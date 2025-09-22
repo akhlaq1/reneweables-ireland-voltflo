@@ -149,33 +149,39 @@ export function estimateAnnualSolarSavings(annualPV: number, selfUseFraction: nu
 
 // Brand definitions
 const brands: Record<string, Branding> = {
-  voltflo: {
-    slug: 'voltflo',
-    name: 'Voltflo inc.',
-    website: 'https://voltflo.com',
-    email: 'solarpotential@voltflo.com',
-    phone: '(085) 834-9461',
-    logo: '/logo.png',
-    description: "Ireland's trusted SEAI-registered solar installer, delivering reliable energy solutions for your home and future.",
+  renewables: {
+    slug: 'renewables',
+    name: 'Renewables Ireland Limited',
+    website: 'https://renewables-ireland.ie',
+    email: 'info@renewables-ireland.ie',
+    phone: '+353 (0)1 298 6140',
+    logo: '/renewables.png',
+    description: "Big enough to get the job done & small enough to care",
     colors: { primary: '#1d4ed8', secondary: '#059669', accent: '#f59e0b' },
     social: {
-      instagram: 'https://www.instagram.com/voltflo.ie/',
-      facebook: 'https://www.facebook.com/VoltfloSolar/',
-      linkedin: 'https://www.linkedin.com/company/voltflo/'
+      instagram: 'https://www.instagram.com/stories/renewablesireland.ie/3725637469225194131/',
+      facebook: 'https://www.facebook.com/higconrenewablesireland/',
+      linkedin: 'https://www.linkedin.com/company/renewables-ireland-limited/?viewAsMember=true'
     },
-    founder: {
-      name: 'David Joyce',
-      title: 'Founder & Lead Electrician',
-      photo: '/images/stephen.png',
-      description: 'David has over 18 years of hands-on electrical experience and personally oversees every solar install for quality and safety.',
-      quote: 'Our goal is simple: deliver solar installations you can trust for decades to come.',
-      experience: '18+ years'
+    reviews: {
+      rating: 5.0,
+      count: 117,
+      url: 'https://www.google.com/search?sca_esv=9594ada01a48a169&rlz=1C5CHFA_enNL1151CN1151&sxsrf=AE3TifOLVIRREnjf2ydlbYTV2tkTXeJTkw:1758561478793&si=AMgyJEtREmoPL4P1I5IDCfuA8gybfVI2d5Uj7QMwYCZHKDZ-E1ubApUpwoeV_DuAxkE_TYKKgzVbiT_bBHZ4WYKu7vkmt3eKiqLNVWGAcl4x0HIfQcTO1v53QxUk-jWrhFTqvSs2N4sdeEYbrxDNIneWCpnJlyVmbA%3D%3D&q=Renewables+Ireland+Reviews&sa=X&ved=2ahUKEwjykYmC8OyPAxXOk1YBHUQANYQQ0bkNegQIIhAE&biw=2560&bih=1198&dpr=2',
+      warranty: '2-Year Workmanship Warranty'
     },
+    // founder: {
+    //   name: 'David Joyce',
+    //   title: 'Founder & Lead Electrician',
+    //   photo: '/images/stephen.png',
+    //   description: 'David has over 18 years of hands-on electrical experience and personally oversees every solar install for quality and safety.',
+    //   quote: 'Our goal is simple: deliver solar installations you can trust for decades to come.',
+    //   experience: '18+ years'
+    // },
     certifications: [
       { name: 'SEAI Registered', verified: true },
       { name: 'RECI Certified', verified: true },
-      { name: 'Fully Insured', verified: true },
-      { name: '18+ Years\' Experience', verified: true }
+      { name: 'Huawei Certified', verified: true },
+      { name: 'Van Der Valk Certified', verified: true }
     ],
     testimonials: [
       {
@@ -280,75 +286,7 @@ const brands: Record<string, Branding> = {
     }
   },
   
-  jrenergy: {
-    slug: 'jrenergy',
-    name: 'JR Energy',
-    website: 'https://jrenergy.ie',
-    email: 'info@jrenergy.ie',
-    phone: '(085) 834-9461',
-    logo: '/images/jrenergy.png',
-    description: "Ireland's trusted SEAI-registered solar installer, delivering reliable energy solutions for your home and future.",
-    colors: { primary: '#059669', secondary: '#1d4ed8', accent: '#f59e0b' },
-    social: {
-      instagram: 'https://www.instagram.com/jrenergy.ie/',
-      facebook: 'https://www.facebook.com/Joyceelectrical/',
-      linkedin: 'https://www.linkedin.com/in/stephen-joyce-043153101/'
-    },
-    reviews: {
-      rating: 5.0,
-      count: 86,
-      url: 'https://www.google.com/search?sca_esv=ab8db249d156b33c&hl=en-JP&sxsrf=AE3TifN-LagWmY0BkQKqe6y4gRwkF9q-4w:1754465366632&si=AMgyJEtREmoPL4P1I5IDCfuA8gybfVI2d5Uj7QMwYCZHKDZ-E1DcjeChbzMgLGM6ManPei2PXu1b61LopSKgAp-FdJo3Mt3YlmA3eYYPA8JQF096dn7HtXMKFSupKoa89jYCkKKM4kFcZhEl8CkbT2W4YzaC5J-gXw%3D%3D&q=JREnergy+Electrical+and+Solar+Reviews&sa=X&ved=2ahUKEwiAq8vn1PWOAxUXrlYBHZAHM8sQ0bkNegQIIhAE&biw=1512&bih=738&dpr=2',
-      warranty: '5-Year Workmanship Warranty'
-    },
-    certifications: [
-      { name: 'SEAI Registered', verified: true },
-      { name: 'RECI Certified', verified: true },
-      { name: 'Fully Insured', verified: true },
-      { name: '18+ Years\' Experience', verified: true }
-    ],
-    founder: {
-      name: 'Stephen Joyce',
-      title: 'Founder & Lead Electrician',
-      photo: '/images/stephen.png',
-      description: 'Stephen has over 18 years of hands-on electrical experience and personally oversees every solar install for quality and safety.',
-      quote: 'Our goal is simple: deliver solar installations you can trust for decades to come.',
-      experience: '18+ years'
-    },
-    testimonials: [
-      {
-        name: "Emer Bowens",
-        location: "Galway",
-        text: "JR Energy recently completed work at our house in Galway. Stephen and his team installed solar panels and an electric car charger. Stephen was extremely professional in all our dealings with him and provided a fast and efficient service. I would highly recommend JR Energy to friends and family.",
-        rating: 5,
-      },
-      {
-        name: "Cliona Murphy",
-        location: "Co. Galway",
-        text: "Stephen and his lads did a brilliant job on installing solar panels in our house in Co. Galway recently. Very professional and helpful from the start. Would definitely recommend Stephen for any solar jobs.",
-        rating: 5,
-      },
-    ],
-    equipment: {} as any,
-    pricing: {} as any,
-    energy: {} as any,
-    emailBranding: {
-      company_name: 'JR Energy',
-      company_tagline: 'SEAI Registered Solar Installation Company',
-      support_email: 'solarpotential@voltflo.com',
-      phone_number: '(085) 834-9461',
-      phone_number_clean: '0858349461',
-      website_url: 'https://staging.installer.voltflo.com',
-      backend_url: 'https://staging-installerflow.voltflo.com',
-      logo_url: null,
-      platform_name: 'Voltflo',
-      report_primary_color: '#10b981',
-      report_secondary_color: '#2563eb',
-      call_primary_color: '#28a745',
-      call_secondary_color: '#007bff',
-      background_gradient: 'linear-gradient(90deg,#f0fdf4,#eff6ff)',
-      calendar_button_color: '#4285f4',
-    }
-  }
+  
 };
 
 // Simple inheritance for brands that reuse core config from voltflo
