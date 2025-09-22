@@ -2224,6 +2224,17 @@ export default function AddressPage() {
                           height={200}
                           className="w-full h-auto"
                         />
+                        {/* Brand logo and name overlay - top left corner */}
+                        <div className="absolute top-3 left-3 bg-gray-800/80 text-white px-3 py-2 rounded-lg text-xs font-medium shadow-lg backdrop-blur-sm border border-gray-600/30 flex items-center space-x-2">
+                          <Image
+                            src={branding.logo}
+                            alt={branding.name}
+                            width={20}
+                            height={20}
+                            className="w-5 h-5 object-contain"
+                          />
+                          <span className="font-semibold">{branding.name}</span>
+                        </div>
                         <div className="absolute top-3 right-3 bg-green-500 text-white px-3 py-2 rounded-full text-xs font-semibold shadow-lg backdrop-blur-sm border border-green-400/30">
                           €1,200/year saved
                         </div>

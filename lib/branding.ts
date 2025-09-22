@@ -289,33 +289,13 @@ const brands: Record<string, Branding> = {
   
 };
 
-// Simple inheritance for brands that reuse core config from voltflo
-['jrenergy'].forEach(slug => {
-  const base = brands.voltflo;
-  const target = brands[slug];
-  brands[slug] = {
-    ...target,
-    equipment: target.equipment && Object.keys(target.equipment).length ? target.equipment : base.equipment,
-    pricing: target.pricing && Object.keys(target.pricing).length ? target.pricing : base.pricing,
-    energy: target.energy && Object.keys(target.energy).length ? target.energy : base.energy,
-    // Inherit additional properties if not defined
-    description: target.description || base.description,
-    certifications: target.certifications || base.certifications,
-    testimonials: target.testimonials || base.testimonials,
-    founder: target.founder || base.founder,
-  };
-});
-
 export function resolveBrandSlugFromHostname(host?: string): string {
-  if (!host) return 'voltflo';
-  const h = host.toLowerCase();
-  if (h.includes('jrenergy')) return 'jrenergy';
-  return 'voltflo';
+  return 'renewables';
 }
 
 export function getBranding(hostname?: string): Branding {
   const slug = resolveBrandSlugFromHostname(hostname || (typeof window !== 'undefined' ? window.location.hostname : undefined));
-  return brands[slug] || brands.voltflo;
+  return brands[slug] || brands.renewables;
 }
 
 export function listBrands(): Branding[] { return Object.values(brands); }
