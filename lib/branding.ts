@@ -17,12 +17,52 @@ export interface EquipmentOption {
   reason: string;
   datasheet?: string; // Path to downloadable PDF if available
   features?: string[];
+  image?: string; // Path to equipment image/logo
+}
+
+/**
+ * PRICING SYSTEM DOCUMENTATION
+ * ============================
+ * 
+ * This branding system supports two different pricing models:
+ * 
+ * 1. BASE + INCREMENTAL PRICING ('base_plus_incremental')
+ *    - Uses a base system price for a threshold number of panels
+ *    - Adds a fixed cost per additional panel beyond the threshold
+ *    - Example: €7,360 for 8 panels, then €200 per additional panel
+ * 
+ * 2. SLAB PRICING ('slab_pricing')
+ *    - Uses predefined price tiers for specific panel counts
+ *    - More flexible pricing that doesn't follow a linear pattern
+ *    - Example pricing structure as requested:
+ *      - 8 panels: €7,360
+ *      - 10 panels: €7,660
+ *      - 12 panels: €7,960
+ *      - 14 panels: €8,165
+ *      - 16 panels: €8,350
+ * 
+ * To switch between pricing systems:
+ * - Set `pricingType` to 'base_plus_incremental' or 'slab_pricing'
+ * - For slab pricing, provide the `slabPricing` array with panel counts and prices
+ * - The calculateSystemBaseCost() function automatically handles both systems
+ * 
+ * The system will automatically find the appropriate price tier for any panel count.
+ * If the panel count exceeds all defined tiers, it uses the highest tier price.
+ */
+
+export interface PricingSlabTier {
+  panelCount: number; // Number of panels for this tier
+  price: number; // Total system price for this panel count
 }
 
 export interface PricingFormulaConfig {
+  pricingType: 'base_plus_incremental' | 'slab_pricing'; // Determines which pricing method to use
+  // Base + Incremental pricing (original method)
   basePanelThreshold: number; // Number of panels included in base price
   baseSystemPrice: number; // Price covering basePanelThreshold panels + default inverter & panel option
   additionalPanelCost: number; // Incremental cost per panel beyond threshold
+  // Slab pricing (new method)
+  slabPricing?: PricingSlabTier[]; // Array of panel count -> price mappings
   seaiGrant: number; // Default SEAI grant (if eligible)
   defaultEVGrant: number; // Default EV charger grant (if equipment entry has grant undefined)
 }
@@ -118,13 +158,40 @@ export interface Branding {
 
 // Helper calculation utilities centralised here for reuse
 export function calculateSystemBaseCost(panelCount: number, panel: EquipmentOption, inverter: EquipmentOption, pricing: PricingFormulaConfig) {
-  const { basePanelThreshold, baseSystemPrice, additionalPanelCost } = pricing;
   const panelAdj = panel.priceAdjustment || 0;
   const inverterAdj = inverter.priceAdjustment || 0;
-  if (panelCount <= basePanelThreshold) {
-    return baseSystemPrice + panelAdj + inverterAdj;
+  
+  if (pricing.pricingType === 'slab_pricing' && pricing.slabPricing) {
+    // Find the appropriate slab tier for the panel count
+    const slabTier = findSlabTierForPanelCount(panelCount, pricing.slabPricing);
+    return slabTier.price + panelAdj + inverterAdj;
+  } else {
+    // Use original base + incremental pricing
+    const { basePanelThreshold, baseSystemPrice, additionalPanelCost } = pricing;
+    if (panelCount <= basePanelThreshold) {
+      return baseSystemPrice + panelAdj + inverterAdj;
+    }
+    return baseSystemPrice + (panelCount - basePanelThreshold) * additionalPanelCost + panelAdj + inverterAdj;
   }
-  return baseSystemPrice + (panelCount - basePanelThreshold) * additionalPanelCost + panelAdj + inverterAdj;
+}
+
+// Helper function to find the appropriate slab tier for a given panel count
+export function findSlabTierForPanelCount(panelCount: number, slabPricing: PricingSlabTier[]): PricingSlabTier {
+  // Sort the slab pricing by panel count in ascending order
+  const sortedSlabs = [...slabPricing].sort((a, b) => a.panelCount - b.panelCount);
+  
+  // Find the exact match or the next higher tier
+  let selectedTier = sortedSlabs[0]; // Default to first tier
+  
+  for (const tier of sortedSlabs) {
+    if (panelCount <= tier.panelCount) {
+      selectedTier = tier;
+      break;
+    }
+    selectedTier = tier; // Keep updating to the highest tier if panel count exceeds all tiers
+  }
+  
+  return selectedTier;
 }
 
 export function getBatteryCost(includeBattery: boolean, battery: EquipmentOption, count: number) {
@@ -185,15 +252,15 @@ const brands: Record<string, Branding> = {
     ],
     testimonials: [
       {
-        name: "Emer Bowens",
+        name: "Andrea Webb",
         location: "Galway",
-        text: "Voltflo inc. recently completed work at our house in Galway. Stephen and his team installed solar panels and an electric car charger. Stephen was extremely professional in all our dealings with him and provided a fast and efficient service. I would highly recommend Voltflo inc. to friends and family.",
+        text: "The team at Renewables were so helpful and supportive. Great advice to help choose the right solar solution for my home and family and the app tracks all the data for me.",
         rating: 5,
       },
       {
-        name: "Cliona Murphy",
+        name: "Paddy Duffy",
         location: "Co. Galway",
-        text: "Stephen and his lads did a brilliant job on installing solar panels in our house in Co. Galway recently. Very professional and helpful from the start. Would definitely recommend Stephen for any solar jobs.",
+        text: "Renewables Ireland recently installed solar panels at our home. I would highly recommend the team. From the office to the installation team and follow up support, they were very professional, clearly experts in how to maximise usage, and courteous. A great local company.",
         rating: 5,
       },
     ],
@@ -201,28 +268,153 @@ const brands: Record<string, Branding> = {
     equipment: {
       solarPanels: [
         {
-          id: 'jinko',
-            name: 'JinkoSolar 440W',
-            tier: 'Tier 1',
-            warranty: '25-Year Performance',
-            efficiency: '21.4%',
-            priceAdjustment: 0,
-            recommended: true,
-            reason: 'Higher efficiency, premium pricing',
-            datasheet: '/pdf/jinko_panel.pdf'
+          id: 'astro',
+          name: 'Astro N7s',
+          tier: 'Tier 1',
+          warranty: '30-Year Performance',
+          efficiency: '21.4%',
+          priceAdjustment: 0,
+          recommended: true,
+          reason: 'Higher efficiency, premium pricing',
+          datasheet: '/pdf/astron7s.pdf',
+          image: '/images/solar-panels/astron7s.png'
         }
       ],
       inverters: [
         {
-          id: 'sigenergy',
-          name: 'Sigenergy Inverter',
+          id: 'huawei',
+          name: 'Huawei SUN2000 Inverter',
           tier: 'Premium',
           warranty: '10-Year Product',
           efficiency: '98.4%',
           priceAdjustment: 0,
           recommended: true,
           reason: 'Industry-leading reliability',
-          datasheet: '/pdf/sig_inverter.pdf'
+          datasheet: '/pdf/huawei_inverter.pdf',
+          image: '/images/inverters/huawei.png'
+        }
+      ],
+      batteries: [
+        {
+          id: 'huawei5',
+          name: 'Huawei LUNA2000 5kWh',
+          capacity: 5,
+          price: 2495,
+          tier: 'Standard',
+          warranty: '10-Year Product',
+          recommended: false,
+          reason: 'Compact solution, lower capacity',
+          datasheet: '/pdf/huawei_battery.pdf',
+          image: '/images/batteries/huwaei.png'
+        },
+        {
+          id: 'huawei10',
+          name: 'Huawei LUNA2000 10kWh',
+          capacity: 10,
+          price: 4990,
+          tier: 'Standard',
+          warranty: '10-Year Product',
+          recommended: false,
+          reason: 'Compact solution, lower capacity',
+          datasheet: '/pdf/huawei_battery.pdf',
+          image: '/images/batteries/huwaei.png'
+        },
+      ],
+      evChargers: [
+        {
+          id: 'myenergi_zappi',
+          name: 'Myenergi Zappi 7KW',
+          power: '7kW',
+          price: 1600,
+          grant: 300,
+          tier: 'Premium',
+          warranty: '3-Year Product',
+          recommended: true,
+          reason: 'Smart charging with solar integration',
+          features: ['Solar integration', 'Smart scheduling', 'Load balancing', 'Mobile app control'],
+          image: '/images/ev-chargers/myenergi_zappi.png'
+        }
+      ]
+    },
+    pricing: {
+      pricingType: 'slab_pricing',
+      basePanelThreshold: 8,
+      baseSystemPrice: 7360,
+      additionalPanelCost: 200,
+      slabPricing: [
+        { panelCount: 8, price: 7360 },
+        { panelCount: 10, price: 7660 },
+        { panelCount: 12, price: 7960 },
+        { panelCount: 14, price: 8165 },
+        { panelCount: 16, price: 8350 },
+        { panelCount: 18, price: 8535 },
+        { panelCount: 20, price: 8720 },
+        { panelCount: 22, price: 8905 },
+        { panelCount: 24, price: 9090 },
+        { panelCount: 26, price: 9275 },
+      ],
+      seaiGrant: 1800,
+      defaultEVGrant: 300
+    },
+    energy: {
+      gridRateDay: 0.35,
+      gridRateNight: 0.08,
+      exportRate: 0.20,
+      annualPriceIncrease: 0.03,
+      batteryRoundTripEfficiency: 0.9
+    },
+    emailBranding: {
+      company_name: 'Renewables Ireland',
+      company_tagline: 'Big enough to get the job done & small enough to care.',
+      support_email: 'info@renewables-ireland.ie',
+      phone_number: '+353 (0)1 298 6140',
+      phone_number_clean: '+353 (0)1 298 6140',
+      website_url: 'https://renewables-ireland.netlify.app',
+      backend_url: 'https://staging-installerflow.voltflo.com',
+      logo_url: null,
+      platform_name: 'Voltflo',
+      report_primary_color: '#1d4ed8',
+      report_secondary_color: '#059669',
+      call_primary_color: '#28a745',
+      call_secondary_color: '#007bff',
+      background_gradient: 'linear-gradient(90deg,#dbeafe,#ecfdf5)',
+      calendar_button_color: '#1d4ed8',
+    }
+  },
+
+  // Example brand with base + incremental pricing for comparison
+  renewables_incremental: {
+    slug: 'renewables_incremental',
+    name: 'Renewables Ireland Limited (Incremental Pricing)',
+    website: 'https://renewables-ireland.ie',
+    email: 'info@renewables-ireland.ie',
+    phone: '+353 (0)1 298 6140',
+    logo: '/renewables.png',
+    description: "Example configuration using base + incremental pricing",
+    colors: { primary: '#1d4ed8', secondary: '#059669', accent: '#f59e0b' },
+    equipment: {
+      solarPanels: [
+        {
+          id: 'astro',
+          name: 'Astro N7s',
+          tier: 'Tier 1',
+          warranty: '30-Year Performance',
+          efficiency: '21.4%',
+          priceAdjustment: 0,
+          recommended: true,
+          reason: 'Higher efficiency, premium pricing',
+        }
+      ],
+      inverters: [
+        {
+          id: 'huawei',
+          name: 'Huawei SUN2000 Inverter',
+          tier: 'Premium',
+          warranty: '10-Year Product',
+          efficiency: '98.4%',
+          priceAdjustment: 0,
+          recommended: true,
+          reason: 'Industry-leading reliability',
         }
       ],
       batteries: [
@@ -235,7 +427,26 @@ const brands: Record<string, Branding> = {
           warranty: '10-Year Product',
           recommended: true,
           reason: 'Most reliable, excellent cycle life',
-          datasheet: '/pdf/sig_battery.pdf'
+        },
+        {
+          id: 'huawei',
+          name: 'Huawei Battery 5kWh',
+          capacity: 5,
+          price: 2200,
+          tier: 'Standard',
+          warranty: '10-Year Product',
+          recommended: false,
+          reason: 'Compact solution, lower capacity',
+        },
+        {
+          id: 'tesla',
+          name: 'Tesla Powerwall 10kWh',
+          capacity: 10,
+          price: 4500,
+          tier: 'Premium+',
+          warranty: '10-Year Product',
+          recommended: false,
+          reason: 'High capacity, premium brand',
         }
       ],
       evChargers: [
@@ -249,14 +460,15 @@ const brands: Record<string, Branding> = {
           warranty: '3-Year Product',
           recommended: true,
           reason: 'Smart charging with solar integration',
-          features: ['Solar integration', 'Smart scheduling', 'Load balancing', 'Mobile app control']
+          features: ['Solar integration', 'Smart scheduling', 'Load balancing', 'Mobile app control'],
         }
       ]
     },
     pricing: {
+      pricingType: 'base_plus_incremental',
       basePanelThreshold: 8,
-      baseSystemPrice: 7550,
-      additionalPanelCost: 350,
+      baseSystemPrice: 7360,
+      additionalPanelCost: 200,
       seaiGrant: 1800,
       defaultEVGrant: 300
     },
@@ -268,12 +480,12 @@ const brands: Record<string, Branding> = {
       batteryRoundTripEfficiency: 0.9
     },
     emailBranding: {
-      company_name: 'Voltflo inc.',
-      company_tagline: 'SEAI Registered Solar Installation Company',
-      support_email: 'solarpotential@voltflo.com',
-      phone_number: '(085) 834-9461',
-      phone_number_clean: '0858349461',
-      website_url: 'https://staging.installer.voltflo.com',
+      company_name: 'Renewables Ireland',
+      company_tagline: 'Big enough to get the job done & small enough to care.',
+      support_email: 'info@renewables-ireland.ie',
+      phone_number: '+353 (0)1 298 6140',
+      phone_number_clean: '+353 (0)1 298 6140',
+      website_url: 'https://renewables-ireland.netlify.app',
       backend_url: 'https://staging-installerflow.voltflo.com',
       logo_url: null,
       platform_name: 'Voltflo',
