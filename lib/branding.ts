@@ -105,6 +105,7 @@ export interface FounderInfo {
 }
 
 export interface EmailBranding {
+  company_id?: number; // Optional ID if linked to a company in backend
   company_name: string;
   company_tagline: string;
   support_email: string;
@@ -366,6 +367,7 @@ const brands: Record<string, Branding> = {
       batteryRoundTripEfficiency: 0.9
     },
     emailBranding: {
+      company_id: 3,
       company_name: 'Renewables Ireland',
       company_tagline: 'Big enough to get the job done & small enough to care.',
       // support_email: 'info@renewables-ireland.ie',
