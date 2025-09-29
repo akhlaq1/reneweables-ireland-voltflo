@@ -2656,13 +2656,12 @@ export default function SolarEnergyPlanner() {
                             {/* Footer - Minimal */}
                             <div className="text-center pt-1 sm:pt-2 border-t border-blue-100">
                               <p className="text-xs text-gray-600">
-                                Questions?{" "}
-                                <a
-                                  href="mailto:solarpotential@voltflo.com"
-                                  className="text-blue-600 hover:text-blue-700 font-medium hover:underline"
-                                >
-                                  solarpotential@voltflo.com
-                                </a>
+                                Questions or need help?{" "}
+                                    {branding.email && (
+                                      <a href={`mailto:${branding.email}`} className="text-blue-600 hover:text-blue-700 font-medium hover:underline">
+                                      {branding.email}
+                                      </a>
+                                    )}
                               </p>
                             </div>
                           </div>
@@ -2936,13 +2935,12 @@ export default function SolarEnergyPlanner() {
             {/* Footer - Minimal */}
             <div className="text-center pt-1 sm:pt-2 border-t border-blue-100">
               <p className="text-xs text-gray-600">
-                Questions?{" "}
-                <a
-                  href="mailto:solarpotential@voltflo.com"
-                  className="text-blue-600 hover:text-blue-700 font-medium hover:underline"
-                >
-                  solarpotential@voltflo.com
-                </a>
+               Questions or need help?{" "}
+                {branding.email && (
+                  <a href={`mailto:${branding.email}`} className="text-blue-600 hover:text-blue-700 font-medium hover:underline">
+                  {branding.email}
+                  </a>
+                )}
               </p>
             </div>
           </div>
@@ -5146,10 +5144,10 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                         <p className="text-xs text-gray-600">
                           Questions?{" "}
                           <a
-                            href="mailto:solarpotential@voltflo.com"
+                            href="mailto:info@renewables-ireland.ie"
                             className="text-blue-600 hover:text-blue-700 font-medium hover:underline"
                           >
-                            solarpotential@voltflo.com
+                            info@renewables-ireland.ie
                           </a>
                         </p>
                       </div>
@@ -5460,10 +5458,10 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
               <p className="text-xs text-gray-600">
                 Questions?{" "}
                 <a
-                  href="mailto:solarpotential@voltflo.com"
+                  href="mailto:info@renewables-ireland.ie"
                   className="text-blue-600 hover:text-blue-700 font-medium hover:underline"
                 >
-                  solarpotential@voltflo.com
+                  info@renewables-ireland.ie
                 </a>
               </p>
             </div>
