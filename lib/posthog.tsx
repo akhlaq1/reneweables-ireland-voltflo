@@ -33,7 +33,6 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
         capture_pageview: false, // Disable automatic pageview capture, as we capture manually
         capture_pageleave: true,
         loaded: (posthog) => {
-          if (process.env.NODE_ENV === 'development') console.log('PostHog loaded')
         }
       })
     }

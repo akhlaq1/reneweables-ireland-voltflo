@@ -101,7 +101,6 @@ export default function GetPlanPage() {
   }, [email, firstName]);
 
   const handleError = (apiError: any) => {
-    console.error("API Error:", apiError);
     
     // Check if it's a network error
     if (!apiError.response) {
@@ -332,7 +331,6 @@ export default function GetPlanPage() {
           const parsedData = JSON.parse(energyIndependenceData);
           energyIndependence = parsedData.practicalIndependence;
         } catch (error) {
-          console.error("Error parsing energy_independence_data:", error);
         }
       }
 
@@ -362,15 +360,12 @@ export default function GetPlanPage() {
       );
 
       // Handle successful response
-      console.log("User journey data saved successfully:", response.data);
 
       // Send user flow email asynchronously (fire and forget)
       api.get(`public_users/send-userflow-email?email=${encodeURIComponent(email)}`)
         .then(() => {
-          console.log("User flow email sent successfully");
         })
         .catch((error) => {
-          console.error("Error sending user flow email:", error);
         });
 
       // Store signup status in localStorage

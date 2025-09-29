@@ -35,7 +35,6 @@ export const getEnergyIndependenceFromStorage = () => {
         return parsed;
       }
     } catch (error) {
-      console.error('Failed to retrieve energy independence data from localStorage:', error);
     }
   }
   return null;
@@ -51,10 +50,8 @@ export const saveEnergyIndependenceToStorage = (data: any, source = 'unknown') =
         source
       };
       localStorage.setItem('energy_independence_data', JSON.stringify(energyIndependenceStorage));
-      console.log('Energy independence data saved to localStorage:', energyIndependenceStorage);
       return true;
     } catch (error) {
-      console.error('Failed to save energy independence data to localStorage:', error);
       return false;
     }
   }
@@ -91,7 +88,6 @@ export default function SolarSavings({ businessProposalData }: { businessProposa
         }
       }
     } catch (error) {
-      console.error('Failed to get bill amount from localStorage:', error);
     }
     
     // Calculate annual PV generation from monthly forecast

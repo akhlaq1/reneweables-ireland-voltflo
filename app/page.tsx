@@ -376,21 +376,12 @@ export default function AddressPage() {
   }, [isLoading, isMapVisible, showBillSelection])
 
   useEffect(() => {
-    console.log('Map useEffect triggered:', { 
-      isMapVisible, 
-      hasPendingPlace: !!pendingPlace?.geometry?.location,
-      pendingPlaceCoords: pendingPlace?.geometry?.location ? {
-        lat: pendingPlace.geometry.location.lat(),
-        lng: pendingPlace.geometry.location.lng()
-      } : null
-    })
     
     if (!isMapVisible || !pendingPlace?.geometry?.location) return
 
     const mapElement = document.getElementById("map")
 
     if (!mapElement) {
-      console.log('Map element not found in DOM')
       return
     }
 
@@ -482,7 +473,6 @@ export default function AddressPage() {
               } else {
                 // Try alternative geocoding method
                 setDebugInfo("Primary failed, trying alternative...")
-                console.log('Primary geocoding returned coordinates, trying alternative method...')
                 const alternativeAddress = await alternativeReverseGeocode(newCenter)
                 if (alternativeAddress && !alternativeAddress.startsWith('📍')) {
                   setAddress(alternativeAddress)
@@ -495,7 +485,6 @@ export default function AddressPage() {
                 } else {
                   // Try one more time to get at least a general location
                   setDebugInfo("Alternative failed, trying general location...")
-                  console.log('Alternative geocoding failed, trying general location...')
                   const generalLocation = await getGeneralLocation(newCenter)
                   setAddress(generalLocation)
                   setAddressJustUpdated(true)
@@ -507,7 +496,6 @@ export default function AddressPage() {
                 }
               }
             } catch (error) {
-              console.warn('Reverse geocoding failed:', error)
               // Fallback to coordinates
               const coordString = `📍 ${newCenter.lat().toFixed(6)}, ${newCenter.lng().toFixed(6)}`
               setAddress(coordString)
@@ -542,10 +530,6 @@ export default function AddressPage() {
         })
       }
     } else {
-      console.log('Updating existing map with new location:', {
-        lat: pendingPlace.geometry.location.lat(),
-        lng: pendingPlace.geometry.location.lng()
-      })
       
       // Update map center for new address
       mapRef.current.setCenter(pendingPlace.geometry.location)
@@ -553,14 +537,11 @@ export default function AddressPage() {
       // Update marker position to match new center
       if (markerRef.current) {
         markerRef.current.setPosition(pendingPlace.geometry.location)
-        console.log('Marker position updated')
       } else {
-        console.log('No marker ref available')
       }
       
       // Update selected location state
       setSelectedLocation(pendingPlace.geometry.location)
-      console.log('Selected location state updated')
     }
   }, [isMapVisible, pendingPlace?.geometry?.location?.lat(), pendingPlace?.geometry?.location?.lng()])
 
@@ -893,8 +874,7 @@ export default function AddressPage() {
             componentRestrictions: { country: "ie" }
           },
           (results: any[], status: string) => {
-            console.log('Reverse geocoding status:', status)
-            console.log('Reverse geocoding results:', results)
+            
 
             if (status === "OK" && results?.length > 0) {
 
@@ -927,12 +907,11 @@ export default function AddressPage() {
                 return !isCountryOnly && !isIrelandOnly && !isTooGeneric
               })
 
-              console.log('Filtered results:', filteredResults)
+              
 
               if (filteredResults.length === 0) {
                 // Return coordinates as fallback
                 const coordString = `📍 ${location.lat().toFixed(6)}, ${location.lng().toFixed(6)}`
-                console.log('No valid results, returning coordinates:', coordString)
                 resolve(coordString)
                 return
               }
@@ -962,7 +941,7 @@ export default function AddressPage() {
                 bestResult = filteredResults[0]
               }
 
-              console.log('Best result selected:', bestResult)
+              
 
               const foundEircode = bestResult.address_components?.find(
                 (component: any) => component.types.includes("postal_code")
@@ -980,10 +959,8 @@ export default function AddressPage() {
                 formattedAddress = `📍 ${location.lat().toFixed(6)}, ${location.lng().toFixed(6)}`
               }
 
-              console.log('Final formatted address:', formattedAddress)
               resolve(formattedAddress)
             } else {
-              console.log('Geocoding failed with status:', status)
               // Return coordinates as fallback if geocoding fails
               const coordString = `📍 ${location.lat().toFixed(6)}, ${location.lng().toFixed(6)}`
               resolve(coordString)
@@ -992,7 +969,6 @@ export default function AddressPage() {
         )
       })
     } catch (error) {
-      console.error('Reverse geocoding error:', error)
       // Return coordinates as fallback on error
       const coordString = `📍 ${location.lat().toFixed(6)}, ${location.lng().toFixed(6)}`
       return coordString
@@ -1016,8 +992,7 @@ export default function AddressPage() {
             // No component restrictions to get broader results
           },
           (results: any[], status: string) => {
-            console.log('Alternative reverse geocoding status:', status)
-            console.log('Alternative reverse geocoding results:', results)
+            
 
             if (status === "OK" && results?.length > 0) {
               // Look for any result that contains Ireland or Irish addresses
@@ -1030,7 +1005,7 @@ export default function AddressPage() {
                   )
               })
 
-              console.log('Irish results:', irishResults)
+              
 
               if (irishResults.length > 0) {
                 // Find the most specific Irish result
@@ -1051,7 +1026,7 @@ export default function AddressPage() {
                   bestResult = irishResults[0]
                 }
 
-                console.log('Alternative best result:', bestResult)
+                
 
                 if (bestResult && bestResult.formatted_address) {
                   resolve(bestResult.formatted_address)
@@ -1066,7 +1041,6 @@ export default function AddressPage() {
         )
       })
     } catch (error) {
-      console.error('Alternative reverse geocoding error:', error)
       return null
     }
   }
@@ -1087,7 +1061,7 @@ export default function AddressPage() {
             componentRestrictions: { country: "ie" }
           },
           (results: any[], status: string) => {
-            console.log('General location geocoding status:', status)
+            
 
             if (status === "OK" && results?.length > 0) {
               // Look for locality, administrative areas, or any descriptive location
@@ -1099,7 +1073,6 @@ export default function AddressPage() {
               )
 
               if (generalResult && generalResult.formatted_address) {
-                console.log('General location found:', generalResult.formatted_address)
                 resolve(`Near ${generalResult.formatted_address}`)
                 return
               }
@@ -1107,7 +1080,6 @@ export default function AddressPage() {
               // If we have any result at all, use it
               if (results[0] && results[0].formatted_address &&
                 results[0].formatted_address !== "Ireland") {
-                console.log('Using first available result:', results[0].formatted_address)
                 resolve(`Near ${results[0].formatted_address}`)
                 return
               }
@@ -1115,13 +1087,11 @@ export default function AddressPage() {
 
             // Final fallback to coordinates
             const coordString = `📍 ${location.lat().toFixed(6)}, ${location.lng().toFixed(6)}`
-            console.log('No general location found, using coordinates:', coordString)
             resolve(coordString)
           }
         )
       })
     } catch (error) {
-      console.error('General location geocoding error:', error)
       return `📍 ${location.lat().toFixed(6)}, ${location.lng().toFixed(6)}`
     }
   }

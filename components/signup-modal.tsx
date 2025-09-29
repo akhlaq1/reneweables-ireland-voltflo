@@ -62,7 +62,6 @@ export function SignupModal({ isOpen, onClose, onSignup, showSkip = false, onSki
           const parsedData = JSON.parse(energyIndependenceData)
           energyIndependence = parsedData.practicalIndependence
         } catch (error) {
-          console.error('Error parsing energy_independence_data:', error)
         }
       }
 
@@ -84,13 +83,11 @@ export function SignupModal({ isOpen, onClose, onSignup, showSkip = false, onSki
       const response = await api.post('public_users/new-journey-user', requestData)
       
       // Handle successful response
-      console.log('User journey data saved successfully:', response.data)
       
       // Call the original onSignup callback
       onSignup(email, firstName, allowContact, phoneNumber)
       
     } catch (error) {
-      console.error('Error saving user journey data:', error)
       // You might want to show a more user-friendly error message
       alert('There was an error saving your information. Please try again.')
     } finally {

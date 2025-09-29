@@ -148,7 +148,6 @@ export default function SolarPanelInfoCard() {
 
       setIsLoading(false)
     } catch (error) {
-      console.error('Error loading solar panel data:', error)
       setIsLoading(false)
     }
   }, [])

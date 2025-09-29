@@ -151,7 +151,6 @@ export default function LocationDataCard({ trueSolarEnergyGenerated = 0 }: Locat
         setEnergyIndependenceData(JSON.parse(energyIndependenceDataRaw))
       }
     } catch (error) {
-      console.error('Error loading localStorage data:', error)
     }
   }, [])
 
@@ -189,7 +188,6 @@ export default function LocationDataCard({ trueSolarEnergyGenerated = 0 }: Locat
 
   const handleMouseLeave = useCallback(() => {
     if (!isMobile) {
-      console.log("handleMouseLeave")
       setActiveItem(null)
     }
   }, [isMobile])

@@ -48,14 +48,12 @@ export default function PropertyDetailsPage() {
         
         // Check if system_size exists and exceeds the limit
         if (businessProposal.system_size && businessProposal.system_size > maxSystemSize) {
-          console.log(`System size ${businessProposal.system_size}W exceeds limit for ${selectedType} (${maxSystemSize}W). Adjusting to maximum.`)
           businessProposal.system_size = maxSystemSize
           
           // Save the updated business_proposal back to localStorage
           localStorage.setItem("business_proposal", JSON.stringify(businessProposal))
         }
       } catch (error) {
-        console.error("Error parsing business_proposal from localStorage:", error)
       }
     }
 

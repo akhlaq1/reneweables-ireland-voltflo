@@ -357,7 +357,6 @@ export default function CallPage() {
     const first = findFirstAvailableDate()
     if (first) {
       // Log for debugging if needed
-      console.log('First available date found:', first.date)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookingsLoaded])
@@ -428,12 +427,8 @@ export default function CallPage() {
         branding: getEmailBranding(),
       }
 
-      console.log('Submitting call booking data:', requestBody)
-
       // Make API call to the same endpoint as plan page
       const response = await api.post('public_users/new-journey-installer-user', requestBody)
-
-      console.log('API response:', response.data)
 
       // Save contact info to localStorage for future use
       const contactInfoToSave = {
@@ -447,7 +442,6 @@ export default function CallPage() {
       setStep("booking-success")
 
     } catch (error: any) {
-      console.error('Error submitting call booking:', error)
       setSubmitError(
         error?.response?.data?.message ||
         'Failed to book your call. Please try again.'

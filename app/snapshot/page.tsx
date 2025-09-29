@@ -26,12 +26,7 @@ export default function SnapshotPage() {
     const selfConsumption = annualGeneration * 0.3 * gridRate
     const exportRevenue = annualGeneration * 0.7 * exportRate
 
-    console.log("annualGeneration:", annualGeneration)
-    console.log("gridRate:", gridRate)
-    console.log("exportRate:", exportRate)
-    console.log("selfConsumption:", selfConsumption)
-    console.log("exportRevenue:", exportRevenue)
-    console.log("totalSavings:", selfConsumption + exportRevenue)
+    
 
     return Math.round(selfConsumption + exportRevenue)
   }

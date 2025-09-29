@@ -41,7 +41,6 @@ export async function GET(request: Request) {
       },
     })
   } catch (error) {
-    console.error('Error fetching street view or satellite image:', error)
     return NextResponse.json({ error: 'Failed to fetch image' }, { status: 500 })
   }
 } 

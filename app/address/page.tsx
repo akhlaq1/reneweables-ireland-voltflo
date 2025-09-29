@@ -489,7 +489,6 @@ export default function AddressPage() {
   useEffect(() => {
     // Check if Google Maps API is already loaded
     if (window.google && window.google.maps) {
-      console.log("Google Maps API already loaded")
       setIsLoading(false)
       initializeGoogleMaps()
       return
@@ -498,7 +497,6 @@ export default function AddressPage() {
     // Check if script is already being loaded
     const existingScript = document.querySelector('script[src*="maps.googleapis.com/maps/api/js"]')
     if (existingScript) {
-      console.log("Google Maps script already exists, waiting for it to load...")
       
       // Wait for existing script to load
       const checkGoogleMaps = setInterval(() => {
@@ -523,12 +521,10 @@ export default function AddressPage() {
 
     // Load Google Maps JavaScript API
     const script = document.createElement("script")
-    console.log("Loading Google Maps API with key:", process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY)
     script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places&callback=initMap`
     script.async = true
     script.defer = true
     script.onerror = (error) => {
-      console.error("Google Maps script loading error:", error)
       setError("Failed to load Google Maps. Please check your internet connection.")
       setIsLoading(false)
     }
@@ -542,7 +538,6 @@ export default function AddressPage() {
         }
         delete (window as any).initMap
       } catch (e) {
-        console.log("Script cleanup error (this is usually fine):", e)
       }
     }
   }, [])
@@ -553,7 +548,6 @@ export default function AddressPage() {
     const mapElement = document.getElementById("map")
     
     if (!mapElement) {
-      console.error("Map container not found in DOM")
       return
     }
 
@@ -634,7 +628,6 @@ export default function AddressPage() {
             const newAddress = await reverseGeocode(newCenter)
             if (newAddress) {
               setAddress(newAddress)
-              console.log('✅ Address updated from pin drag:', newAddress)
             }
           }
         })

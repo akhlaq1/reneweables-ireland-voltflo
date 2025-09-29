@@ -69,7 +69,6 @@ export function usePWA() {
       setIsInstallable(false)
       return outcome === 'accepted'
     } catch (error) {
-      console.error('Error installing PWA:', error)
       return false
     }
   }
@@ -85,7 +84,6 @@ export function usePWA() {
         })
         return true
       } catch (error) {
-        console.error('Error sharing:', error)
         return false
       }
     }

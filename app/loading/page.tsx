@@ -98,9 +98,7 @@ export default function LoadingPage() {
           }
         }
       }
-      console.log(`consumption used: ${averageConsumption} kWh`);
     } catch (error) {
-      console.error('Failed to get bill amount from localStorage:', error);
     }
     
     // Calculate annual PV generation from monthly forecast
@@ -164,7 +162,6 @@ export default function LoadingPage() {
         setIsStreetViewComplete(true)
       }
     } catch (error) {
-      console.error('Error fetching street view:', error)
       // On error, store null to indicate we should show satellite view
       localStorage.setItem("streetViewUrl", "null")
       setIsStreetViewComplete(true)
@@ -219,14 +216,12 @@ export default function LoadingPage() {
                   
                   // Check if system_size exists and exceeds the limit
                   if (businessProposal.system_size && businessProposal.system_size > maxSystemSize) {
-                    console.log(`System size ${businessProposal.system_size}W exceeds limit for ${homeType} (${maxSystemSize}W). Adjusting to maximum.`)
                     businessProposal.system_size = maxSystemSize
                     
                     // Save the updated business_proposal back to localStorage
                     localStorage.setItem("business_proposal", JSON.stringify(businessProposal))
                   }
                 } catch (error) {
-                  console.error("Error parsing business_proposal from localStorage:", error)
                 }
               }
               
@@ -242,11 +237,9 @@ export default function LoadingPage() {
               }
               localStorage.setItem("propertyDetails", JSON.stringify(propertyDetails))
               
-              console.log('Property details stored from loading page:', propertyDetails)
             }
           }
         } catch (error) {
-          console.error("Error processing homeType from localStorage:", error)
         }
       }
       
@@ -313,7 +306,6 @@ export default function LoadingPage() {
         billAmount = parsedAnswers.billAmount || 250
       }
     } catch (error) {
-      console.log("Error parsing personalise_answers from localStorage:", error)
       billAmount = 250
     }
 
@@ -328,15 +320,12 @@ export default function LoadingPage() {
       if (energyIndependenceData.annualPVGeneration > 0) {
         try {
           localStorage.setItem('energy_independence_data', JSON.stringify(energyIndependenceData))
-          console.log('Energy independence data calculated and stored in loading page:', energyIndependenceData)
         } catch (error) {
-          console.error('Failed to store energy independence data:', error)
         }
       }
       
       setIsProposalLoadingComplete(true)
     }).catch((err: any) => {
-      console.log(err)
       setIsProposalLoadingComplete(true)
     })
   }

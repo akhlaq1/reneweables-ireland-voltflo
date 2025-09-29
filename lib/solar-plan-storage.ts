@@ -99,10 +99,8 @@ const STORAGE_KEYS = {
 export const saveSolarPlanData = (planData: SolarPlanData): boolean => {
   try {
     localStorage.setItem(STORAGE_KEYS.SOLAR_PLAN, JSON.stringify(planData));
-    console.log('Solar plan data saved successfully:', planData);
     return true;
   } catch (error) {
-    console.error('Error saving solar plan data:', error);
     return false;
   }
 };
@@ -115,7 +113,6 @@ export const getSolarPlanData = (): SolarPlanData | null => {
     const savedData = localStorage.getItem(STORAGE_KEYS.SOLAR_PLAN);
     return savedData ? JSON.parse(savedData) : null;
   } catch (error) {
-    console.error('Error retrieving solar plan data:', error);
     return null;
   }
 };
@@ -126,10 +123,8 @@ export const getSolarPlanData = (): SolarPlanData | null => {
 export const saveUserContactInfo = (userInfo: UserContactInfo): boolean => {
   try {
     localStorage.setItem(STORAGE_KEYS.USER_CONTACT, JSON.stringify(userInfo));
-    console.log('User contact info saved successfully:', userInfo);
     return true;
   } catch (error) {
-    console.error('Error saving user contact info:', error);
     return false;
   }
 };
@@ -142,7 +137,6 @@ export const getUserContactInfo = (): UserContactInfo | null => {
     const savedData = localStorage.getItem(STORAGE_KEYS.USER_CONTACT);
     return savedData ? JSON.parse(savedData) : null;
   } catch (error) {
-    console.error('Error retrieving user contact info:', error);
     return null;
   }
 };
@@ -154,7 +148,6 @@ export const addUserInfoToPlan = (userInfo: Omit<UserContactInfo, 'submittedAt'>
   try {
     const existingPlan = getSolarPlanData();
     if (!existingPlan) {
-      console.error('No existing plan data found');
       return false;
     }
 
@@ -168,7 +161,6 @@ export const addUserInfoToPlan = (userInfo: Omit<UserContactInfo, 'submittedAt'>
 
     return saveSolarPlanData(updatedPlan);
   } catch (error) {
-    console.error('Error adding user info to plan:', error);
     return false;
   }
 };
@@ -180,10 +172,8 @@ export const clearSolarPlanData = (): boolean => {
   try {
     localStorage.removeItem(STORAGE_KEYS.SOLAR_PLAN);
     localStorage.removeItem(STORAGE_KEYS.USER_CONTACT);
-    console.log('Solar plan data cleared successfully');
     return true;
   } catch (error) {
-    console.error('Error clearing solar plan data:', error);
     return false;
   }
 };
@@ -196,7 +186,6 @@ export const hasSolarPlanData = (): boolean => {
     const data = localStorage.getItem(STORAGE_KEYS.SOLAR_PLAN);
     return data !== null && data !== undefined;
   } catch (error) {
-    console.error('Error checking for solar plan data:', error);
     return false;
   }
 };

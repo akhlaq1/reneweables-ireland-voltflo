@@ -12,7 +12,6 @@ export default function ReviewReportLanding() {
   const branding = getBranding()
 
   const handleBookConsultation = () => {
-    console.log("[v0] User clicked Book Consultation from landing page")
     setAppNavigation()
     router.push('/call-page')
   }
