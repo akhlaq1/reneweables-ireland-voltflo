@@ -21,6 +21,14 @@ import { AvatarAssistant } from "@/components/avatar-assistant"
 import { AppHeader } from "@/components/app-header"
 import { setAppNavigation } from "@/lib/navigation-tracker"
 import { ProgressBars } from "@/components/progress-bars"
+import { 
+  AddressTemplate0, 
+  AddressTemplate1, 
+  AddressTemplate2, 
+  AddressTemplate3, 
+  AddressTemplate4, 
+  AddressTemplate5 
+} from "@/components/address-templates"
 
 const ProgressStep = ({ icon: Icon, label, isActive = false }: { icon: any; label: string; isActive?: boolean }) => (
   <div className="flex flex-col items-center">
@@ -2031,263 +2039,43 @@ export default function AddressPage() {
         </>
       ) : (
         <>
+          {/* Template Switching Logic */}
+          {(() => {
+            const templateId = branding.address_template || 0
+            const templateProps = {
+              branding,
+              address,
+              handleAddressChange,
+              handleSubmit: () => {
+                // This will trigger the Google Maps autocomplete when user has selected an address
+                if (selectedLocation) {
+                  setIsMapVisible(true)
+                }
+              },
+              mainInputRef,
+              isLoading,
+              isGeocoding,
+              addressJustUpdated,
+              selectedLocation,
+              error
+            }
 
-
-          {/* New Solar Assessment UI */}
-          <main className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex items-start sm:items-center justify-center p-4 sm:p-4">
-            <div className="max-w-5xl w-full max-h-[95vh] overflow-y-auto mt-4 sm:mt-0">
-              {/* Main content card */}
-              <div className="bg-white rounded-3xl overflow-hidden shadow-2xl shadow-gray-600/5 border border-gray-300/50 backdrop-blur-sm">
-                <div className="grid lg:grid-cols-2 gap-0">
-                  {/* Left side - Form and main CTA */}
-                  <div className="p-4 sm:p-6 lg:p-8 flex flex-col justify-center">
-                    <div className="mb-4 sm:mb-6">
-                      <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-2 sm:mb-3">
-                        Your Home Could Save <span className="text-green-600">80% on Your Electricity Bills</span> With Solar
-                      </h1>
-                      <p className="text-sm sm:text-base text-gray-600 mb-2">Get your personalised solar plan in under 60 seconds</p>
-                    </div>
-
-                    {/* Address form */}
-                    <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
-                      <div>
-                        <label htmlFor="main-address" className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                          Address
-                        </label>
-                        <div className="relative">
-                          <Input
-                            id="main-address"
-                            ref={mainInputRef}
-                            type="text"
-                            placeholder="Enter your Eircode or full address..."
-                            value={address}
-                            onChange={handleAddressChange}
-                            className={`pl-8 h-10 sm:h-12 text-sm rounded-2xl border-2 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 shadow-sm hover:shadow-md transition-all duration-200 ${isGeocoding
-                                ? 'border-blue-300 bg-blue-50'
-                                : addressJustUpdated
-                                  ? 'border-green-300 bg-green-50 ring-2 ring-green-200'
-                                  : 'border-gray-200'
-                              }`}
-                            disabled={isLoading}
-                            required
-                          />
-                          {isGeocoding ? (
-                            <div className="absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 border border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                          ) : (
-                            <MapPin className="absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                          )}
-                        </div>
-                        <div className="flex items-center text-xs text-gray-500 mt-1">
-                          <span>Eircode preferred for best results</span>
-                        </div>
-                      </div>
-
-                      <Button
-                        type="submit"
-                        onClick={() => {
-                          // This will trigger the Google Maps autocomplete when user has selected an address
-                          if (selectedLocation) {
-                            setIsMapVisible(true)
-                          }
-                        }}
-                        className="w-full h-10 sm:h-12 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm sm:text-base rounded-2xl transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/25 hover:-translate-y-0.5 shadow-lg"
-                        disabled={isLoading}
-                      >
-                        Get My Free Assessment →
-                      </Button>
-                    </form>
-
-                    {/* Include PDF info */}
-                    <div className="text-center mt-2">
-                      <p className="text-xs sm:text-sm text-gray-600">
-                        Includes a personalised solar plan + savings report (PDF)
-                      </p>
-                    </div>
-
-                    {/* Loading and error states */}
-                    {error && (
-                      <div className="rounded-2xl bg-red-50 border border-red-200/50 p-3 text-red-600 mt-3 shadow-sm">
-                        {error}
-                      </div>
-                    )}
-
-                    {isLoading && (
-                      <div className="text-center text-gray-500 mt-2">
-                        Loading maps...
-                      </div>
-                    )}
-
-                    {isGeocoding && (
-                      <div className="text-center text-blue-600 mt-2">
-                        🔍 Validating coordinates for accuracy...
-                      </div>
-                    )}
-
-                    {/* Privacy note */}
-                    <div className="flex items-center justify-center text-xs text-gray-600 mt-2">
-                      <svg className="w-3 h-3 text-green-600 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                      </svg>
-                      <span>100% Private & Secure</span>
-                    </div>
-
-                    {/* Google Reviews - Only show if reviews data exists */}
-                    {branding.reviews && (
-                      <div className="mt-4 mb-3">
-                        <div
-                          onClick={() => branding.reviews?.url && window.open(branding.reviews.url, "_blank")}
-                          className={`flex items-center justify-start space-x-3 bg-white border border-gray-100/50 rounded-2xl p-4 shadow-lg shadow-blue-500/5 hover:shadow-xl hover:shadow-blue-500/10 hover:-translate-y-0.5 transition-all duration-300 backdrop-blur-sm ${branding.reviews.url ? 'cursor-pointer' : ''}`}
-                        >
-                          <Image
-                            src={branding.logo}
-                            alt={branding.name}
-                            width={60}
-                            height={30}
-                            className="h-8 object-contain"
-                          />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1 mb-1 flex-wrap">
-                              <span className="text-sm font-bold text-gray-900 whitespace-nowrap">{branding.reviews.rating}</span>
-                              <div className="flex text-yellow-400 text-xs">
-                                {"★★★★★".split("").map((star, i) => (
-                                  <span key={i}>{star}</span>
-                                ))}
-                              </div>
-                              <span className="text-xs text-gray-600 whitespace-nowrap">({branding.reviews.count} reviews)</span>
-                            </div>
-                            {branding.reviews.warranty && (
-                              <div className="text-xs text-gray-600">{branding.reviews.warranty}</div>
-                            )}
-                          </div>
-                          <Image
-                            src="/google-logo.png"
-                            alt="Google"
-                            width={80}
-                            height={26}
-                            className="h-8 object-contain"
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    {/* SEAI Trust Badge */}
-                    <div className="mb-4">
-                      <div className="flex items-center justify-start space-x-3 bg-white border border-gray-100/50 rounded-2xl p-4 shadow-lg shadow-green-500/5 hover:shadow-xl hover:shadow-green-500/10 hover:-translate-y-0.5 transition-all duration-300 backdrop-blur-sm">
-                        <Image
-                          src="/images/seai-logo.png"
-                          alt="SEAI Registered - Sustainable Energy Authority of Ireland"
-                          width={60}
-                          height={40}
-                          className="h-10 object-contain"
-                        />
-                        <div className="flex-1">
-                          <div className="font-semibold text-sm text-gray-900">SEAI-Registered Installer</div>
-                          <div className="text-xs text-gray-600 mt-0.5">Handles the entire grant process</div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Powered by Voltflo */}
-                    <div className="flex items-center justify-center text-xs text-gray-500 mt-0 -mb-2">
-                      <svg className="w-6 h-6 mr-1.5" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M8 20L16 12L20 16L24 12L32 20L24 28L20 24L16 28L8 20Z" fill="url(#paint0_linear_new)" opacity="0.8"/>
-                        <path d="M12 20L20 12L28 20" stroke="url(#paint1_linear_new)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-                        <path d="M12 20L20 28L28 20" stroke="url(#paint2_linear_new)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-                        <defs>
-                          <linearGradient id="paint0_linear_new" x1="8" y1="12" x2="32" y2="28" gradientUnits="userSpaceOnUse">
-                            <stop stopColor="#FBBF24" stopOpacity="0.6"/>
-                            <stop offset="1" stopColor="#F59E0B" stopOpacity="0.3"/>
-                          </linearGradient>
-                          <linearGradient id="paint1_linear_new" x1="12" y1="12" x2="28" y2="20" gradientUnits="userSpaceOnUse">
-                            <stop stopColor="#F59E0B"/>
-                            <stop offset="1" stopColor="#D97706"/>
-                          </linearGradient>
-                          <linearGradient id="paint2_linear_new" x1="12" y1="20" x2="28" y2="28" gradientUnits="userSpaceOnUse">
-                            <stop stopColor="#FBBF24"/>
-                            <stop offset="1" stopColor="#F59E0B"/>
-                          </linearGradient>
-                        </defs>
-                      </svg>
-                      <span className="font-medium">Powered by Voltflo</span>
-                    </div>
-                  </div>
-
-                  {/* Right side - House image and benefits */}
-                  <div className="hidden lg:flex bg-gradient-to-br from-blue-100 to-green-100 p-4 lg:p-6 flex-col justify-center">
-                    {/* House illustration */}
-                    <div className="mb-6 relative">
-                      <div className="relative overflow-hidden rounded-3xl shadow-2xl shadow-green-500/20 border border-white/30 hover:shadow-green-500/30 transition-all duration-500 hover:-translate-y-1">
-                        <Image
-                          src="/images/modern-solar-house.png"
-                          alt="Modern house with solar panels showing energy savings"
-                          width={300}
-                          height={200}
-                          className="w-full h-auto"
-                        />
-                        {/* Brand logo and name overlay - top left corner */}
-                        <div className="absolute top-3 left-3 bg-gray-800/80 text-white px-3 py-2 rounded-lg text-xs font-medium shadow-lg backdrop-blur-sm border border-gray-600/30 flex items-center space-x-2">
-                          <Image
-                            src={branding.logo}
-                            alt={branding.name}
-                            width={20}
-                            height={20}
-                            className="w-5 h-5 object-contain"
-                          />
-                          <span className="font-semibold">{branding.name}</span>
-                        </div>
-                        <div className="absolute top-3 right-3 bg-green-500 text-white px-3 py-2 rounded-full text-xs font-semibold shadow-lg backdrop-blur-sm border border-green-400/30">
-                          €1,200/year saved
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Benefits */}
-                    <div className="space-y-3">
-                      <div className="flex items-center bg-white/90 backdrop-blur-md rounded-2xl p-4 shadow-lg shadow-green-500/10 border border-white/20 hover:shadow-xl hover:shadow-green-500/15 transition-all duration-300 hover:-translate-y-0.5">
-                        <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
-                          <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
-                          </svg>
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-sm text-gray-900">Lower Your Bills</h3>
-                          <p className="text-xs text-gray-600">Save up to 80% on electricity</p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center bg-white/90 backdrop-blur-md rounded-2xl p-4 shadow-lg shadow-blue-500/10 border border-white/20 hover:shadow-xl hover:shadow-blue-500/15 transition-all duration-300 hover:-translate-y-0.5">
-                        <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
-                          <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
-                          </svg>
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-sm text-gray-900">Carbon Footprint Drop</h3>
-                          <p className="text-xs text-gray-600">Cut emissions with clean energy</p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center bg-white/90 backdrop-blur-md rounded-2xl p-4 shadow-lg shadow-purple-500/10 border border-white/20 hover:shadow-xl hover:shadow-purple-500/15 transition-all duration-300 hover:-translate-y-0.5">
-                        <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
-                          <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
-                          </svg>
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-sm text-gray-900">Higher Home Value</h3>
-                          <p className="text-xs text-gray-600">Solar boosts resale potential</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <p className="text-xs text-gray-600 text-center mt-3 font-medium">
-                      No upfront costs. No hidden fees. Just smart energy.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </main>
+            switch (templateId) {
+              case 1:
+                return <AddressTemplate1 {...templateProps} />
+              case 2:
+                return <AddressTemplate2 {...templateProps} />
+              case 3:
+                return <AddressTemplate3 {...templateProps} />
+              case 4:
+                return <AddressTemplate4 {...templateProps} />
+              case 5:
+                return <AddressTemplate5 {...templateProps} />
+              case 0:
+              default:
+                return <AddressTemplate0 {...templateProps} />
+            }
+          })()}
         </>
       )}
       <AvatarAssistant step={1} pageType="address" />

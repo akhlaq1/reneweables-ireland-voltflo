@@ -236,9 +236,11 @@ export default function ReviewReportLanding() {
         <div className="text-center space-y-2 py-3 sm:py-4 border-t border-blue-100">
           <p className="text-xs sm:text-sm text-gray-600">
             Questions or need help?{" "}
-            <a href="mailto:solarpotential@voltflo.com" className="text-blue-600 hover:text-blue-700 font-medium hover:underline">
-              solarpotential@voltflo.com
-            </a>
+            {branding.email && (
+              <a href={`mailto:${branding.email}`} className="text-blue-600 hover:text-blue-700 font-medium hover:underline">
+              {branding.email}
+              </a>
+            )}
           </p>
           <p className="text-xs text-gray-400">Powered by VoltFlo</p>
         </div>

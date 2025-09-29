@@ -130,6 +130,7 @@ export interface Branding {
   phone: string;
   logo: string; // Path to logo asset
   description?: string; // Company description
+  address_template?: number; // Template ID for address page (0-5, defaults to 0)
   colors: {
     primary: string;
     secondary: string;
@@ -224,6 +225,7 @@ const brands: Record<string, Branding> = {
     phone: '+353 (0)1 298 6140',
     logo: '/renewables.png',
     description: "Big enough to get the job done & small enough to care",
+    address_template: 0, // Default template
     colors: { primary: '#1d4ed8', secondary: '#059669', accent: '#f59e0b' },
     social: {
       instagram: 'https://www.instagram.com/stories/renewablesireland.ie/3725637469225194131/',
@@ -366,7 +368,8 @@ const brands: Record<string, Branding> = {
     emailBranding: {
       company_name: 'Renewables Ireland',
       company_tagline: 'Big enough to get the job done & small enough to care.',
-      support_email: 'info@renewables-ireland.ie',
+      // support_email: 'info@renewables-ireland.ie',
+      support_email: 'akhlaq@voltflo.com',
       phone_number: '+353 (0)1 298 6140',
       phone_number_clean: '+353 (0)1 298 6140',
       website_url: 'https://renewables-ireland.netlify.app',
@@ -391,6 +394,7 @@ const brands: Record<string, Branding> = {
     phone: '+353 (0)1 298 6140',
     logo: '/renewables.png',
     description: "Example configuration using base + incremental pricing",
+    address_template: 1, // Use template 1
     colors: { primary: '#1d4ed8', secondary: '#059669', accent: '#f59e0b' },
     equipment: {
       solarPanels: [
@@ -482,7 +486,7 @@ const brands: Record<string, Branding> = {
     emailBranding: {
       company_name: 'Renewables Ireland',
       company_tagline: 'Big enough to get the job done & small enough to care.',
-      support_email: 'info@renewables-ireland.ie',
+      support_email: 'akhlaq@voltflo.com',
       phone_number: '+353 (0)1 298 6140',
       phone_number_clean: '+353 (0)1 298 6140',
       website_url: 'https://renewables-ireland.netlify.app',
