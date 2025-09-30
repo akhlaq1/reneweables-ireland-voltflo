@@ -373,7 +373,7 @@ const brands: Record<string, Branding> = {
       support_email: 'info@renewables-ireland.ie',
       phone_number: '+353 (0)1 298 6140',
       phone_number_clean: '+353 (0)1 298 6140',
-      website_url: 'https://renewables-ireland.netlify.app',
+      website_url: 'https://renewables-ireland.voltflo.ie',
       backend_url: 'https://staging-installerflow.voltflo.com',
       logo_url: null,
       platform_name: 'Voltflo',
