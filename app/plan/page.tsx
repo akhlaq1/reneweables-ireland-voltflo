@@ -359,7 +359,7 @@ export default function SolarEnergyPlanner() {
     const batteryThroughput = includeBattery ? Math.round((selectedBattery.capacity || 0) * batteryCount * 300) : 0 // 300 cycles/year
     
     // Night rate arbitrage (for EV tariff users)
-    const nightRateArbitrage = includeBattery ? Math.round(Math.min(8, (selectedBattery.capacity || 0) * batteryCount) * 300 * (gridRate - branding.energy.gridRateNight)) : 0
+    const nightRateArbitrage = includeBattery ? Math.round((selectedBattery.capacity || 0) * batteryCount * 300 * (gridRate - branding.energy.gridRateNight)) : 0
     
     // Battery utilization percentage 
     const batteryUtilization = includeBattery && batteryThroughput > 0 ? 
@@ -1688,7 +1688,7 @@ export default function SolarEnergyPlanner() {
                                 <p className="text-xs text-gray-600">
                                   {batteryCount}x {selectedBattery.capacity || 0}kWh = {batteryCount * (selectedBattery.capacity || 0)}kWh total • {selectedBattery.reason}
                                 </p>
-                                <a href={selectedBattery.datasheet || "/pdf/sig_battery.pdf"} download="SigEnergy_Battery_8kWh_Spec_Sheet.pdf">
+                                <a href={selectedBattery.datasheet || "/pdf/sig_battery.pdf"} download={`SigEnergy_Battery_${selectedBattery.capacity || 0}kWh_Spec_Sheet.pdf`}>
                                   <Button variant="outline" size="sm" className="h-6 text-xs bg-transparent">
                                     <Download className="w-3 h-3 mr-1" />
                                     Download Spec Sheet
@@ -3393,7 +3393,7 @@ export default function SolarEnergyPlanner() {
                           <div className="relative group">
                             <Info className="w-4 h-4 text-gray-400 cursor-help" />
                             <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-white text-gray-800 text-xs rounded-lg shadow-lg border opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 w-48">
-                              20% of annual generation sold at €0.20/kWh.
+                              100% of annual generation sold at €0.20/kWh.
                               <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-white"></div>
                             </div>
                           </div>
@@ -3407,17 +3407,17 @@ export default function SolarEnergyPlanner() {
                           <div className="relative group">
                             <Info className="w-4 h-4 text-gray-400 cursor-help" />
                             <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-white text-gray-800 text-xs rounded-lg shadow-lg border opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 w-48">
-                              {batteryCount === 1 ? '8kW' : '16kW'} × 90% efficiency × 315 cycles × €0.27 savings.
+                              {batteryCount * (selectedBattery.capacity || 0)}kW × 90% efficiency × 315 cycles × €0.27 savings.
                               <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-white"></div>
                             </div>
                           </div>
                         </div>
-                        <span className="text-green-600 font-medium">€{Math.round((batteryCount === 1 ? 8 : 16) * 0.9 * 315 * 0.27)}</span>
+                        <span className="text-green-600 font-medium">€{Math.round(batteryCount * (selectedBattery.capacity || 0) * 0.9 * 315 * 0.27)}</span>
                       </div>
 
                       <div className="border-t pt-3 flex justify-between font-bold">
                         <span>Total Benefit</span>
-                        <span className="text-green-600 text-lg">€{Math.round(annualPVGeneration * 1.0 * exportRate + (batteryCount === 1 ? 8 : 16) * 0.9 * 315 * 0.27)}</span>
+                        <span className="text-green-600 text-lg">€{Math.round(annualPVGeneration * 1.0 * exportRate + batteryCount * (selectedBattery.capacity || 0) * 0.9 * 315 * 0.27)}</span>
                       </div>
                     </div>
 
@@ -3496,7 +3496,7 @@ export default function SolarEnergyPlanner() {
 
                   {batteryCount === 2 && (
                     <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                      <span className="text-amber-600">⚠️</span>
+                      <span className="text-amber-600">💡</span>
                       <span className="text-sm text-amber-700">
                         Adding a second battery extends your backup time and maximizes savings under time-of-use tariffs.
                       </span>
@@ -4190,7 +4190,7 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                     extra={`${batteryCount}x ${selectedBattery.capacity || 0} kWh (${batteryCount * (selectedBattery.capacity || 0)} kWh total) • ${selectedBattery.reason}`}
                     imagePath={selectedBattery.image || `/images/batteries/${selectedBattery.id}.png`}
                     downloadUrl={selectedBattery.datasheet || "/pdf/sig_battery.pdf"}
-                    downloadName="SigEnergy_Battery_8kWh_Spec_Sheet.pdf"
+                    downloadName={`SigEnergy_Battery_${selectedBattery.capacity || 0}kWh_Spec_Sheet.pdf`}
                   />
                 )}
               </CollapsibleContent>
@@ -4432,11 +4432,11 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                           />
                           <MobileBreakdownRow
                             title="Battery Savings (Arbitrage)"
-                            detail={`8 kWh × (€${gridRate.toFixed(2)} − €0.08) × 365`}
-                            value={`€${Math.round(8 * (gridRate - 0.08) * 365)}`}
+                            detail={`${batteryCount * (selectedBattery.capacity || 0)} kWh × (€${gridRate.toFixed(2)} − €0.08) × 365`}
+                            value={`€${Math.round(batteryCount * (selectedBattery.capacity || 0) * (gridRate - 0.08) * 365)}`}
                             color="purple"
                           />
-                          <MobileTotalRow value={`€${Math.round(annualPVGeneration * 1.0 * 0.2) + Math.round(8 * (gridRate - 0.08) * 365)}`} />
+                          <MobileTotalRow value={`€${Math.round(annualPVGeneration * 1.0 * 0.2) + Math.round(batteryCount * (selectedBattery.capacity || 0) * (gridRate - 0.08) * 365)}`} />
                         </div>
                       </div>
                     </TabsContent>
@@ -5713,7 +5713,7 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                 </div>
 
                 <div className="mt-3 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
                       <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
                         <span className="text-xs font-bold text-blue-600">⚡</span>
@@ -5725,29 +5725,29 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                       <div className="flex bg-white rounded-lg p-1 shadow-sm border">
                         <button
                           onClick={() => setBatteryCount(1)}
-                          className={`px-3 py-1.5 text-sm rounded-md font-medium transition-all duration-200 ${
+                          className={`px-2 sm:px-3 py-1.5 text-xs sm:text-sm rounded-md font-medium transition-all duration-200 ${
                             batteryCount === 1 
                               ? "bg-blue-500 text-white shadow-sm" 
                               : "text-gray-600 hover:text-gray-800 hover:bg-gray-50"
                           }`}
                         >
-                          1 Battery
+                          1<span className="hidden sm:inline"> Battery</span>
                         </button>
                         <button
                           onClick={() => setBatteryCount(2)}
-                          className={`px-3 py-1.5 text-sm rounded-md font-medium transition-all duration-200 ${
+                          className={`px-2 sm:px-3 py-1.5 text-xs sm:text-sm rounded-md font-medium transition-all duration-200 ${
                             batteryCount === 2 
                               ? "bg-blue-500 text-white shadow-sm" 
                               : "text-gray-600 hover:text-gray-800 hover:bg-gray-50"
                           }`}
                         >
-                          2 Batteries
+                          2<span className="hidden sm:inline"> Batteries</span>
                         </button>
                       </div>
                     </div>
                   </div>
                   <div className="mt-2 flex items-center justify-between text-xs text-gray-600">
-                    <span>Capacity: {batteryCount === 1 ? '8kWh' : '16kWh'} total</span>
+                    <span>Capacity: {batteryCount * (selectedBattery.capacity || 0)}kWh total</span>
                     <span>{batteryCount === 1 ? '1 day' : '2 days'} backup power</span>
                   </div>
                 </div>
@@ -5839,7 +5839,7 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                         <div className="relative group">
                           <Info className="w-3 h-3 text-gray-400 cursor-help" />
                           <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-white text-gray-800 text-xs rounded-lg shadow-lg border opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 w-40">
-                            20% of annual generation sold at €0.20/kWh.
+                            100% of annual generation sold at €0.20/kWh.
                             <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-white"></div>
                           </div>
                         </div>
@@ -5853,17 +5853,17 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                         <div className="relative group">
                           <Info className="w-3 h-3 text-gray-400 cursor-help" />
                           <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-white text-gray-800 text-xs rounded-lg shadow-lg border opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 w-40">
-                            {batteryCount === 1 ? '8kW' : '16kW'} × 90% efficiency × 315 cycles × €0.27 savings.
+                            {batteryCount * (selectedBattery.capacity || 0)}kW × 90% efficiency × 315 cycles × €0.27 savings.
                             <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-white"></div>
                           </div>
                         </div>
                       </div>
-                      <span className="text-green-600 font-medium">€{Math.round((batteryCount === 1 ? 8 : 16) * 0.9 * 315 * 0.27)}</span>
+                      <span className="text-green-600 font-medium">€{Math.round(batteryCount * (selectedBattery.capacity || 0) * 0.9 * 315 * 0.27)}</span>
                     </div>
 
                     <div className="border-t pt-2 flex justify-between font-bold text-sm">
                       <span>Total Benefit</span>
-                      <span className="text-green-600">€{Math.round(annualPVGeneration * 1.0 * 0.2 + (batteryCount === 1 ? 8 : 16) * 0.9 * 315 * 0.27)}</span>
+                      <span className="text-green-600">€{Math.round(annualPVGeneration * 1.0 * 0.2 + batteryCount * (selectedBattery.capacity || 0) * 0.9 * 315 * 0.27)}</span>
                     </div>
                   </div>
 
@@ -5876,9 +5876,9 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                       <div className="space-y-1">
                         <div>• Annual generation: {annualPVGeneration} kWh</div>
                         <div>• Solar export (100%): {Math.round(annualPVGeneration * 1.0)} kWh × €0.20 = €{Math.round(annualPVGeneration * 1.0 * 0.2)}</div>
-                        <div>• Battery capacity: {batteryCount === 1 ? '8kW' : '16kW'} × 90% efficiency = {Math.round((batteryCount === 1 ? 8 : 16) * 0.9)}kW usable</div>
-                        <div>• Night charge cycles: 315 cycles/year × €0.27 savings = €{Math.round((batteryCount === 1 ? 8 : 16) * 0.9 * 315 * 0.27)}</div>
-                        <div className="font-medium pt-1 border-t">Total: €{Math.round(annualPVGeneration * 1.0 * 0.2 + (batteryCount === 1 ? 8 : 16) * 0.9 * 315 * 0.27)}</div>
+                        <div>• Battery capacity: {batteryCount * (selectedBattery.capacity || 0)}kW × 90% efficiency = {Math.round(batteryCount * (selectedBattery.capacity || 0) * 0.9)}kW usable</div>
+                        <div>• Night charge cycles: 315 cycles/year × €0.27 savings = €{Math.round(batteryCount * (selectedBattery.capacity || 0) * 0.9 * 315 * 0.27)}</div>
+                        <div className="font-medium pt-1 border-t">Total: €{Math.round(annualPVGeneration * 1.0 * 0.2 + batteryCount * (selectedBattery.capacity || 0) * 0.9 * 315 * 0.27)}</div>
                       </div>
                     </CollapsibleContent>
                   </Collapsible>
@@ -5919,14 +5919,14 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                     </div>
                   </div>
                   <div className="mt-2 flex items-center justify-between text-xs text-gray-600">
-                    <span>Night cycles: {Math.round((batteryCount === 1 ? 8 : 16) * 0.9 * 315)} kWh/year</span>
-                    <span>Arbitrage: €{Math.round((batteryCount === 1 ? 8 : 16) * 0.9 * 315 * 0.27)}/year</span>
+                    <span>Night cycles: {Math.round(batteryCount * (selectedBattery.capacity || 0) * 0.9 * 315)} kWh/year</span>
+                    <span>Arbitrage: €{Math.round(batteryCount * (selectedBattery.capacity || 0) * 0.9 * 315 * 0.27)}/year</span>
                   </div>
                 </div>
 
                 {batteryCount === 2 && (
                   <div className="flex items-center gap-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
-                    <span className="text-amber-600 text-sm">⚠️</span>
+                    <span className="text-amber-600 text-sm">💡</span>
                     <span className="text-xs text-amber-700">
                       Adding a second battery extends your backup time and maximizes savings under time-of-use tariffs.
                     </span>
