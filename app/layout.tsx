@@ -6,17 +6,18 @@ import { getBranding } from '@/lib/branding'
 import { getGTMScript } from '@/lib/gtm'
 import GTMNoscript from '@/components/gtm-noscript'
 import Script from 'next/script'
+import { BrandingProvider } from '@/contexts/branding-context'
 
-const branding = getBranding()
+// Get branding for metadata (server-side)
+const branding = await getBranding()
 
 export const metadata: Metadata = {
   title: branding.name,
   description: `Created by Akhlaq Ahmed`,
   generator: "Voltflo",
-
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
@@ -40,9 +41,11 @@ export default function RootLayout({
         <GTMNoscript />
         
         <Suspense fallback={<div>Loading...</div>}>
-          <PostHogProvider>
-            {children}
-          </PostHogProvider>
+          <BrandingProvider >
+            <PostHogProvider>
+              {children}
+            </PostHogProvider>
+          </BrandingProvider>
         </Suspense>
       </body>
     </html>

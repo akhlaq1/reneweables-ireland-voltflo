@@ -2,6 +2,8 @@
 // All brand-related data (logos, contact, equipment catalogs, pricing formulas) lives here.
 // Extend or add new brands by updating the brands map below.
 
+import companyService from '../app/api/company';
+
 export interface EquipmentOption {
   id: string;
   name: string;
@@ -507,21 +509,77 @@ const brands: Record<string, Branding> = {
 };
 
 export function resolveBrandSlugFromHostname(host?: string): string {
-  return 'renewables';
+  return 'jr';
 }
 
-export function getBranding(hostname?: string): Branding {
+// create a async api function
+export async function getBranding(hostname?: string): Promise<Branding> {
   const slug = resolveBrandSlugFromHostname(hostname || (typeof window !== 'undefined' ? window.location.hostname : undefined));
-  return brands[slug] || brands.renewables;
+  return companyService.getCompanyDatabySubDomain({
+    "sub_domain": slug,
+    "required_fields": ["name", "logo","slug"]
+  }).then((res) => {
+    return {
+      ...res.data.data
+    };
+   
+  }).catch((error) => {
+    console.error('Error fetching branding:', error);
+    return brands[slug] || brands.renewables;
+  });
+  
 }
 
-export function listBrands(): Branding[] { return Object.values(brands); }
+// export function getBranding1(hostname?: string): Branding {
+//   const slug = resolveBrandSlugFromHostname(hostname || (typeof window !== 'undefined' ? window.location.hostname : undefined));
+//   return brands[slug] || brands.renewables;
+  
+// }
+
+// export function listBrands(): Branding[] { return Object.values(brands); }
 
 // Convenience helpers
-export function getPrimaryColor() { return getBranding().colors.primary }
-export function getSecondaryColor() { return getBranding().colors.secondary }
-export function getAccentColor() { return getBranding().colors.accent }
-export function getSupportEmail() { return getBranding().email }
-export function getEmailBranding(hostname?: string): EmailBranding { 
-  return getBranding(hostname).emailBranding 
-}
+// export function getPrimaryColor() { return getBranding().colors.primary }
+// export function getSecondaryColor() { return getBranding().colors.secondary }
+// export function getAccentColor() { return getBranding().colors.accent }
+// export function getSupportEmail() { return getBranding().email }
+
+// export function getEmailBranding1(hostname?: string): EmailBranding { 
+//   return getBranding(hostname).emailBranding 
+// }
+
+
+// export async function getEmailBranding(hostname?: string): Promise<EmailBranding> {
+//   try {
+//     const currentHostname = resolveBrandSlugFromHostname(hostname || (typeof window !== 'undefined' ? window.location.hostname : undefined));
+    
+//     console.log("Fetching email branding for hostname:", currentHostname);
+
+//     const response = await companyService.getCompanyDatabySubDomain({
+//       "sub_domain": currentHostname,
+//       "required_fields": ["emailBranding"]
+//     });
+    
+//     console.log("API response:", response);
+    
+//     if (response.status !== 200) {
+//       throw new Error(`Failed to fetch email branding: ${response.statusText}`);
+//     }
+    
+//     // Extract email branding from the response
+//     const emailBranding = response.data.emailBranding;
+//     console.log("Extracted email branding:", emailBranding);
+    
+//     if (!emailBranding) {
+//       throw new Error('Email branding data not found in response');
+//     }
+    
+//     return emailBranding;
+//   } catch (error) {
+//     console.error('Error fetching email branding from API:', error);
+//     // Fallback to static branding on error
+//     const fallbackBranding = getBranding(hostname).emailBranding;
+//     console.log("Using fallback email branding:", fallbackBranding);
+//     return fallbackBranding;
+//   }
+// }

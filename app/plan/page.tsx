@@ -57,15 +57,15 @@ import api from "@/app/api/api"
 import { AppHeader } from "@/components/app-header"
 import { ProgressBars } from "@/components/progress-bars"
 import { setAppNavigation } from "@/lib/navigation-tracker"
-import { getEmailBranding, getBranding, calculateSystemBaseCost } from "@/lib/branding"
+import { calculateSystemBaseCost, resolveBrandSlugFromHostname, Branding, EquipmentOption } from "@/lib/branding"
+import companyService from "../api/company"
 
 // ProgressStep component for navigation
 const ProgressStep = ({ icon: Icon, label, isActive = false }: { icon: any; label: string; isActive?: boolean }) => (
   <div className="flex flex-col items-center">
     <div
-      className={`w-6 h-6 md:w-7 md:h-7 rounded-full flex items-center justify-center mb-1 ${
-        isActive ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-500"
-      }`}
+      className={`w-6 h-6 md:w-7 md:h-7 rounded-full flex items-center justify-center mb-1 ${isActive ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-500"
+        }`}
     >
       {isActive ? <CheckCircle className="w-3 h-3 md:w-3.5 md:h-3.5" /> : <Icon className="w-3 h-3 md:w-3.5 md:h-3.5" />}
     </div>
@@ -97,20 +97,32 @@ const energyUsagePatterns = [
 export default function SolarEnergyPlanner() {
   const router = useRouter()
   const isMobile = useIsMobile()
-  const branding = getBranding()
-  
+  // const branding = getBranding()
+  const [branding, setBranding] = useState<Branding | null>(null)
+
   // Equipment options from branding
-  const solarPanelOptions = branding.equipment.solarPanels
-  const inverterOptions = branding.equipment.inverters
-  const batteryOptions = branding.equipment.batteries
-  const evChargerOptions = branding.equipment.evChargers
+    // const solarPanelOptions = branding.equipment.solarPanels
+    // const inverterOptions = branding.equipment.inverters
+    // const batteryOptions = branding.equipment.batteries
+    // const evChargerOptions = branding.equipment.evChargers
+  const [solarPanelOptions, setSolarPanelOptions] = useState<EquipmentOption[]>([])
+  const [inverterOptions, setInverterOptions] = useState<EquipmentOption[]>([])
+  const [batteryOptions, setBatteryOptions] = useState<EquipmentOption[]>([])
+  const [evChargerOptions, setEVChargerOptions] = useState<EquipmentOption[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [basePanelCount, setBasePanelCount] = useState(15)
   const [maxPanels, setMaxPanels] = useState(22) // Default to 22, will be loaded from localStorage
-  const [selectedSolarPanel, setSelectedSolarPanel] = useState(solarPanelOptions[0])
-  const [selectedInverter, setSelectedInverter] = useState(inverterOptions[0])
-  const [selectedBattery, setSelectedBattery] = useState(batteryOptions[0])
-  const [selectedEVCharger, setSelectedEVCharger] = useState(evChargerOptions[0])
+
+  const [selectedSolarPanel, setSelectedSolarPanel] = useState<EquipmentOption | null>(null)
+  const [selectedInverter, setSelectedInverter] = useState<EquipmentOption | null>(null)
+  const [selectedBattery, setSelectedBattery] = useState<EquipmentOption | null>(null)
+  const [selectedEVCharger, setSelectedEVCharger] = useState<EquipmentOption | null>(null)
+
+  // const [selectedSolarPanel, setSelectedSolarPanel] = useState(solarPanelOptions[0])
+  // const [selectedInverter, setSelectedInverter] = useState(inverterOptions[0])
+  // const [selectedBattery, setSelectedBattery] = useState(batteryOptions[0])
+  // const [selectedEVCharger, setSelectedEVCharger] = useState(evChargerOptions[0])
+  
   const [includeBattery, setIncludeBattery] = useState(false)
   const [batteryCount, setBatteryCount] = useState(1)
   const [includeEVCharger, setIncludeEVCharger] = useState(false)
@@ -132,7 +144,7 @@ export default function SolarEnergyPlanner() {
   const [customAnnualBill, setCustomAnnualBill] = useState(2640)
   const [billInputMode, setBillInputMode] = useState<"annual" | "monthly">("annual")
   const [perPanelGeneration, setPerPanelGeneration] = useState(410) // Default fallback value
-  
+
   // Enhanced Savings Modal states
   const [showSavingsModal, setShowSavingsModal] = useState(false)
   const [savingsModalTab, setSavingsModalTab] = useState("solarOnly")
@@ -140,13 +152,70 @@ export default function SolarEnergyPlanner() {
   const [showEnergyProfileModal, setShowEnergyProfileModal] = useState(false)
   const [energyProfile, setEnergyProfile] = useState("family")
   const [tempMonthlyBill, setTempMonthlyBill] = useState<string>("220")
-  
+
   // SEAI Grant eligibility state
   const [isEligibleForSEAIGrant, setIsEligibleForSEAIGrant] = useState(true) // Default to true for backward compatibility
+
+  useEffect(() => {
+    getCompanyData()
+  }, [])
+
+  const getCompanyData = async () => {
+    const payload={
+      "sub_domain": "jr",
+      "required_fields": ["equipment", "pricing", "energy", "email"]
+    }
+    await companyService.getCompanyDatabySubDomain(payload).then((res) => {
+      const response= res?.data?.data
+      setBranding({
+        ...branding as Branding, 
+        slug: res?.data?.data?.slug,
+        name: res?.data?.data?.name,
+        website: res?.data?.data?.website,
+        email: res?.data?.data?.email,
+        phone: res?.data?.data?.phone,
+        description: res?.data?.data?.description,
+        address_template: res?.data?.data?.address_template,
+        logo: res?.data?.data?.logo,
+        colors: {
+          primary: res?.data?.data?.colors?.primary,
+          secondary: res?.data?.data?.colors?.secondary,
+          accent: res?.data?.data?.colors?.accent
+        },
+        equipment: response.equipment,
+        pricing: response.pricing,
+        energy: response.energy,
+      })
+
+      setSolarPanelOptions(response.equipment.solarPanels)
+      setInverterOptions(response.equipment.inverters)
+      setBatteryOptions(response.equipment.batteries)
+      setEVChargerOptions(response.equipment.evChargers)
+
+      if (response.equipment.solarPanels.length > 0) {
+        setSelectedSolarPanel(response.equipment.solarPanels[0])
+        
+      }
+      if (response.equipment.inverters.length > 0) {
+        setSelectedInverter(response.equipment.inverters[0])
+      }
+      if (response.equipment.batteries.length > 0) {
+        setSelectedBattery(response.equipment.batteries[0])
+      }
+      if (response.equipment.evChargers.length > 0) {
+        setSelectedEVCharger(response.equipment.evChargers[0])
+      }
+
+    })
+    
+  }
+ 
+
 
   // Sync modal tab with main battery toggle - prefer Battery Arbitrage when battery is on
   useEffect(() => {
     setSavingsModalTab(includeBattery ? "nightCharge" : "solarOnly")
+
   }, [includeBattery])
 
   // Function to save new bill amount
@@ -154,12 +223,12 @@ export default function SolarEnergyPlanner() {
     console.log('handleSaveBillAmount called with tempMonthlyBill:', tempMonthlyBill)
     const monthlyAmount = parseFloat(tempMonthlyBill) || 0
     const newAnnualBill = monthlyAmount * 12
-    
+
     // Update localStorage - preserve existing personalise_answers and only update billAmount
     const storedPersonaliseAnswers = localStorage.getItem('personalise_answers')
     console.log('Current localStorage personalise_answers:', storedPersonaliseAnswers)
     let personaliseData: any = {}
-    
+
     if (storedPersonaliseAnswers) {
       try {
         personaliseData = JSON.parse(storedPersonaliseAnswers)
@@ -169,32 +238,32 @@ export default function SolarEnergyPlanner() {
         personaliseData = {}
       }
     }
-    
+
     // Update only the billAmount property
     personaliseData.billAmount = tempMonthlyBill
     console.log('Updated personaliseData with new billAmount:', personaliseData)
     localStorage.setItem('personalise_answers', JSON.stringify(personaliseData))
-    
+
     // Verify the save
     const verifyData = localStorage.getItem('personalise_answers')
     console.log('Verified localStorage after save:', verifyData)
-    
+
     // Update state variables
     console.log('Updating annualBillAmount from', annualBillAmount, 'to', newAnnualBill)
     setAnnualBillAmount(newAnnualBill)
     setCustomAnnualBill(newAnnualBill)
-    
+
     // Force a small delay to ensure state has updated
     setTimeout(() => {
       console.log('Forced update - annualBillAmount should now be:', newAnnualBill)
       console.log('Monthly bill should now be:', Math.round(newAnnualBill / 12))
     }, 100)
-    
+
     console.log('State updated - new calculations should trigger')
-    
+
     // Close the edit modal
     setShowEnergyProfileModal(false)
-    
+
     // Determine energy profile based on monthly bill
     if (monthlyAmount <= 150) {
       setEnergyProfile("small")
@@ -204,7 +273,7 @@ export default function SolarEnergyPlanner() {
       setEnergyProfile("big")
     }
   }
-  
+
   // Save Plan Dialog states
   const [showSavePlanDialog, setShowSavePlanDialog] = useState(false)
   const [showSuccessModal, setShowSuccessModal] = useState(false)
@@ -228,13 +297,13 @@ export default function SolarEnergyPlanner() {
   // Calculate additional panels needed (for display and savings calculation only)
   const evPanelsNeeded = includeEVCharger ? 3 : 0
   const heatPumpPanelsNeeded = includeHeatPump ? 3 : 0
-  
+
   const totalPanelCount = basePanelCount
 
   const recommendedPanelCount = businessProposal?.system_size ? Math.round(businessProposal.system_size / parseFloat(process.env.NEXT_PUBLIC_PANEL_WATTAGE || '0.44')) : 12
 
   // Calculations - Make system cost dynamic based on BASE panel count only (EV/heat pump don't affect price)
-  const basePanelThreshold = branding.pricing.basePanelThreshold
+  // const basePanelThreshold = branding?.pricing.basePanelThreshold
 
   // Calculate actual annual PV generation dynamically based on current panel count
   // This scales with panel count changes to update savings correctly
@@ -244,18 +313,18 @@ export default function SolarEnergyPlanner() {
   }, [totalPanelCount, perPanelGeneration]);
 
   // Grid and export rates for savings calculation
-  const gridRate = branding.energy.gridRateDay
-  const exportRate = branding.energy.exportRate
+  const gridRate = branding?.energy.gridRateDay
+  const exportRate = branding?.energy.exportRate
 
   // Base solar-only savings (30% self-use / 70% export) retained for breakdown displays
   const solarAnnualSavings = useMemo(() => {
     const selfUseFraction = 0.30
     const exportFraction = 0.70
-    return Math.round(annualPVGeneration * (selfUseFraction * gridRate + exportFraction * exportRate)) || 0
+    return Math.round(annualPVGeneration * (selfUseFraction * (gridRate || 0) + exportFraction * (exportRate || 0))) || 0
   }, [annualPVGeneration])
 
-  console.log("Solar Annual Savings:", solarAnnualSavings)
-  console.log("Annual PV Generation:", annualPVGeneration)
+  // console.log("Solar Annual Savings:", solarAnnualSavings)
+  // console.log("Annual PV Generation:", annualPVGeneration)
 
   // Determine scenario self-use/export fractions based on battery count
   const scenarioFractions = useMemo(() => {
@@ -268,37 +337,37 @@ export default function SolarEnergyPlanner() {
   const totalAnnualSavings = useMemo(() => {
     // If battery is enabled, use the Solar + Battery (Arbitrage) calculation
     if (includeBattery) {
-      const solarExportIncome = annualPVGeneration * 1.0 * exportRate // 100% export at €0.20/kWh for arbitrage mode
-      const batteryCapacity = (selectedBattery.capacity || 0) * batteryCount // Total kWh capacity
+      const solarExportIncome = annualPVGeneration * 1.0 * (exportRate || 0) // 100% export at €0.20/kWh for arbitrage mode
+      const batteryCapacity = (selectedBattery?.capacity || 0) * batteryCount // Total kWh capacity
       const batteryArbitrageSavings = batteryCapacity * 0.9 * 315 * 0.27 // 90% efficiency, 315 cycles, €0.27 savings per kWh
       return Math.round(solarExportIncome + batteryArbitrageSavings) || 0
     }
-    
+
     // For solar only, use the standard calculation
     const { selfUse, export: exportFrac } = scenarioFractions
-    return Math.round(annualPVGeneration * (selfUse * gridRate + exportFrac * exportRate)) || 0
-  }, [annualPVGeneration, scenarioFractions, gridRate, exportRate, includeBattery, batteryCount, selectedBattery.capacity])
+    return Math.round(annualPVGeneration * (selfUse * (gridRate || 0) + exportFrac * (exportRate || 0))) || 0
+  }, [annualPVGeneration, scenarioFractions, gridRate, exportRate, includeBattery, batteryCount, selectedBattery?.capacity])
 
   // Calculate Battery Night Charge Savings specifically for display in Battery Storage card
   const batteryNightChargeSavings = useMemo(() => {
     if (!includeBattery) return 0
-    const batteryCapacity = (selectedBattery.capacity || 0) * batteryCount // Total kWh capacity
+    const batteryCapacity = (selectedBattery?.capacity || 0) * batteryCount // Total kWh capacity
     const chargeEfficiency = 0.9 // 90% efficiency
     const nightRateDays = 315 // days per year when night rate is cheaper
     const nightRateSavings = 0.27 // €/kWh savings from night rate vs day rate
     return Math.round(batteryCapacity * chargeEfficiency * nightRateDays * nightRateSavings)
-  }, [includeBattery, batteryCount, selectedBattery.capacity])
+  }, [includeBattery, batteryCount, selectedBattery?.capacity])
 
   // Additional savings attributable to batteries (difference vs solar-only base)
   const batteryAnnualSavings = useMemo(() => {
     if (!includeBattery) return 0
-    
+
     // If night charge mode is selected, use the night charge calculation
     if (savingsModalTab === "nightCharge") {
-      const solarExportIncome = annualPVGeneration * 1.0 * exportRate // 100% export for arbitrage mode
+      const solarExportIncome = annualPVGeneration * 1.0 * (exportRate || 0) // 100% export for arbitrage mode
       return Math.round(solarExportIncome + batteryNightChargeSavings)
     }
-    
+
     // For Battery Storage card display, always include night charge savings
     // This ensures the card shows the full potential of battery savings
     const hybridSavings = Math.max(0, totalAnnualSavings - solarAnnualSavings)
@@ -306,14 +375,16 @@ export default function SolarEnergyPlanner() {
   }, [includeBattery, totalAnnualSavings, solarAnnualSavings, savingsModalTab, annualPVGeneration, batteryCount, batteryNightChargeSavings])
 
   // Calculate system cost using the centralized function that supports both pricing methods
-  const systemBaseCost = calculateSystemBaseCost(basePanelCount, selectedSolarPanel, selectedInverter, branding.pricing)
-  const batteryCost = includeBattery ? (selectedBattery.price || 0) * batteryCount : 0
+  const systemBaseCost = selectedSolarPanel && selectedInverter && branding?.pricing 
+    ? calculateSystemBaseCost(basePanelCount, selectedSolarPanel, selectedInverter, branding.pricing)
+    : 0
+  const batteryCost = includeBattery ? (selectedBattery?.price || 0) * batteryCount : 0  
   // IMPORTANT: use full EV charger price here (not netPrice) so the grant is applied only once
-  const evChargerCost = includeEVChargerEquipment ? (selectedEVCharger.price || 0) : 0
+  const evChargerCost = includeEVChargerEquipment ? (selectedEVCharger?.price || 0) : 0
 
   const totalSystemCost = systemBaseCost + batteryCost + evChargerCost
-  const seaiGrant = isEligibleForSEAIGrant ? branding.pricing.seaiGrant : 0
-  const evChargerGrant = includeEVChargerEquipment ? (selectedEVCharger.grant || 0) : 0
+  const seaiGrant = isEligibleForSEAIGrant ? branding?.pricing?.seaiGrant || 0 : 0
+  const evChargerGrant = includeEVChargerEquipment ? (selectedEVCharger?.grant || 0) : 0
   const totalGrants = seaiGrant + evChargerGrant
   const finalPrice = totalSystemCost - totalGrants
 
@@ -330,6 +401,7 @@ export default function SolarEnergyPlanner() {
 
   // Enhanced Modal Calculations
   const dailyUsageKwh = useMemo(() => {
+    if (!gridRate) return 0
     const annualUsage = annualBillAmount / gridRate
     const result = Math.round(annualUsage / 365)
     console.log('dailyUsageKwh recalculated:', result, 'from annualBillAmount:', annualBillAmount)
@@ -346,27 +418,27 @@ export default function SolarEnergyPlanner() {
   }, [monthlyBill])
 
   const scenarios = useMemo(() => {
-    const solarOnlyDirectSavings = Math.round(annualPVGeneration * 0.3 * gridRate)
-    const solarOnlyExportIncome = Math.round(annualPVGeneration * 0.7 * exportRate)
+    const solarOnlyDirectSavings = Math.round(annualPVGeneration * 0.3 * (gridRate || 0))
+    const solarOnlyExportIncome = Math.round(annualPVGeneration * 0.7 * (exportRate || 0))
     const solarOnlyTotal = solarOnlyDirectSavings + solarOnlyExportIncome
 
     const { selfUse, export: exportFrac } = scenarioFractions
-    const hybridDirectSavings = Math.round(annualPVGeneration * selfUse * gridRate)
-    const hybridExportIncome = Math.round(annualPVGeneration * exportFrac * exportRate)
+    const hybridDirectSavings = Math.round(annualPVGeneration * selfUse * (gridRate || 0))
+    const hybridExportIncome = Math.round(annualPVGeneration * exportFrac * (exportRate || 0))
     const hybridTotal = hybridDirectSavings + hybridExportIncome
 
     // Battery throughput calculation (kWh/year through battery)
-    const batteryThroughput = includeBattery ? Math.round((selectedBattery.capacity || 0) * batteryCount * 300) : 0 // 300 cycles/year
-    
+    const batteryThroughput = includeBattery ? Math.round((selectedBattery?.capacity || 0) * batteryCount * 300) : 0 // 300 cycles/year
+
     // Night rate arbitrage (for EV tariff users)
-    const nightRateArbitrage = includeBattery ? Math.round((selectedBattery.capacity || 0) * batteryCount * 300 * (gridRate - branding.energy.gridRateNight)) : 0
-    
+    const nightRateArbitrage = includeBattery ? Math.round((selectedBattery?.capacity || 0) * batteryCount * 300 * ((gridRate || 0) - (branding?.energy?.gridRateNight || 0))) : 0
+
     // Battery utilization percentage 
-    const batteryUtilization = includeBattery && batteryThroughput > 0 ? 
-      Math.round((batteryThroughput / ((selectedBattery.capacity || 0) * batteryCount * 365)) * 100) : 0
+    const batteryUtilization = includeBattery && batteryThroughput > 0 ?
+      Math.round((batteryThroughput / ((selectedBattery?.capacity || 0) * batteryCount * 365)) * 100) : 0
 
     // Energy independence calculation
-    const annualUsageKwh = annualBillAmount / gridRate
+    const annualUsageKwh = annualBillAmount / (gridRate || 1)
     const solarSelfUse = annualPVGeneration * selfUse
     const energyIndependence = Math.min(95, Math.round((solarSelfUse / annualUsageKwh) * 100))
     console.log('scenarios recalculated - energyIndependence:', energyIndependence, 'from annualBillAmount:', annualBillAmount)
@@ -423,7 +495,7 @@ export default function SolarEnergyPlanner() {
         bgColor: "bg-blue-50",
         borderColor: "border-blue-200",
       }
-    } 
+    }
     // else if (basePanelCount < recommendedPanelCount) {
     //   const missingPanels = recommendedPanelCount - basePanelCount
     //   const coveragePercent = Math.round((basePanelCount / recommendedPanelCount) * 100)
@@ -449,7 +521,7 @@ export default function SolarEnergyPlanner() {
     if (features.length === 0) {
       return `✓ ${recommendedPanelCount} panels recommended for your home size`
     }
-    
+
     return `✓ ${recommendedPanelCount} panels recommended + ${features.join(", ")}`
   }
 
@@ -598,7 +670,7 @@ export default function SolarEnergyPlanner() {
         evPanelsNeeded,
         heatPumpPanelsNeeded,
       },
-      
+
       // System Specifications
       systemSpecs: {
         systemSizeKwp: (totalPanelCount * parseFloat(process.env.NEXT_PUBLIC_PANEL_WATTAGE || '0.44')),
@@ -608,7 +680,7 @@ export default function SolarEnergyPlanner() {
         annualBillAmount,
         customAnnualBill,
       },
-      
+
       // Cost Breakdown
       costs: {
         systemBaseCost,
@@ -622,7 +694,7 @@ export default function SolarEnergyPlanner() {
         finalPrice,
         monthlyFinancing: Math.round(finalPrice / 84),
       },
-      
+
       // Savings Breakdown
       savings: {
         solarAnnualSavings,
@@ -637,7 +709,7 @@ export default function SolarEnergyPlanner() {
         annualBillReduction: Math.round(annualBillAmount * (billOffset / 100)),
         newAnnualBill: Math.round(annualBillAmount * (1 - billOffset / 100)),
       },
-      
+
       // Equipment Details
       equipment: {
         solarPanel: {
@@ -649,7 +721,7 @@ export default function SolarEnergyPlanner() {
         battery: includeBattery ? {
           ...selectedBattery,
           quantity: batteryCount,
-          totalCapacity: (selectedBattery.capacity || 0) * batteryCount,
+          totalCapacity: (selectedBattery?.capacity || 0) * batteryCount,
         } : null,
         evCharger: includeEVChargerEquipment ? {
           ...selectedEVCharger,
@@ -662,17 +734,17 @@ export default function SolarEnergyPlanner() {
           additionalPanels: heatPumpPanelsNeeded,
         } : null,
       },
-      
+
       // Property Impact
       propertyImpact: {
         berImprovement: "D2 → C1",
         propertyValueUplift: 9000,
         valueUpliftPercentage: "4-6%",
       },
-      
+
       // Personalise Answers - Include the personalise_answers data within the plan
       personalise_answers: personaliseAnswers,
-      
+
       // Metadata
       metadata: {
         planCreatedAt: new Date().toISOString(),
@@ -694,10 +766,10 @@ export default function SolarEnergyPlanner() {
     if (!fullName.trim() || !email.trim() || !agreeToTerms) {
       return
     }
-    
+
     setIsSubmitting(true)
     setSubmitError("")
-    
+
     try {
       // Save plan data with user information using utility functions
       addUserInfoToPlan({
@@ -712,44 +784,55 @@ export default function SolarEnergyPlanner() {
         email: email.trim(),
         submittedAt: new Date().toISOString(),
       });
-      
+
       // Collect data from localStorage for API call
       const solarPlanData = localStorage.getItem('solar_plan_data');
       const personaliseAnswers = localStorage.getItem('personalise_answers');
       const selectedLocation = localStorage.getItem('selectedLocation');
-      
-      // Prepare API request body
-      const requestBody = {
-        email: email.trim(),
-        name: fullName.trim(),
-        solar_plan_data: solarPlanData ? JSON.parse(solarPlanData) : null,
-        personalise_answers: personaliseAnswers ? JSON.parse(personaliseAnswers) : null,
-        selectedLocation: selectedLocation ? JSON.parse(selectedLocation) : null,
-        branding: getEmailBranding(),
-      };
-      
-      console.log('Submitting plan data:', requestBody);
-      
-      // Make API call
-      const response = await api.post('public_users/new-journey-installer-user', requestBody);
-      
-      console.log('API response:', response.data);
-      
-      // Save email submission success to localStorage
-      localStorage.setItem('email_submission_success', 'true')
-      localStorage.setItem('submitted_email', email.trim())
-      
-      // Update state
-      setEmailSubmissionSuccess(true)
-      
-      // Close dialog and show success modal
-      setShowSavePlanDialog(false);
-      setShowSuccessModal(true);
-      
+
+      // Fetch email branding first
+
+      await companyService.getCompanyDatabySubDomain({
+        "sub_domain": resolveBrandSlugFromHostname(typeof window !== "undefined" ? window.location.hostname : ""),
+        "required_fields": ["emailBranding"]
+      }).then(async (res) => {
+
+        // Prepare API request body with the fetched email branding
+        const requestBody = {
+          email: email.trim(),
+          name: fullName.trim(),
+          solar_plan_data: solarPlanData ? JSON.parse(solarPlanData) : null,
+          personalise_answers: personaliseAnswers ? JSON.parse(personaliseAnswers) : null,
+          selectedLocation: selectedLocation ? JSON.parse(selectedLocation) : null,
+          branding: res?.data?.data?.emailBranding,
+        };
+
+        // console.log('Submitting plan data:', requestBody);
+
+        // Make API call
+        const response = await api.post('public_users/new-journey-installer-user', requestBody);
+
+        // console.log('API response:', response.data);
+
+        // Save email submission success to localStorage
+        localStorage.setItem('email_submission_success', 'true')
+        localStorage.setItem('submitted_email', email.trim())
+
+        // Update state
+        setEmailSubmissionSuccess(true)
+
+        // Close dialog and show success modal
+        setShowSavePlanDialog(false);
+        setShowSuccessModal(true);
+
+
+      }).catch((error) => {
+        console.error('Failed to fetch email branding, using fallback:', error);
+      });
     } catch (error: any) {
       console.error('Error submitting plan:', error);
       setSubmitError(
-        error?.response?.data?.message || 
+        error?.response?.data?.message ||
         'Failed to save your plan. Please try again.'
       );
     } finally {
@@ -765,14 +848,14 @@ export default function SolarEnergyPlanner() {
   useEffect(() => {
     try {
       console.log("Loading data from localStorage...")
-      
+
       // Load business proposal
       const storedProposal = localStorage.getItem("business_proposal")
       if (storedProposal) {
         const proposalData = JSON.parse(storedProposal)
         setBusinessProposal(proposalData)
         console.log("Loaded business proposal from localStorage:", proposalData)
-        
+
         // Calculate basePanelCount from system_size and panel wattage
         if (proposalData.system_size) {
           const systemSizeKw = parseFloat(proposalData.system_size)
@@ -790,7 +873,7 @@ export default function SolarEnergyPlanner() {
       if (storedPersonaliseAnswers) {
         const personaliseData = JSON.parse(storedPersonaliseAnswers)
         console.log("Initial load - parsed personaliseData:", personaliseData)
-        
+
         // Check SEAI grant eligibility based on house build date
         if (personaliseData["house-built-date"]) {
           const houseBuildDate = personaliseData["house-built-date"]
@@ -802,14 +885,14 @@ export default function SolarEnergyPlanner() {
           setIsEligibleForSEAIGrant(true)
           console.log("No house build date found, defaulting to SEAI grant eligible")
         }
-        
+
         if (personaliseData.billAmount) {
           const monthlyBill = parseFloat(personaliseData.billAmount)
           const calculatedAnnualBill = Math.round(monthlyBill * 12)
           setAnnualBillAmount(calculatedAnnualBill)
           setCustomAnnualBill(calculatedAnnualBill)
           console.log(`Initial load - monthly bill: €${monthlyBill}, calculated annual bill: €${calculatedAnnualBill}`)
-          
+
           // Set energy profile based on monthly bill
           if (monthlyBill <= 150) {
             setEnergyProfile("small")
@@ -825,7 +908,7 @@ export default function SolarEnergyPlanner() {
       } else {
         console.log("No personalise_answers found in localStorage, using defaults")
       }
-      
+
       // Mark data as loaded
       setIsDataLoaded(true)
 
@@ -834,80 +917,80 @@ export default function SolarEnergyPlanner() {
       if (storedPlanData) {
         const planData = JSON.parse(storedPlanData)
         console.log("Loading previously saved plan data:", planData)
-        
+
         // Restore system configuration
         if (planData.systemConfiguration) {
           const config = planData.systemConfiguration
-          
+
           // Restore panel count (but only if not overridden by business proposal)
           if (config.basePanelCount && !storedProposal) {
             setBasePanelCount(config.basePanelCount)
             console.log(`Restored basePanelCount: ${config.basePanelCount}`)
           }
-          
+
           // Restore equipment selections
           if (config.selectedSolarPanel?.id) {
-            const panel = solarPanelOptions.find(p => p.id === config.selectedSolarPanel.id)
+            const panel = solarPanelOptions.find(p => p.id === config.selectedSolarPanel?.id)
             if (panel) {
               setSelectedSolarPanel(panel)
               console.log(`Restored solar panel: ${panel.name}`)
             }
           }
-          
+
           if (config.selectedInverter?.id) {
-            const inverter = inverterOptions.find(i => i.id === config.selectedInverter.id)
+            const inverter = inverterOptions.find(i => i.id === config.selectedInverter?.id)
             if (inverter) {
               setSelectedInverter(inverter)
               console.log(`Restored inverter: ${inverter.name}`)
             }
           }
-          
+
           if (config.selectedBattery?.id) {
-            const battery = batteryOptions.find(b => b.id === config.selectedBattery.id)
+            const battery = batteryOptions.find(b => b.id === config.selectedBattery?.id)
             if (battery) {
               setSelectedBattery(battery)
               console.log(`Restored battery: ${battery.name}`)
             }
           }
-          
+
           if (config.selectedEVCharger?.id) {
-            const evCharger = evChargerOptions.find(c => c.id === config.selectedEVCharger.id)
+            const evCharger = evChargerOptions.find(c => c.id === config.selectedEVCharger?.id)
             if (evCharger) {
               setSelectedEVCharger(evCharger)
               console.log(`Restored EV charger: ${evCharger.name}`)
             }
           }
-          
+
           // Restore feature toggles
           if (typeof config.includeBattery === 'boolean') {
             setIncludeBattery(config.includeBattery)
             console.log(`Restored includeBattery: ${config.includeBattery}`)
           }
-          
+
           if (typeof config.includeEVCharger === 'boolean') {
             setIncludeEVCharger(config.includeEVCharger)
             console.log(`Restored includeEVCharger: ${config.includeEVCharger}`)
           }
-          
+
           if (typeof config.includeEVChargerEquipment === 'boolean') {
             setIncludeEVChargerEquipment(config.includeEVChargerEquipment)
             console.log(`Restored includeEVChargerEquipment: ${config.includeEVChargerEquipment}`)
           }
-          
+
           if (typeof config.includeHeatPump === 'boolean') {
             setIncludeHeatPump(config.includeHeatPump)
             console.log(`Restored includeHeatPump: ${config.includeHeatPump}`)
           }
-          
+
           if (typeof config.powerOutageBackup === 'boolean') {
             setPowerOutageBackup(config.powerOutageBackup)
             console.log(`Restored powerOutageBackup: ${config.powerOutageBackup}`)
           }
-          
+
           // Set daily flow type based on battery inclusion
           setDailyFlowType(config.includeBattery ? "solar-battery" : "solar")
         }
-        
+
         // Restore system specs including custom bill amount
         // Only restore bill amount from plan data if not already loaded from personalise_answers
         if (planData.systemSpecs) {
@@ -918,20 +1001,20 @@ export default function SolarEnergyPlanner() {
           } else if (planData.systemSpecs.annualBillAmount && storedPersonaliseAnswers) {
             console.log(`Skipping plan data bill amount (€${planData.systemSpecs.annualBillAmount}) - using personalise_answers instead`)
           }
-          
+
           // Restore per panel generation if it exists
           if (planData.systemSpecs.perPanelGeneration) {
             setPerPanelGeneration(planData.systemSpecs.perPanelGeneration)
             console.log(`Restored perPanelGeneration: ${planData.systemSpecs.perPanelGeneration} kWh/panel/year`)
           }
-          
+
           // Restore original business proposal panel count if it exists
           if (planData.systemSpecs.originalBusinessProposalPanelCount) {
             setOriginalBusinessProposalPanelCount(planData.systemSpecs.originalBusinessProposalPanelCount)
             console.log(`Restored originalBusinessProposalPanelCount: ${planData.systemSpecs.originalBusinessProposalPanelCount}`)
           }
         }
-        
+
         // Restore user information if it exists
         if (planData.userInfo) {
           setFullName(planData.userInfo.fullName || "")
@@ -1006,10 +1089,10 @@ export default function SolarEnergyPlanner() {
     }
   }, [
     basePanelCount,
-    selectedSolarPanel.id,
-    selectedInverter.id,
-    selectedBattery.id,
-    selectedEVCharger.id,
+    selectedSolarPanel?.id,
+    selectedInverter?.id,
+    selectedBattery?.id,
+    selectedEVCharger?.id,
     includeBattery,
     batteryCount,
     includeEVCharger,
@@ -1040,9 +1123,9 @@ export default function SolarEnergyPlanner() {
         <div className="text-center">
           <div className="w-16 h-16 mx-auto mb-4 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
           <h2 className="text-xl font-semibold text-gray-900 mb-2">Building Your Energy Plan</h2>
-            <p className="text-gray-600">
-              Calculating your personalised energy system based on your home and responses...
-            </p>
+          <p className="text-gray-600">
+            Calculating your personalised energy system based on your home and responses...
+          </p>
         </div>
       </div>
     )
@@ -1050,9 +1133,9 @@ export default function SolarEnergyPlanner() {
 
   return (
     <>
-      <AppHeader  maxWidth="max-w-6xl"/>
+      <AppHeader maxWidth="max-w-6xl" />
       {/* Progress Bar */}
-      <ProgressBars 
+      <ProgressBars
         addressActive={true}
         potentialActive={true}
         personaliseActive={true}
@@ -1148,7 +1231,7 @@ export default function SolarEnergyPlanner() {
           energyProfile={energyProfile}
           dailyUsageKwh={dailyUsageKwh}
           monthlyBill={monthlyBill}
-          gridRate={gridRate}
+          gridRate={gridRate || 0}
           hasEV={includeEVCharger}
           hasHeatPump={includeHeatPump}
           scenarios={scenarios}
@@ -1158,526 +1241,174 @@ export default function SolarEnergyPlanner() {
       ) : (
         // ==================== DESKTOP VIEW START ====================
         <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
-      {/* Hero Section */}
-      <div className="bg-white">
-        <div className="max-w-6xl mx-auto px-4 py-4 md:py-8">
-          <div className="text-center mb-6 md:mb-8">
-            <h1 className="text-2xl md:text-4xl font-bold text-gray-900 mb-2 md:mb-4">Your Personal Energy Plan</h1>
-            <p className="text-lg md:text-xl text-gray-600 mb-2">
-              An interactive tool to build your perfect solar + battery system.
-            </p>
-          </div>
-
-          <div className="grid lg:grid-cols-3 gap-6 md:gap-8">
-            {/* Main Content */}
-            <div className="lg:col-span-2 space-y-6 md:space-y-8">
-              {/* Enhanced Hero Image */}
-              <div className="relative overflow-hidden rounded-xl">
-                <div className="relative h-48 md:h-80">
-                  <img
-                    src="/images/plan-hero-image.png"
-                    alt="Modern home with comprehensive solar system and EV charging"
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
-                  <div className="absolute bottom-4 left-4 right-4 text-white">
-                    <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-                      <div>
-                        <h2 className="text-xl md:text-2xl font-bold mb-1">Complete Energy Independence</h2>
-                        <p className="text-sm md:text-base opacity-90">Solar + Battery + EV Charging Solution</p>
-                      </div>
-                      <div className="mt-2 md:mt-0 bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-medium">
-                      {totalPanelCount} Panels | {(totalPanelCount * parseFloat(process.env.NEXT_PUBLIC_PANEL_WATTAGE || '0.44')).toFixed(1)} kWp System
-                      </div>
-                    </div>
-                  </div>
-                </div>
+          {/* Hero Section */}
+          <div className="bg-white">
+            <div className="max-w-6xl mx-auto px-4 py-4 md:py-8">
+              <div className="text-center mb-6 md:mb-8">
+                <h1 className="text-2xl md:text-4xl font-bold text-gray-900 mb-2 md:mb-4">Your Personal Energy Plan</h1>
+                <p className="text-lg md:text-xl text-gray-600 mb-2">
+                  An interactive tool to build your perfect solar + battery system.
+                </p>
               </div>
 
-              {/* Section 1: Your System Builder */}
-              <Card>
-                <CardHeader className="pb-4">
-                  <CardTitle className="flex items-center gap-3 text-lg md:text-xl">
-                    <div className="w-6 h-6 md:w-8 md:h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-semibold text-sm md:text-base">
-                      1
-                    </div>
-                    Customize Your System
-                  </CardTitle>
-                  <p className="text-sm md:text-base text-gray-600">
-                    Select your hardware. All costs and savings will update instantly.
-                  </p>
-                </CardHeader>
-                <CardContent className="space-y-6 md:space-y-8">
-                  {/* Solar System Configuration */}
-                  <div className="space-y-4 md:space-y-6 p-4 md:p-6 bg-yellow-50 rounded-lg border-2 border-yellow-200">
-                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                      <div className="flex items-center gap-3 md:gap-4">
-                        <div className="w-12 h-12 md:w-16 md:h-16 bg-yellow-100 rounded-full flex items-center justify-center">
-                          <Sun className="w-6 h-6 md:w-8 md:h-8 text-yellow-600" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2 mb-2">
-                            <h3 className="text-base md:text-lg font-bold">
-                              Solar System{" "}
-                              <span className="text-xs font-medium text-gray-600">
-                                (€{solarAnnualSavings} savings/year)
-                              </span>
-                            </h3>
-                            <div className="relative group">
-                            <Info className="w-4 h-4 text-gray-400 cursor-help" />
-                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-white text-gray-800 text-xs rounded-lg shadow-lg border opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 w-48">
-                              <p className="font-medium mb-1">Solar Panels:</p>
-                              <p>
-                                Convert sunlight into free electricity for your home and sell excess back to the grid.
-                              </p>
-                              <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-white"></div>
-                            </div>
+              <div className="grid lg:grid-cols-3 gap-6 md:gap-8">
+                {/* Main Content */}
+                <div className="lg:col-span-2 space-y-6 md:space-y-8">
+                  {/* Enhanced Hero Image */}
+                  <div className="relative overflow-hidden rounded-xl">
+                    <div className="relative h-48 md:h-80">
+                      <img
+                        src="/images/plan-hero-image.png"
+                        alt="Modern home with comprehensive solar system and EV charging"
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+                      <div className="absolute bottom-4 left-4 right-4 text-white">
+                        <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+                          <div>
+                            <h2 className="text-xl md:text-2xl font-bold mb-1">Complete Energy Independence</h2>
+                            <p className="text-sm md:text-base opacity-90">Solar + Battery + EV Charging Solution</p>
                           </div>
-                          </div>
-                          <p className="text-sm md:text-base text-gray-600">
-                            {totalPanelCount} panels generating {(annualPVGeneration).toLocaleString()} kWh annually
-                          </p>
-                          <p className="text-xs text-green-600 font-medium">{getRecommendationText()}</p>
-                        </div>
-                      </div>
-                      <div className="text-center md:text-right">
-                        <div className="flex items-center justify-center md:justify-end gap-2 mb-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              const newBasePanelCount = Math.max(8, basePanelCount - 1)
-                              setBasePanelCount(newBasePanelCount)
-                            }}
-                            disabled={basePanelCount <= 8}
-                          >
-                            <Minus className="w-4 h-4" />
-                          </Button>
-                          <span className="w-12 text-center font-bold text-lg">{totalPanelCount}</span>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              const newBasePanelCount = Math.min(maxPanels, basePanelCount + 1)
-                              setBasePanelCount(newBasePanelCount)
-                            }}
-                            disabled={totalPanelCount >= maxPanels}
-                          >
-                            <Plus className="w-4 h-4" />
-                          </Button>
-                        </div>
-                        <div className="text-xl md:text-2xl font-bold">€{systemBaseCost.toLocaleString()}</div>
-                      </div>
-                    </div>
-
-                    {/* Panel Sizing Feedback */}
-                    {panelSizingMessage && (
-                      <div
-                        className={`p-3 rounded-lg border ${panelSizingMessage.bgColor} ${panelSizingMessage.borderColor}`}
-                      >
-                        <p className={`text-xs font-medium ${panelSizingMessage.color}`}>
-                          {panelSizingMessage.message}
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Visual Equipment Display */}
-                    {/* Compact Equipment Selection for Solar */}
-                    <Collapsible open={showSolarEquipment} onOpenChange={setShowSolarEquipment}>
-                      <CollapsibleTrigger asChild>
-                        <Button variant="outline" className="w-full justify-between text-sm bg-transparent">
-                          <span>Recommended Equipment</span>
-                          <ChevronDown
-                            className={`w-4 h-4 transition-transform ${showSolarEquipment ? "rotate-180" : ""}`}
-                          />
-                        </Button>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent className="space-y-4 mt-4">
-                        {/* Solar Panel Selection */}
-                        <div className="grid md:grid-cols-4 gap-3 p-3 bg-white rounded-lg border">
-                          <div className="md:col-span-1">
-                            <img
-                              src={selectedSolarPanel.image || `/images/solar-panels/${selectedSolarPanel.id}.png`}
-                              alt={selectedSolarPanel.name}
-                              className="w-full h-32 object-contain rounded bg-gray-100 p-1"
-                            />
-                          </div>
-                          <div className="md:col-span-3 space-y-2">
-                            <div className="flex items-center justify-between">
-                              <h4 className="font-medium text-sm">Solar Panel</h4>
-                            </div>
-                            <Select
-                              value={selectedSolarPanel.id}
-                              onValueChange={(value) => {
-                                const panel = solarPanelOptions.find((p) => p.id === value)
-                                if (panel) setSelectedSolarPanel(panel)
-                              }}
-                            >
-                              <SelectTrigger className="h-8 text-xs">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {solarPanelOptions.map((panel) => (
-                                  <SelectItem key={panel.id} value={panel.id}>
-                                    <div className="flex items-center justify-between w-full">
-                                      <span className="text-xs">
-                                        {panel.name}{" "}
-                                        {(panel.priceAdjustment || 0) !== 0 &&
-                                          `(${(panel.priceAdjustment || 0) > 0 ? "+" : ""}€${panel.priceAdjustment || 0})`}
-                                      </span>
-                                      {panel.recommended && (
-                                        <Badge className="ml-1 bg-green-600 text-xs px-1">Recommended</Badge>
-                                      )}
-                                    </div>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <p className="text-xs text-gray-600">
-                              {selectedSolarPanel.reason}
-                            </p>
-                            <a href={selectedSolarPanel.datasheet || "/pdf/jinko_panel.pdf"} download="JinkoSolar_440W_Spec_Sheet.pdf">
-                              <Button variant="outline" size="sm" className="h-6 text-xs bg-transparent">
-                                <Download className="w-3 h-3 mr-1" />
-                                Download Spec Sheet
-                              </Button>
-                            </a>
+                          <div className="mt-2 md:mt-0 bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-medium">
+                            {totalPanelCount} Panels | {(totalPanelCount * parseFloat(process.env.NEXT_PUBLIC_PANEL_WATTAGE || '0.44')).toFixed(1)} kWp System
                           </div>
                         </div>
-
-                        {/* Inverter Selection */}
-                        <div className="grid md:grid-cols-4 gap-3 p-3 bg-white rounded-lg border">
-                          <div className="md:col-span-1">
-                            <img
-                              src={selectedInverter.image || `/images/inverters/${selectedInverter.id}.png`}
-                              alt={selectedInverter.name}
-                              className="w-full h-32 object-contain rounded bg-gray-100 p-1"
-                            />
-                          </div>
-                          <div className="md:col-span-3 space-y-2">
-                            <div className="flex items-center justify-between">
-                              <h4 className="font-medium text-sm">Inverter</h4>
-                              <div className="flex items-center gap-2">
-                                {powerOutageBackup && <Badge className="bg-orange-600 text-xs">Hybrid</Badge>}
-                              </div>
-                            </div>
-                            <Select
-                              value={selectedInverter.id}
-                              onValueChange={(value) => {
-                                const inverter = inverterOptions.find((i) => i.id === value)
-                                if (inverter) setSelectedInverter(inverter)
-                              }}
-                            >
-                              <SelectTrigger className="h-8 text-xs">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {inverterOptions.map((inverter) => (
-                                  <SelectItem key={inverter.id} value={inverter.id}>
-                                    <div className="flex items-center justify-between w-full">
-                                      <span className="text-xs">
-                                        {inverter.name}{" "}
-                                        {(inverter.priceAdjustment || 0) !== 0 &&
-                                          `(${(inverter.priceAdjustment || 0) > 0 ? "+" : ""}€${inverter.priceAdjustment || 0})`}
-                                      </span>
-                                      {inverter.recommended && !powerOutageBackup && (
-                                        <Badge className="ml-1 bg-green-600 text-xs px-1">Recommended</Badge>
-                                      )}
-                                    </div>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <p className="text-xs text-gray-600">
-                              {selectedInverter.reason}
-                            </p>
-                            <a href={selectedInverter.datasheet || "/pdf/sig_inverter.pdf"} download="Sigenergy_Inverter_Spec_Sheet.pdf">
-                              <Button variant="outline" size="sm" className="h-6 text-xs bg-transparent">
-                                <Download className="w-3 h-3 mr-1" />
-                                Download Spec Sheet
-                              </Button>
-                            </a>
-                          </div>
-                        </div>
-                      </CollapsibleContent>
-                    </Collapsible>
-
-                    {/* Improved Power Outage Question */}
-                    <div className="flex items-start gap-3 py-2">
-                      {/* <Checkbox 
-                        checked={powerOutageBackup} 
-                        onCheckedChange={(checked) => setPowerOutageBackup(checked === true)} 
-                        className="mt-1" 
-                      /> */}
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium">Power outage backup?</span>
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <button className="text-blue-600 hover:text-blue-700 underline text-xs flex items-center gap-1">
-                                <Info className="w-3 h-3" />
-                                Learn more
-                              </button>
-                            </DialogTrigger>
-                            <DialogContent className="max-h-[66vh] overflow-y-auto">
-                              <DialogHeader className="relative">
-                                <DialogClose asChild>
-                                  <button
-                                    className="absolute top-0 right-0 w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 hover:text-gray-700 transition-colors"
-                                  >
-                                    ×
-                                  </button>
-                                </DialogClose>
-                                <DialogTitle className="flex items-center gap-2 text-xl font-bold pr-8">
-                                  <AlertCircle className="w-6 h-6 text-orange-500" />
-                                  Did You Know? Power Outage Backup Options
-                                </DialogTitle>
-                                <p className="text-sm text-gray-600">
-                                  Important considerations for using your system during grid outages.
-                                </p>
-                              </DialogHeader>
-                              <div className="space-y-4">
-                                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                                  <p className="text-sm text-blue-800 mb-3">
-                                    <strong>Most installers don't tell you this:</strong> To use your solar and battery during power outages, you need specific equipment installed from the start.
-                                  </p>
-                                </div>
-                                
-                                <div className="space-y-3">
-                                  <div className="bg-white p-4 rounded-lg border-2 border-green-200">
-                                    <div className="flex items-center gap-2 mb-2">
-                                      <CheckCircle className="w-5 h-5 text-green-500" />
-                                      <h4 className="font-semibold text-green-800">Option 1: Hybrid Inverter</h4>
-                                    </div>
-                                    <p className="text-sm text-gray-700 mb-2">Automatically switches to battery power during outages</p>
-                                    <ul className="text-xs text-gray-600 space-y-1">
-                                      <li>• Seamless backup power</li>
-                                      <li>• No manual intervention needed</li>
-                                      <li>• Premium option</li>
-                                    </ul>
-                                  </div>
-                                  
-                                  <div className="bg-white p-4 rounded-lg border-2 border-orange-200">
-                                    <div className="flex items-center gap-2 mb-2">
-                                      <AlertCircle className="w-5 h-5 text-orange-500" />
-                                      <h4 className="font-semibold text-orange-800">Option 2: Standard Inverter + Changeover Switch</h4>
-                                    </div>
-                                    <p className="text-sm text-gray-700 mb-2">Requires manual switching during outages</p>
-                                    <ul className="text-xs text-gray-600 space-y-1">
-                                      <li>• Must be installed at point of solar installation</li>
-                                      <li>• Manual switch to battery power</li>
-                                      <li>• More affordable option</li>
-                                    </ul>
-                                  </div>
-                                </div>
-                                
-                                <div className="bg-gray-50 p-3 rounded-lg text-xs text-gray-700">
-                                  <p>
-                                    Important: This cannot be easily added later - it must be planned and installed with your solar system.
-                                  </p>
-                                </div>
-                              </div>
-                            </DialogContent>
-                          </Dialog>
-                        </div>
-                        <p className="text-xs text-gray-600">Use your solar and battery when the grid goes down</p>
-                        {powerOutageBackup && (
-                          <div className="mt-1 p-2 bg-green-50 rounded text-xs text-green-700">
-                            ✓ Hybrid inverter included
-                          </div>
-                        )}
                       </div>
                     </div>
                   </div>
 
-                  {/* Compressed Battery Storage Section */}
-                  <div className="space-y-4">
-                    <div className="p-3 md:p-4 bg-green-50 rounded-lg border-2 border-green-200">
-                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                        <div className="flex items-center gap-3 md:gap-4">
-                          <div className="w-12 h-12 md:w-16 md:h-16 bg-green-100 rounded-full flex items-center justify-center">
-                            <Battery className="w-6 h-6 md:w-8 md:h-8 text-green-600" />
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-2 mb-2">
-                              <h3 className="text-base md:text-lg font-bold">
-                                Add Battery Storage{" "}
-                                <span className="text-xs font-medium text-gray-600">
-                                  (€{batteryNightChargeSavings} savings/year)
-                                </span>
-                              </h3>
-                              <div className="relative group">
-                            <Info className="w-4 h-4 text-gray-400 cursor-help" />
-                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-white text-gray-800 text-xs rounded-lg shadow-lg border opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 w-56">
-                              <p className="font-medium mb-1">Battery Storage Benefits:</p>
-                              <p className="mb-2">Stores excess solar energy for use at night and during power outages.</p>
-                              {includeBattery && (
-                                <div className="border-t pt-2">
-                                  <p className="font-medium text-blue-600 mb-1">Night Charge Savings:</p>
-                                  <p>€{batteryNightChargeSavings}/year from storing cheap night electricity</p>
+                  {/* Section 1: Your System Builder */}
+                  <Card>
+                    <CardHeader className="pb-4">
+                      <CardTitle className="flex items-center gap-3 text-lg md:text-xl">
+                        <div className="w-6 h-6 md:w-8 md:h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-semibold text-sm md:text-base">
+                          1
+                        </div>
+                        Customize Your System
+                      </CardTitle>
+                      <p className="text-sm md:text-base text-gray-600">
+                        Select your hardware. All costs and savings will update instantly.
+                      </p>
+                    </CardHeader>
+                    <CardContent className="space-y-6 md:space-y-8">
+                      {/* Solar System Configuration */}
+                      <div className="space-y-4 md:space-y-6 p-4 md:p-6 bg-yellow-50 rounded-lg border-2 border-yellow-200">
+                        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                          <div className="flex items-center gap-3 md:gap-4">
+                            <div className="w-12 h-12 md:w-16 md:h-16 bg-yellow-100 rounded-full flex items-center justify-center">
+                              <Sun className="w-6 h-6 md:w-8 md:h-8 text-yellow-600" />
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2 mb-2">
+                                <h3 className="text-base md:text-lg font-bold">
+                                  Solar System{" "}
+                                  <span className="text-xs font-medium text-gray-600">
+                                    (€{solarAnnualSavings} savings/year)
+                                  </span>
+                                </h3>
+                                <div className="relative group">
+                                  <Info className="w-4 h-4 text-gray-400 cursor-help" />
+                                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-white text-gray-800 text-xs rounded-lg shadow-lg border opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 w-48">
+                                    <p className="font-medium mb-1">Solar Panels:</p>
+                                    <p>
+                                      Convert sunlight into free electricity for your home and sell excess back to the grid.
+                                    </p>
+                                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-white"></div>
+                                  </div>
                                 </div>
-                              )}
-                              <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-white"></div>
+                              </div>
+                              <p className="text-sm md:text-base text-gray-600">
+                                {totalPanelCount} panels generating {(annualPVGeneration).toLocaleString()} kWh annually
+                              </p>
+                              <p className="text-xs text-green-600 font-medium">{getRecommendationText()}</p>
                             </div>
                           </div>
+                          <div className="text-center md:text-right">
+                            <div className="flex items-center justify-center md:justify-end gap-2 mb-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  const newBasePanelCount = Math.max(8, basePanelCount - 1)
+                                  setBasePanelCount(newBasePanelCount)
+                                }}
+                                disabled={basePanelCount <= 8}
+                              >
+                                <Minus className="w-4 h-4" />
+                              </Button>
+                              <span className="w-12 text-center font-bold text-lg">{totalPanelCount}</span>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  const newBasePanelCount = Math.min(maxPanels, basePanelCount + 1)
+                                  setBasePanelCount(newBasePanelCount)
+                                }}
+                                disabled={totalPanelCount >= maxPanels}
+                              >
+                                <Plus className="w-4 h-4" />
+                              </Button>
                             </div>
-                            <p className="text-sm md:text-base text-gray-600">
-                              Store energy for night use
+                            <div className="text-xl md:text-2xl font-bold">€{systemBaseCost.toLocaleString()}</div>
+                          </div>
+                        </div>
+
+                        {/* Panel Sizing Feedback */}
+                        {panelSizingMessage && (
+                          <div
+                            className={`p-3 rounded-lg border ${panelSizingMessage.bgColor} ${panelSizingMessage.borderColor}`}
+                          >
+                            <p className={`text-xs font-medium ${panelSizingMessage.color}`}>
+                              {panelSizingMessage.message}
                             </p>
                           </div>
-                        </div>
-                        <div className="text-center md:text-right">
-                          <Switch checked={includeBattery} onCheckedChange={setIncludeBattery} />
-                          {includeBattery && (
-                            <div className="mt-2 space-y-2">
-                              <div className="text-xl md:text-2xl font-bold">€{batteryCost.toLocaleString()}</div>
-                              
-                              {/* Battery Quantity Controls */}
-                              <div className="flex items-center justify-center gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="w-8 h-8 p-0"
-                                  onClick={() => setBatteryCount(Math.max(1, batteryCount - 1))}
-                                  disabled={batteryCount <= 1}
-                                >
-                                  <Minus className="w-4 h-4" />
-                                </Button>
-                                <span className="text-sm font-medium min-w-[60px] text-center">
-                                  {batteryCount}x {selectedBattery.capacity || 0}kWh
-                                </span>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="w-8 h-8 p-0"
-                                  onClick={() => setBatteryCount(Math.min(2, batteryCount + 1))}
-                                  disabled={batteryCount >= 2}
-                                >
-                                  <Plus className="w-4 h-4" />
-                                </Button>
-                              </div>
-                              <div className="text-xs text-gray-600 text-center">
-                                Total: {batteryCount * (selectedBattery.capacity || 0)}kWh storage
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                        )}
 
-                      {/* Energy Independence Comparison Cards - Integrated within battery section */}
-                      <div className="mt-4 space-y-3">
-                        <h4 className="font-semibold text-center text-sm text-gray-800">Choose Your Energy Solution</h4>
-                        
-                        {/* Comparison Cards */}
-                        <div className="grid grid-cols-2 gap-3">
-                          {/* Solar Only Card - Clickable */}
-                          <button
-                            onClick={() => setIncludeBattery(false)}
-                            className={`p-3 rounded-lg border-2 transition-all duration-300 text-left hover:shadow-md ${
-                              !includeBattery 
-                                ? 'border-orange-400 bg-orange-50 shadow-sm' 
-                                : 'border-gray-200 bg-white hover:border-orange-200'
-                            }`}
-                          >
-                            <div className="text-center">
-                              <div className="w-8 h-8 mx-auto mb-2 flex items-center justify-center bg-orange-100 rounded-full">
-                                <Sun className="w-5 h-5 text-orange-500" />
-                              </div>
-                              <h5 className="font-bold text-sm text-orange-600 mb-1">Solar Only</h5>
-                              <div className="text-lg font-bold text-orange-600 mb-1">20-30%</div>
-                              <p className="text-xs text-gray-600 mb-2">Grid-dependent at night</p>
-                              <div className="text-xs font-semibold text-gray-500">€0 extra</div>
-                            </div>
-                          </button>
-
-                          {/* Solar + Battery Card - Clickable */}
-                          <button
-                            onClick={() => setIncludeBattery(true)}
-                            className={`p-3 rounded-lg border-2 transition-all duration-300 text-left hover:shadow-md ${
-                              includeBattery 
-                                ? 'border-blue-500 bg-white shadow-lg ring-2 ring-blue-100' 
-                                : 'border-gray-200 bg-white hover:border-green-200'
-                            }`}
-                          >
-                            <div className="text-center">
-                              <div className={`w-8 h-8 mx-auto mb-2 flex items-center justify-center rounded-full ${
-                                includeBattery ? 'bg-blue-100' : 'bg-green-100'
-                              }`}>
-                                <Battery className={`w-5 h-5 ${includeBattery ? 'text-blue-600' : 'text-green-600'}`} />
-                              </div>
-                              <h5 className={`font-bold text-sm mb-1 ${includeBattery ? 'text-blue-700' : 'text-green-700'}`}>Solar + Battery</h5>
-                              <div className={`text-lg font-bold mb-1 ${includeBattery ? 'text-blue-600' : 'text-green-600'}`}>{batteryCount >= 2 ? '80-90%' : '70-80%'}</div>
-                              <p className="text-xs text-gray-600 mb-2">Power day & night</p>
-                              <div className={`text-xs font-semibold ${includeBattery ? 'text-blue-600' : 'text-green-600'}`}>+€{batteryAnnualSavings}/year</div>
-                            </div>
-                          </button>
-                        </div>
-
-                        {/* Dynamic insight message based on selection */}
-                        <div
-                          className={`p-3 rounded-lg border transition-all duration-300 ${
-                            includeBattery 
-                              ? 'bg-blue-50 border-blue-200' 
-                              : 'bg-orange-50 border-orange-200'
-                          }`}
-                        >
-                          <div className="flex items-start gap-2">
-                            <Info
-                              className={`w-4 h-4 flex-shrink-0 mt-0.5 ${
-                                includeBattery ? 'text-blue-500' : 'text-orange-500'
-                              }`}
-                            />
-                            <p className={`text-xs ${includeBattery ? 'text-blue-800' : 'text-orange-700'}`}>
-                              {includeBattery
-                                ? `With ${batteryCount > 1 ? `${batteryCount} batteries` : 'battery storage'} (${batteryCount * (selectedBattery.capacity || 0)}kWh total), you'll use your own solar power even after sunset, ${batteryCount >= 2 ? 'achieving near-complete' : 'dramatically reducing'} grid dependence.`
-                                : "Adding battery storage can increase your energy independence from 30% to 85%, powering your home through nights and outages."}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Compact Battery Equipment Selection */}
-                      {includeBattery && (
-                        <Collapsible open={showBatteryEquipment} onOpenChange={setShowBatteryEquipment}>
+                        {/* Visual Equipment Display */}
+                        {/* Compact Equipment Selection for Solar */}
+                        <Collapsible open={showSolarEquipment} onOpenChange={setShowSolarEquipment}>
                           <CollapsibleTrigger asChild>
-                            <Button variant="outline" className="w-full justify-between text-sm bg-transparent mt-4">
+                            <Button variant="outline" className="w-full justify-between text-sm bg-transparent">
                               <span>Recommended Equipment</span>
                               <ChevronDown
-                                className={`w-4 h-4 transition-transform ${showBatteryEquipment ? "rotate-180" : ""}`}
+                                className={`w-4 h-4 transition-transform ${showSolarEquipment ? "rotate-180" : ""}`}
                               />
                             </Button>
                           </CollapsibleTrigger>
                           <CollapsibleContent className="space-y-4 mt-4">
+                            {/* Solar Panel Selection */}
                             <div className="grid md:grid-cols-4 gap-3 p-3 bg-white rounded-lg border">
                               <div className="md:col-span-1">
                                 <img
-                                  src={selectedBattery.image || `/images/batteries/${selectedBattery.id}.png`}
-                                  alt={selectedBattery.name}
+                                  src={selectedSolarPanel?.image || `/images/solar-panels/${selectedSolarPanel?.id}.png`}
+                                  alt={selectedSolarPanel?.name}
                                   className="w-full h-32 object-contain rounded bg-gray-100 p-1"
                                 />
                               </div>
                               <div className="md:col-span-3 space-y-2">
                                 <div className="flex items-center justify-between">
-                                  <h4 className="font-medium text-sm">Battery Storage</h4>
+                                  <h4 className="font-medium text-sm">Solar Panel</h4>
                                 </div>
                                 <Select
-                                  value={selectedBattery.id}
+                                  value={selectedSolarPanel?.id}
                                   onValueChange={(value) => {
-                                    const battery = batteryOptions.find((b) => b.id === value)
-                                    if (battery) setSelectedBattery(battery)
+                                    const panel = solarPanelOptions.find((p) => p.id === value)
+                                    if (panel) setSelectedSolarPanel(panel)
                                   }}
                                 >
                                   <SelectTrigger className="h-8 text-xs">
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent>
-                                    {batteryOptions.map((battery) => (
-                                      <SelectItem key={battery.id} value={battery.id}>
+                                    {solarPanelOptions.map((panel) => (
+                                      <SelectItem key={panel.id} value={panel.id}>
                                         <div className="flex items-center justify-between w-full">
                                           <span className="text-xs">
-                                            {battery.name} ({battery.capacity}kWh) - €{battery.price}
+                                            {panel.name}{" "}
+                                            {(panel.priceAdjustment || 0) !== 0 &&
+                                              `(${(panel.priceAdjustment || 0) > 0 ? "+" : ""}€${panel.priceAdjustment || 0})`}
                                           </span>
-                                          {battery.recommended && (
+                                          {panel.recommended && (
                                             <Badge className="ml-1 bg-green-600 text-xs px-1">Recommended</Badge>
                                           )}
                                         </div>
@@ -1686,9 +1417,64 @@ export default function SolarEnergyPlanner() {
                                   </SelectContent>
                                 </Select>
                                 <p className="text-xs text-gray-600">
-                                  {batteryCount}x {selectedBattery.capacity || 0}kWh = {batteryCount * (selectedBattery.capacity || 0)}kWh total • {selectedBattery.reason}
+                                  {selectedSolarPanel?.reason}
                                 </p>
-                                <a href={selectedBattery.datasheet || "/pdf/sig_battery.pdf"} download={`SigEnergy_Battery_${selectedBattery.capacity || 0}kWh_Spec_Sheet.pdf`}>
+                                <a href={selectedSolarPanel?.datasheet || "/pdf/jinko_panel.pdf"} download="JinkoSolar_440W_Spec_Sheet.pdf">
+                                  <Button variant="outline" size="sm" className="h-6 text-xs bg-transparent">
+                                    <Download className="w-3 h-3 mr-1" />
+                                    Download Spec Sheet
+                                  </Button>
+                                </a>
+                              </div>
+                            </div>
+
+                            {/* Inverter Selection */}
+                            <div className="grid md:grid-cols-4 gap-3 p-3 bg-white rounded-lg border">
+                              <div className="md:col-span-1">
+                                <img
+                                  src={selectedInverter?.image || `/images/inverters/${selectedInverter?.id}.png`}
+                                  alt={selectedInverter?.name}
+                                  className="w-full h-32 object-contain rounded bg-gray-100 p-1"
+                                />
+                              </div>
+                              <div className="md:col-span-3 space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <h4 className="font-medium text-sm">Inverter</h4>
+                                  <div className="flex items-center gap-2">
+                                    {powerOutageBackup && <Badge className="bg-orange-600 text-xs">Hybrid</Badge>}
+                                  </div>
+                                </div>
+                                <Select
+                                  value={selectedInverter?.id}
+                                  onValueChange={(value) => {
+                                    const inverter = inverterOptions.find((i) => i.id === value)
+                                    if (inverter) setSelectedInverter(inverter)
+                                  }}
+                                >
+                                  <SelectTrigger className="h-8 text-xs">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {inverterOptions.map((inverter) => (
+                                      <SelectItem key={inverter.id} value={inverter.id}>
+                                        <div className="flex items-center justify-between w-full">
+                                          <span className="text-xs">
+                                            {inverter.name}{" "}
+                                            {(inverter.priceAdjustment || 0) !== 0 &&
+                                              `(${(inverter.priceAdjustment || 0) > 0 ? "+" : ""}€${inverter.priceAdjustment || 0})`}
+                                          </span>
+                                          {inverter.recommended && !powerOutageBackup && (
+                                            <Badge className="ml-1 bg-green-600 text-xs px-1">Recommended</Badge>
+                                          )}
+                                        </div>
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <p className="text-xs text-gray-600">
+                                  {selectedInverter?.reason}
+                                </p>
+                                <a href={selectedInverter?.datasheet || "/pdf/sig_inverter.pdf"} download="Sigenergy_Inverter_Spec_Sheet.pdf">
                                   <Button variant="outline" size="sm" className="h-6 text-xs bg-transparent">
                                     <Download className="w-3 h-3 mr-1" />
                                     Download Spec Sheet
@@ -1698,834 +1484,1124 @@ export default function SolarEnergyPlanner() {
                             </div>
                           </CollapsibleContent>
                         </Collapsible>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
 
-              {/* Section 2: Future-Proof Your Home */}
-              <Card>
-                <CardHeader className="pb-4">
-                  <CardTitle className="flex items-center gap-3 text-lg md:text-xl">
-                    <div className="w-6 h-6 md:w-8 md:h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-semibold text-sm md:text-base">
-                      2
-                    </div>
-                    Future-Proof Your Home
-                  </CardTitle>
-                  <p className="text-sm md:text-base text-gray-600">
-                    Planning upgrades? We'll size your solar system to handle increased energy needs.
-                  </p>
-                </CardHeader>
-                <CardContent className="space-y-4 md:space-y-6">
-                  {/* EV Planning with Panel Addition */}
-                  <div className="space-y-3">
-                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 p-3 md:p-4 bg-blue-50 rounded-lg border border-blue-200">
-                      <div className="flex items-center gap-3 md:gap-4">
-                        <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                          <Zap className="w-5 h-5 md:w-6 md:h-6 text-blue-600" />
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-base md:text-lg">Planning for an Electric Vehicle?</h3>
-                          <p className="text-xs md:text-sm text-gray-600">
-                            Typical increase: +3,500 kWh/year electricity usage
-                          </p>
-                        </div>
-                      </div>
-                      <Switch 
-                        checked={includeEVCharger} 
-                        onCheckedChange={(checked) => {
-                          setIncludeEVCharger(checked)
-                          // When EV planning is enabled, automatically enable EV charger equipment
-                          if (checked) {
-                            setIncludeEVChargerEquipment(true)
-                          } else {
-                            // When EV planning is disabled, automatically disable EV charger equipment
-                            setIncludeEVChargerEquipment(false)
-                          }
-                        }} 
-                      />
-                    </div>
-                    
-                    {includeEVCharger && (
-                      <div className="bg-blue-100 p-3 rounded-lg border border-blue-300">
-                        <div className="flex items-center gap-2 text-blue-800">
-                          <CheckCircle className="w-4 h-4" />
-                          <span className="font-medium text-sm">
-                            We recommend using the maximum allowed panels and adding a battery
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {!includeEVCharger && (
-                      <div className="bg-blue-50 p-2 rounded text-xs text-blue-700 border border-blue-200">
-                        Not driving electric yet? Your system can support it down the line - it's easy to upgrade.
-                      </div>
-                    )}
-                  </div>
+                        {/* Improved Power Outage Question */}
+                        <div className="flex items-start gap-3 py-2">
+                          {/* <Checkbox 
+                        checked={powerOutageBackup} 
+                        onCheckedChange={(checked) => setPowerOutageBackup(checked === true)} 
+                        className="mt-1" 
+                      /> */}
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium">Power outage backup?</span>
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <button className="text-blue-600 hover:text-blue-700 underline text-xs flex items-center gap-1">
+                                    <Info className="w-3 h-3" />
+                                    Learn more
+                                  </button>
+                                </DialogTrigger>
+                                <DialogContent className="max-h-[66vh] overflow-y-auto">
+                                  <DialogHeader className="relative">
+                                    <DialogClose asChild>
+                                      <button
+                                        className="absolute top-0 right-0 w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 hover:text-gray-700 transition-colors"
+                                      >
+                                        ×
+                                      </button>
+                                    </DialogClose>
+                                    <DialogTitle className="flex items-center gap-2 text-xl font-bold pr-8">
+                                      <AlertCircle className="w-6 h-6 text-orange-500" />
+                                      Did You Know? Power Outage Backup Options
+                                    </DialogTitle>
+                                    <p className="text-sm text-gray-600">
+                                      Important considerations for using your system during grid outages.
+                                    </p>
+                                  </DialogHeader>
+                                  <div className="space-y-4">
+                                    <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                                      <p className="text-sm text-blue-800 mb-3">
+                                        <strong>Most installers don't tell you this:</strong> To use your solar and battery during power outages, you need specific equipment installed from the start.
+                                      </p>
+                                    </div>
 
-                  {/* EV Charger Equipment Option - Only visible when Planning for EV */}
-                  {includeEVCharger && (
-                    <div className="space-y-3">
-                      <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
-                        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                          <div className="flex items-center gap-3">
-                            <Zap className="w-5 h-5 text-gray-600" />
-                            <div>
-                              <h4 className="font-medium text-sm">Add EV Charger</h4>
-                              <p className="text-xs text-gray-600">Smart charging with solar integration</p>
+                                    <div className="space-y-3">
+                                      <div className="bg-white p-4 rounded-lg border-2 border-green-200">
+                                        <div className="flex items-center gap-2 mb-2">
+                                          <CheckCircle className="w-5 h-5 text-green-500" />
+                                          <h4 className="font-semibold text-green-800">Option 1: Hybrid Inverter</h4>
+                                        </div>
+                                        <p className="text-sm text-gray-700 mb-2">Automatically switches to battery power during outages</p>
+                                        <ul className="text-xs text-gray-600 space-y-1">
+                                          <li>• Seamless backup power</li>
+                                          <li>• No manual intervention needed</li>
+                                          <li>• Premium option</li>
+                                        </ul>
+                                      </div>
+
+                                      <div className="bg-white p-4 rounded-lg border-2 border-orange-200">
+                                        <div className="flex items-center gap-2 mb-2">
+                                          <AlertCircle className="w-5 h-5 text-orange-500" />
+                                          <h4 className="font-semibold text-orange-800">Option 2: Standard Inverter + Changeover Switch</h4>
+                                        </div>
+                                        <p className="text-sm text-gray-700 mb-2">Requires manual switching during outages</p>
+                                        <ul className="text-xs text-gray-600 space-y-1">
+                                          <li>• Must be installed at point of solar installation</li>
+                                          <li>• Manual switch to battery power</li>
+                                          <li>• More affordable option</li>
+                                        </ul>
+                                      </div>
+                                    </div>
+
+                                    <div className="bg-gray-50 p-3 rounded-lg text-xs text-gray-700">
+                                      <p>
+                                        Important: This cannot be easily added later - it must be planned and installed with your solar system.
+                                      </p>
+                                    </div>
+                                  </div>
+                                </DialogContent>
+                              </Dialog>
                             </div>
+                            <p className="text-xs text-gray-600">Use your solar and battery when the grid goes down</p>
+                            {powerOutageBackup && (
+                              <div className="mt-1 p-2 bg-green-50 rounded text-xs text-green-700">
+                                ✓ Hybrid inverter included
+                              </div>
+                            )}
                           </div>
-                          <div className="text-center md:text-right">
-                            <div className="flex items-center justify-end gap-3">
-                              {includeEVChargerEquipment && (
-                                <div className="text-sm font-bold">
-                                  €{(evChargerCost || 0).toLocaleString()} (€{selectedEVCharger.grant || 0} Grant Available)
+                        </div>
+                      </div>
+
+                      {/* Compressed Battery Storage Section */}
+                      <div className="space-y-4">
+                        <div className="p-3 md:p-4 bg-green-50 rounded-lg border-2 border-green-200">
+                          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                            <div className="flex items-center gap-3 md:gap-4">
+                              <div className="w-12 h-12 md:w-16 md:h-16 bg-green-100 rounded-full flex items-center justify-center">
+                                <Battery className="w-6 h-6 md:w-8 md:h-8 text-green-600" />
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-2 mb-2">
+                                  <h3 className="text-base md:text-lg font-bold">
+                                    Add Battery Storage{" "}
+                                    <span className="text-xs font-medium text-gray-600">
+                                      (€{batteryNightChargeSavings} savings/year)
+                                    </span>
+                                  </h3>
+                                  <div className="relative group">
+                                    <Info className="w-4 h-4 text-gray-400 cursor-help" />
+                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-white text-gray-800 text-xs rounded-lg shadow-lg border opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 w-56">
+                                      <p className="font-medium mb-1">Battery Storage Benefits:</p>
+                                      <p className="mb-2">Stores excess solar energy for use at night and during power outages.</p>
+                                      {includeBattery && (
+                                        <div className="border-t pt-2">
+                                          <p className="font-medium text-blue-600 mb-1">Night Charge Savings:</p>
+                                          <p>€{batteryNightChargeSavings}/year from storing cheap night electricity</p>
+                                        </div>
+                                      )}
+                                      <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-white"></div>
+                                    </div>
+                                  </div>
+                                </div>
+                                <p className="text-sm md:text-base text-gray-600">
+                                  Store energy for night use
+                                </p>
+                              </div>
+                            </div>
+                            <div className="text-center md:text-right">
+                              <Switch checked={includeBattery} onCheckedChange={setIncludeBattery} />
+                              {includeBattery && (
+                                <div className="mt-2 space-y-2">
+                                  <div className="text-xl md:text-2xl font-bold">€{batteryCost.toLocaleString()}</div>
+
+                                  {/* Battery Quantity Controls */}
+                                  <div className="flex items-center justify-center gap-2">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="w-8 h-8 p-0"
+                                      onClick={() => setBatteryCount(Math.max(1, batteryCount - 1))}
+                                      disabled={batteryCount <= 1}
+                                    >
+                                      <Minus className="w-4 h-4" />
+                                    </Button>
+                                    <span className="text-sm font-medium min-w-[60px] text-center">
+                                      {batteryCount}x {selectedBattery?.capacity || 0}kWh
+                                    </span>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="w-8 h-8 p-0"
+                                      onClick={() => setBatteryCount(Math.min(2, batteryCount + 1))}
+                                      disabled={batteryCount >= 2}
+                                    >
+                                      <Plus className="w-4 h-4" />
+                                    </Button>
+                                  </div>
+                                  <div className="text-xs text-gray-600 text-center">
+                                    Total: {batteryCount * (selectedBattery?.capacity || 0)}kWh storage
+                                  </div>
                                 </div>
                               )}
-                              <Switch checked={includeEVChargerEquipment} onCheckedChange={setIncludeEVChargerEquipment} />
                             </div>
                           </div>
+
+                          {/* Energy Independence Comparison Cards - Integrated within battery section */}
+                          <div className="mt-4 space-y-3">
+                            <h4 className="font-semibold text-center text-sm text-gray-800">Choose Your Energy Solution</h4>
+
+                            {/* Comparison Cards */}
+                            <div className="grid grid-cols-2 gap-3">
+                              {/* Solar Only Card - Clickable */}
+                              <button
+                                onClick={() => setIncludeBattery(false)}
+                                className={`p-3 rounded-lg border-2 transition-all duration-300 text-left hover:shadow-md ${!includeBattery
+                                    ? 'border-orange-400 bg-orange-50 shadow-sm'
+                                    : 'border-gray-200 bg-white hover:border-orange-200'
+                                  }`}
+                              >
+                                <div className="text-center">
+                                  <div className="w-8 h-8 mx-auto mb-2 flex items-center justify-center bg-orange-100 rounded-full">
+                                    <Sun className="w-5 h-5 text-orange-500" />
+                                  </div>
+                                  <h5 className="font-bold text-sm text-orange-600 mb-1">Solar Only</h5>
+                                  <div className="text-lg font-bold text-orange-600 mb-1">20-30%</div>
+                                  <p className="text-xs text-gray-600 mb-2">Grid-dependent at night</p>
+                                  <div className="text-xs font-semibold text-gray-500">€0 extra</div>
+                                </div>
+                              </button>
+
+                              {/* Solar + Battery Card - Clickable */}
+                              <button
+                                onClick={() => setIncludeBattery(true)}
+                                className={`p-3 rounded-lg border-2 transition-all duration-300 text-left hover:shadow-md ${includeBattery
+                                    ? 'border-blue-500 bg-white shadow-lg ring-2 ring-blue-100'
+                                    : 'border-gray-200 bg-white hover:border-green-200'
+                                  }`}
+                              >
+                                <div className="text-center">
+                                  <div className={`w-8 h-8 mx-auto mb-2 flex items-center justify-center rounded-full ${includeBattery ? 'bg-blue-100' : 'bg-green-100'
+                                    }`}>
+                                    <Battery className={`w-5 h-5 ${includeBattery ? 'text-blue-600' : 'text-green-600'}`} />
+                                  </div>
+                                  <h5 className={`font-bold text-sm mb-1 ${includeBattery ? 'text-blue-700' : 'text-green-700'}`}>Solar + Battery</h5>
+                                  <div className={`text-lg font-bold mb-1 ${includeBattery ? 'text-blue-600' : 'text-green-600'}`}>{batteryCount >= 2 ? '80-90%' : '70-80%'}</div>
+                                  <p className="text-xs text-gray-600 mb-2">Power day & night</p>
+                                  <div className={`text-xs font-semibold ${includeBattery ? 'text-blue-600' : 'text-green-600'}`}>+€{batteryAnnualSavings}/year</div>
+                                </div>
+                              </button>
+                            </div>
+
+                            {/* Dynamic insight message based on selection */}
+                            <div
+                              className={`p-3 rounded-lg border transition-all duration-300 ${includeBattery
+                                  ? 'bg-blue-50 border-blue-200'
+                                  : 'bg-orange-50 border-orange-200'
+                                }`}
+                            >
+                              <div className="flex items-start gap-2">
+                                <Info
+                                  className={`w-4 h-4 flex-shrink-0 mt-0.5 ${includeBattery ? 'text-blue-500' : 'text-orange-500'
+                                    }`}
+                                />
+                                <p className={`text-xs ${includeBattery ? 'text-blue-800' : 'text-orange-700'}`}>
+                                  {includeBattery
+                                    ? `With ${batteryCount > 1 ? `${batteryCount} batteries` : 'battery storage'} (${batteryCount * (selectedBattery?.capacity || 0)}kWh total), you'll use your own solar power even after sunset, ${batteryCount >= 2 ? 'achieving near-complete' : 'dramatically reducing'} grid dependence.`
+                                    : "Adding battery storage can increase your energy independence from 30% to 85%, powering your home through nights and outages."}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Compact Battery Equipment Selection */}
+                          {includeBattery && (
+                            <Collapsible open={showBatteryEquipment} onOpenChange={setShowBatteryEquipment}>
+                              <CollapsibleTrigger asChild>
+                                <Button variant="outline" className="w-full justify-between text-sm bg-transparent mt-4">
+                                  <span>Recommended Equipment</span>
+                                  <ChevronDown
+                                    className={`w-4 h-4 transition-transform ${showBatteryEquipment ? "rotate-180" : ""}`}
+                                  />
+                                </Button>
+                              </CollapsibleTrigger>
+                              <CollapsibleContent className="space-y-4 mt-4">
+                                <div className="grid md:grid-cols-4 gap-3 p-3 bg-white rounded-lg border">
+                                  <div className="md:col-span-1">
+                                    <img
+                                      src={selectedBattery?.image || `/images/batteries/${selectedBattery?.id}.png`}
+                                      alt={selectedBattery?.name}
+                                      className="w-full h-32 object-contain rounded bg-gray-100 p-1"
+                                    />
+                                  </div>
+                                  <div className="md:col-span-3 space-y-2">
+                                    <div className="flex items-center justify-between">
+                                      <h4 className="font-medium text-sm">Battery Storage</h4>
+                                    </div>
+                                    <Select
+                                      value={selectedBattery?.id}
+                                      onValueChange={(value) => {
+                                        const battery = batteryOptions.find((b) => b.id === value)
+                                        if (battery) setSelectedBattery(battery)
+                                      }}
+                                    >
+                                      <SelectTrigger className="h-8 text-xs">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {batteryOptions.map((battery) => (
+                                          <SelectItem key={battery.id} value={battery.id}>
+                                            <div className="flex items-center justify-between w-full">
+                                              <span className="text-xs">
+                                                {battery.name} ({battery.capacity}kWh) - €{battery.price}
+                                              </span>
+                                              {battery.recommended && (
+                                                <Badge className="ml-1 bg-green-600 text-xs px-1">Recommended</Badge>
+                                              )}
+                                            </div>
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                    <p className="text-xs text-gray-600">
+                                      {batteryCount}x {selectedBattery?.capacity || 0}kWh = {batteryCount * (selectedBattery?.capacity || 0)}kWh total • {selectedBattery?.reason}
+                                    </p>
+                                    <a href={selectedBattery?.datasheet || "/pdf/sig_battery.pdf"} download={`SigEnergy_Battery_${selectedBattery?.capacity || 0}kWh_Spec_Sheet.pdf`}>
+                                      <Button variant="outline" size="sm" className="h-6 text-xs bg-transparent">
+                                        <Download className="w-3 h-3 mr-1" />
+                                        Download Spec Sheet
+                                      </Button>
+                                    </a>
+                                  </div>
+                                </div>
+                              </CollapsibleContent>
+                            </Collapsible>
+                          )}
                         </div>
                       </div>
+                    </CardContent>
+                  </Card>
 
-                                              {/* EV Charger Equipment Selection */}
-                      {includeEVChargerEquipment && (
-                        <Collapsible open={showEVChargerEquipment} onOpenChange={setShowEVChargerEquipment}>
-                          <CollapsibleTrigger asChild>
-                            <Button variant="outline" className="w-full justify-between text-sm bg-transparent">
-                              <span>Recommended Equipment</span>
-                              <ChevronDown
-                                className={`w-4 h-4 transition-transform ${showEVChargerEquipment ? "rotate-180" : ""}`}
-                              />
-                            </Button>
-                          </CollapsibleTrigger>
-                          <CollapsibleContent className="space-y-4 mt-4">
-                            <div className="grid md:grid-cols-4 gap-3 p-3 bg-white rounded-lg border">
-                              <div className="md:col-span-1">
-                                <img
-                                  src={selectedEVCharger.image || `/images/ev-chargers/${selectedEVCharger.id}.png`}
-                                  alt={selectedEVCharger.name}
-                                  className="w-full h-32 object-contain rounded bg-gray-100 p-1"
-                                />
-                              </div>
-                              <div className="md:col-span-3 space-y-2">
-                                <div className="flex items-center justify-between">
-                                  <h4 className="font-medium text-sm">EV Charger</h4>
+                  {/* Section 2: Future-Proof Your Home */}
+                  <Card>
+                    <CardHeader className="pb-4">
+                      <CardTitle className="flex items-center gap-3 text-lg md:text-xl">
+                        <div className="w-6 h-6 md:w-8 md:h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-semibold text-sm md:text-base">
+                          2
+                        </div>
+                        Future-Proof Your Home
+                      </CardTitle>
+                      <p className="text-sm md:text-base text-gray-600">
+                        Planning upgrades? We'll size your solar system to handle increased energy needs.
+                      </p>
+                    </CardHeader>
+                    <CardContent className="space-y-4 md:space-y-6">
+                      {/* EV Planning with Panel Addition */}
+                      <div className="space-y-3">
+                        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 p-3 md:p-4 bg-blue-50 rounded-lg border border-blue-200">
+                          <div className="flex items-center gap-3 md:gap-4">
+                            <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                              <Zap className="w-5 h-5 md:w-6 md:h-6 text-blue-600" />
+                            </div>
+                            <div>
+                              <h3 className="font-semibold text-base md:text-lg">Planning for an Electric Vehicle?</h3>
+                              <p className="text-xs md:text-sm text-gray-600">
+                                Typical increase: +3,500 kWh/year electricity usage
+                              </p>
+                            </div>
+                          </div>
+                          <Switch
+                            checked={includeEVCharger}
+                            onCheckedChange={(checked) => {
+                              setIncludeEVCharger(checked)
+                              // When EV planning is enabled, automatically enable EV charger equipment
+                              if (checked) {
+                                setIncludeEVChargerEquipment(true)
+                              } else {
+                                // When EV planning is disabled, automatically disable EV charger equipment
+                                setIncludeEVChargerEquipment(false)
+                              }
+                            }}
+                          />
+                        </div>
+
+                        {includeEVCharger && (
+                          <div className="bg-blue-100 p-3 rounded-lg border border-blue-300">
+                            <div className="flex items-center gap-2 text-blue-800">
+                              <CheckCircle className="w-4 h-4" />
+                              <span className="font-medium text-sm">
+                                We recommend using the maximum allowed panels and adding a battery
+                              </span>
+                            </div>
+                          </div>
+                        )}
+
+                        {!includeEVCharger && (
+                          <div className="bg-blue-50 p-2 rounded text-xs text-blue-700 border border-blue-200">
+                            Not driving electric yet? Your system can support it down the line - it's easy to upgrade.
+                          </div>
+                        )}
+                      </div>
+
+                      {/* EV Charger Equipment Option - Only visible when Planning for EV */}
+                      {includeEVCharger && (
+                        <div className="space-y-3">
+                          <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                              <div className="flex items-center gap-3">
+                                <Zap className="w-5 h-5 text-gray-600" />
+                                <div>
+                                  <h4 className="font-medium text-sm">Add EV Charger</h4>
+                                  <p className="text-xs text-gray-600">Smart charging with solar integration</p>
                                 </div>
-                                <Select
-                                  value={selectedEVCharger.id}
-                                  onValueChange={(value) => {
-                                    const charger = evChargerOptions.find((c) => c.id === value)
-                                    if (charger) setSelectedEVCharger(charger)
-                                  }}
-                                >
-                                  <SelectTrigger className="h-8 text-xs">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {evChargerOptions.map((charger) => (
-                                      <SelectItem key={charger.id} value={charger.id}>
-                                        <div className="flex items-center justify-between w-full">
-                                          <span className="text-xs">
-                                            {charger.name} (€{(charger.price || 0) - (charger.grant || 0)} after grant)
-                                          </span>
-                                          {charger.recommended && (
-                                            <Badge className="ml-1 bg-green-600 text-xs px-1">Recommended</Badge>
-                                          )}
-                                        </div>
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                                <p className="text-xs text-gray-600">
-                                  {selectedEVCharger.power} • {selectedEVCharger.reason}
-                                </p>
-                                <div className="flex flex-wrap gap-1">
-                                  {(selectedEVCharger.features || []).map((feature, index) => (
-                                    <Badge key={index} variant="secondary" className="text-xs px-1">
-                                      {feature}
-                                    </Badge>
-                                  ))}
+                              </div>
+                              <div className="text-center md:text-right">
+                                <div className="flex items-center justify-end gap-3">
+                                  {includeEVChargerEquipment && (
+                                    <div className="text-sm font-bold">
+                                      €{(evChargerCost || 0).toLocaleString()} (€{selectedEVCharger?.grant || 0} Grant Available)
+                                    </div>
+                                  )}
+                                  <Switch checked={includeEVChargerEquipment} onCheckedChange={setIncludeEVChargerEquipment} />
                                 </div>
                               </div>
                             </div>
-                        </CollapsibleContent>
-                      </Collapsible>
-                    )}
-                    </div>
-                  )}
+                          </div>
 
-                  {/* Heat Pump Planning with Panel Addition */}
-                  <div className="space-y-3">
-                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 p-3 md:p-4 bg-orange-50 rounded-lg border border-orange-200">
-                      <div className="flex items-center gap-3 md:gap-4">
-                        <div className="w-10 h-10 md:w-12 md:h-12 bg-orange-100 rounded-full flex items-center justify-center">
-                          <Home className="w-5 h-5 md:w-6 md:h-6 text-orange-600" />
+                          {/* EV Charger Equipment Selection */}
+                          {includeEVChargerEquipment && (
+                            <Collapsible open={showEVChargerEquipment} onOpenChange={setShowEVChargerEquipment}>
+                              <CollapsibleTrigger asChild>
+                                <Button variant="outline" className="w-full justify-between text-sm bg-transparent">
+                                  <span>Recommended Equipment</span>
+                                  <ChevronDown
+                                    className={`w-4 h-4 transition-transform ${showEVChargerEquipment ? "rotate-180" : ""}`}
+                                  />
+                                </Button>
+                              </CollapsibleTrigger>
+                              <CollapsibleContent className="space-y-4 mt-4">
+                                <div className="grid md:grid-cols-4 gap-3 p-3 bg-white rounded-lg border">
+                                  <div className="md:col-span-1">
+                                    <img
+                                      src={selectedEVCharger?.image || `/images/ev-chargers/${selectedEVCharger?.id}.png`}
+                                      alt={selectedEVCharger?.name}
+                                      className="w-full h-32 object-contain rounded bg-gray-100 p-1"
+                                    />
+                                  </div>
+                                  <div className="md:col-span-3 space-y-2">
+                                    <div className="flex items-center justify-between">
+                                      <h4 className="font-medium text-sm">EV Charger</h4>
+                                    </div>
+                                    <Select
+                                      value={selectedEVCharger?.id}
+                                      onValueChange={(value) => {
+                                        const charger = evChargerOptions.find((c) => c.id === value)
+                                        if (charger) setSelectedEVCharger(charger)
+                                      }}
+                                    >
+                                      <SelectTrigger className="h-8 text-xs">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {evChargerOptions.map((charger) => (
+                                          <SelectItem key={charger.id} value={charger.id}>
+                                            <div className="flex items-center justify-between w-full">
+                                              <span className="text-xs">
+                                                {charger.name} (€{(charger.price || 0) - (charger.grant || 0)} after grant)
+                                              </span>
+                                              {charger.recommended && (
+                                                <Badge className="ml-1 bg-green-600 text-xs px-1">Recommended</Badge>
+                                              )}
+                                            </div>
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                    <p className="text-xs text-gray-600">
+                                      {selectedEVCharger?.power} • {selectedEVCharger?.reason}
+                                    </p>
+                                    <div className="flex flex-wrap gap-1">
+                                      {(selectedEVCharger?.features || []).map((feature, index) => (
+                                        <Badge key={index} variant="secondary" className="text-xs px-1">
+                                          {feature}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </div>
+                              </CollapsibleContent>
+                            </Collapsible>
+                          )}
                         </div>
-                        <div>
-                          <h3 className="font-semibold text-base md:text-lg">Planning a Heat Pump?</h3>
-                          <p className="text-xs md:text-sm text-gray-600">
-                            Typical increase: +2,800 kWh/year electricity usage
+                      )}
+
+                      {/* Heat Pump Planning with Panel Addition */}
+                      <div className="space-y-3">
+                        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 p-3 md:p-4 bg-orange-50 rounded-lg border border-orange-200">
+                          <div className="flex items-center gap-3 md:gap-4">
+                            <div className="w-10 h-10 md:w-12 md:h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                              <Home className="w-5 h-5 md:w-6 md:h-6 text-orange-600" />
+                            </div>
+                            <div>
+                              <h3 className="font-semibold text-base md:text-lg">Planning a Heat Pump?</h3>
+                              <p className="text-xs md:text-sm text-gray-600">
+                                Typical increase: +2,800 kWh/year electricity usage
+                              </p>
+                            </div>
+                          </div>
+                          <Switch checked={includeHeatPump} onCheckedChange={setIncludeHeatPump} />
+                        </div>
+                        {includeHeatPump && (
+                          <div className="bg-orange-100 p-3 rounded-lg border border-orange-300">
+                            <div className="flex items-center gap-2 text-orange-800">
+                              <CheckCircle className="w-4 h-4" />
+                              <span className="font-medium text-sm">
+                                We recommend using the maximum allowed panels and adding a battery
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Simplified Smart Planning Benefits */}
+                      {(includeEVCharger || includeHeatPump) && (
+                        <div className="bg-green-50 p-3 md:p-4 rounded-lg border border-green-200">
+                          <div className="flex items-center gap-2 mb-2">
+                            <TrendingUp className="w-5 h-5 text-green-600" />
+                            <h4 className="font-semibold text-green-800">Future-Proofing Benefits</h4>
+                          </div>
+                          <p className="text-sm text-green-700">
+                            Your solar system is now sized to handle your future energy needs, maximizing savings and
+                            reducing reliance on expensive grid electricity.
+                          </p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Section 3: How Your System Works Daily - Two Options */}
+                  {false && <Card>
+                    <CardHeader className="pb-4">
+                      <CardTitle className="flex items-center gap-3 text-lg md:text-xl">
+                        <div className="w-6 h-6 md:w-8 md:h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-semibold text-sm md:text-base">
+                          3
+                        </div>
+                        How Your System Works Daily
+                      </CardTitle>
+                      <p className="text-sm md:text-base text-gray-600">Interactive walkthrough of your energy system</p>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4 md:space-y-6">
+                        {/* System Type Tabs */}
+                        <Tabs value={dailyFlowType} onValueChange={(value) => setDailyFlowType(value as any)}>
+                          <TabsList className="grid w-full grid-cols-2">
+                            <TabsTrigger value="solar">Solar Only</TabsTrigger>
+                            <TabsTrigger value="solar-battery">Solar + Battery</TabsTrigger>
+                          </TabsList>
+
+                          <TabsContent value="solar" className="mt-4">
+                            <div className="text-center mb-4">
+                              <Button onClick={toggleAnimation} className="bg-blue-600 hover:bg-blue-700" size="lg">
+                                {isAnimationPlaying ? (
+                                  <>
+                                    <Pause className="w-5 h-5 mr-2" />
+                                    Pause Animation
+                                  </>
+                                ) : (
+                                  <>
+                                    <Play className="w-5 h-5 mr-2" />
+                                    Watch Solar-Only Flow
+                                  </>
+                                )}
+                              </Button>
+                            </div>
+                          </TabsContent>
+
+                          <TabsContent value="solar-battery" className="mt-4">
+                            <div className="text-center mb-4">
+                              <Button onClick={toggleAnimation} className="bg-blue-600 hover:bg-blue-700" size="lg">
+                                {isAnimationPlaying ? (
+                                  <>
+                                    <Pause className="w-5 h-5 mr-2" />
+                                    Pause Animation
+                                  </>
+                                ) : (
+                                  <>
+                                    <Play className="w-5 h-5 mr-2" />
+                                    Watch Solar + Battery Flow
+                                  </>
+                                )}
+                              </Button>
+                            </div>
+                          </TabsContent>
+                        </Tabs>
+
+                        {/* Enhanced Animation Display */}
+                        <div className="bg-gradient-to-br from-blue-50 to-purple-50 p-4 md:p-6 rounded-lg border-2 border-blue-200">
+                          <div className="aspect-video bg-white rounded-lg p-4 md:p-6 flex flex-col items-center justify-center relative overflow-hidden">
+                            {/* Current Scene Display */}
+                            <div className="text-center z-10">
+                              {(() => {
+                                const scene = currentScenes[animationStep]
+                                const IconComponent = scene.icon
+                                return (
+                                  <div className="flex flex-col items-center">
+                                    <div
+                                      className={`w-16 h-16 md:w-20 md:h-20 rounded-full ${scene.color} flex items-center justify-center mb-4 transform transition-all duration-500 ${isAnimationPlaying ? "scale-110" : "scale-100"
+                                        }`}
+                                    >
+                                      <IconComponent className="w-8 h-8 md:w-10 md:h-10 text-white" />
+                                    </div>
+                                    <h3 className="text-lg md:text-xl font-bold mb-2">{scene.title}</h3>
+                                    <p className="text-sm md:text-base text-gray-600 max-w-md text-center">
+                                      {scene.description}
+                                    </p>
+                                  </div>
+                                )
+                              })()}
+                            </div>
+
+                            {/* Background animation effect */}
+                            <div
+                              className={`absolute inset-0 opacity-10 transition-all duration-1000 ${currentScenes[animationStep].color} ${isAnimationPlaying ? "scale-110" : "scale-100"}`}
+                            />
+                          </div>
+
+                          {/* Progress Indicator */}
+                          <div className="flex justify-center mt-4 space-x-2">
+                            {currentScenes.map((_, index) => (
+                              <button
+                                key={index}
+                                onClick={() => setAnimationStep(index)}
+                                className={`w-2 h-2 md:w-3 md:h-3 rounded-full transition-all duration-300 ${animationStep === index ? "bg-blue-600 scale-125" : "bg-gray-300 hover:bg-gray-400"
+                                  }`}
+                              />
+                            ))}
+                          </div>
+
+                          <p className="text-xs text-gray-500 text-center mt-4">
+                            Example only – setup and savings vary by home.
                           </p>
                         </div>
                       </div>
-                      <Switch checked={includeHeatPump} onCheckedChange={setIncludeHeatPump} />
-                    </div>
-                    {includeHeatPump && (
-                      <div className="bg-orange-100 p-3 rounded-lg border border-orange-300">
-                        <div className="flex items-center gap-2 text-orange-800">
-                          <CheckCircle className="w-4 h-4" />
-                          <span className="font-medium text-sm">
-                            We recommend using the maximum allowed panels and adding a battery
-                             </span>
+                    </CardContent>
+                  </Card>
+                  }
+                  {/* Section 4: Property Value - Redesigned with Compact Cards */}
+                  <Card>
+                    <CardHeader className="pb-4">
+                      <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
+                        <div className="w-6 h-6 md:w-8 md:h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-semibold text-sm md:text-base">
+                          3
                         </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Simplified Smart Planning Benefits */}
-                  {(includeEVCharger || includeHeatPump) && (
-                    <div className="bg-green-50 p-3 md:p-4 rounded-lg border border-green-200">
-                      <div className="flex items-center gap-2 mb-2">
-                        <TrendingUp className="w-5 h-5 text-green-600" />
-                        <h4 className="font-semibold text-green-800">Future-Proofing Benefits</h4>
-                      </div>
-                      <p className="text-sm text-green-700">
-                        Your solar system is now sized to handle your future energy needs, maximizing savings and
-                        reducing reliance on expensive grid electricity.
-                      </p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Section 3: How Your System Works Daily - Two Options */}
-            { false &&  <Card>
-                <CardHeader className="pb-4">
-                  <CardTitle className="flex items-center gap-3 text-lg md:text-xl">
-                    <div className="w-6 h-6 md:w-8 md:h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-semibold text-sm md:text-base">
-                      3
-                    </div>
-                    How Your System Works Daily
-                  </CardTitle>
-                  <p className="text-sm md:text-base text-gray-600">Interactive walkthrough of your energy system</p>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4 md:space-y-6">
-                    {/* System Type Tabs */}
-                    <Tabs value={dailyFlowType} onValueChange={(value) => setDailyFlowType(value as any)}>
-                      <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="solar">Solar Only</TabsTrigger>
-                        <TabsTrigger value="solar-battery">Solar + Battery</TabsTrigger>
-                      </TabsList>
-
-                      <TabsContent value="solar" className="mt-4">
-                        <div className="text-center mb-4">
-                          <Button onClick={toggleAnimation} className="bg-blue-600 hover:bg-blue-700" size="lg">
-                            {isAnimationPlaying ? (
-                              <>
-                                <Pause className="w-5 h-5 mr-2" />
-                                Pause Animation
-                              </>
-                            ) : (
-                              <>
-                                <Play className="w-5 h-5 mr-2" />
-                                Watch Solar-Only Flow
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                      </TabsContent>
-
-                      <TabsContent value="solar-battery" className="mt-4">
-                        <div className="text-center mb-4">
-                          <Button onClick={toggleAnimation} className="bg-blue-600 hover:bg-blue-700" size="lg">
-                            {isAnimationPlaying ? (
-                              <>
-                                <Pause className="w-5 h-5 mr-2" />
-                                Pause Animation
-                              </>
-                            ) : (
-                              <>
-                                <Play className="w-5 h-5 mr-2" />
-                                Watch Solar + Battery Flow
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                      </TabsContent>
-                    </Tabs>
-
-                    {/* Enhanced Animation Display */}
-                    <div className="bg-gradient-to-br from-blue-50 to-purple-50 p-4 md:p-6 rounded-lg border-2 border-blue-200">
-                      <div className="aspect-video bg-white rounded-lg p-4 md:p-6 flex flex-col items-center justify-center relative overflow-hidden">
-                        {/* Current Scene Display */}
-                        <div className="text-center z-10">
-                          {(() => {
-                            const scene = currentScenes[animationStep]
-                            const IconComponent = scene.icon
-                            return (
-                              <div className="flex flex-col items-center">
-                                <div
-                                  className={`w-16 h-16 md:w-20 md:h-20 rounded-full ${scene.color} flex items-center justify-center mb-4 transform transition-all duration-500 ${
-                                    isAnimationPlaying ? "scale-110" : "scale-100"
-                                  }`}
-                                >
-                                  <IconComponent className="w-8 h-8 md:w-10 md:h-10 text-white" />
-                                </div>
-                                <h3 className="text-lg md:text-xl font-bold mb-2">{scene.title}</h3>
-                                <p className="text-sm md:text-base text-gray-600 max-w-md text-center">
-                                  {scene.description}
-                                </p>
-                              </div>
-                            )
-                          })()}
-                        </div>
-
-                        {/* Background animation effect */}
-                        <div
-                          className={`absolute inset-0 opacity-10 transition-all duration-1000 ${currentScenes[animationStep].color} ${isAnimationPlaying ? "scale-110" : "scale-100"}`}
-                        />
-                      </div>
-
-                      {/* Progress Indicator */}
-                      <div className="flex justify-center mt-4 space-x-2">
-                        {currentScenes.map((_, index) => (
-                          <button
-                            key={index}
-                            onClick={() => setAnimationStep(index)}
-                            className={`w-2 h-2 md:w-3 md:h-3 rounded-full transition-all duration-300 ${
-                              animationStep === index ? "bg-blue-600 scale-125" : "bg-gray-300 hover:bg-gray-400"
-                            }`}
-                          />
-                        ))}
-                      </div>
-
-                      <p className="text-xs text-gray-500 text-center mt-4">
-                        Example only – setup and savings vary by home.
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card> 
-}
-              {/* Section 4: Property Value - Redesigned with Compact Cards */}
-              <Card>
-                <CardHeader className="pb-4">
-                  <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
-                    <div className="w-6 h-6 md:w-8 md:h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-semibold text-sm md:text-base">
-                      3
-                    </div>
-                    💡 How Solar Affects Property Value (example scenario)
-                  </CardTitle>
-                  <p className="text-sm md:text-base text-gray-600">Long-term benefits for your home</p>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid md:grid-cols-3 gap-3">
-                    {/* Property Value Increase Card */}
-                    <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                      <div className="text-center mb-3">
-                        <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                          <TrendingUp className="w-6 h-6 text-blue-600" />
-                        </div>
-                        <h4 className="font-semibold text-blue-800">Property Value Increase</h4>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-blue-600 mb-1">+2% to +6%</div>
-                        <p className="text-sm text-gray-600">~€8,000–24,000 on a €400,000 home</p>
-                      </div>
-                    </div>
-
-                    {/* BER Rating Improvement Card */}
-                    <div className="bg-green-50 p-3 rounded-lg border border-green-200">
-                      <div className="text-center mb-3">
-                        <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                          <Home className="w-6 h-6 text-green-600" />
-                        </div>
-                        <h4 className="font-semibold text-green-800">BER Rating Improvement</h4>
-                      </div>
-                      <div className="flex items-center justify-center gap-3">
-                        <div className="text-center">
-                          <div className="bg-orange-500 text-white px-2 py-1 rounded font-bold text-sm">C2</div>
-                          <p className="text-xs text-gray-600 mt-1">Before</p>
-                        </div>
-                        <div className="text-xl text-gray-400">→</div>
-                        <div className="text-center">
-                          <div className="bg-green-600 text-white px-2 py-1 rounded font-bold text-sm">B3</div>
-                          <p className="text-xs text-gray-600 mt-1">After</p>
-                        </div>
-                      </div>
-                      <p className="text-xs text-green-700 text-center mt-2">Typically improves by 1 BER category</p>
-                    </div>
-
-                    {/* Market Benefits Card */}
-                    <div className="bg-purple-50 p-3 rounded-lg border border-purple-200">
-                      <div className="text-center mb-3">
-                        <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                          <CheckCircle className="w-6 h-6 text-purple-600" />
-                        </div>
-                        <h4 className="font-semibold text-purple-800">Market Benefits</h4>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
-                          <span className="text-xs">20% faster sale times</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
-                          <span className="text-xs">Appeals to eco-conscious buyers</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
-                          <span className="text-xs">Better mortgage rates available</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
-                          <span className="text-xs">89% of buyers value efficiency</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-3 p-3 bg-gray-50 rounded-lg">
-                    <p className="text-xs text-gray-600 text-center">
-                      Based on industry averages for solar, battery, and EV charger installations. Actual impact depends
-                      on the condition of the home and local property market. This is not a valuation.
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Section 5: Installation, Warranties, FAQ */}
-              <Card>
-                <CardHeader className="pb-4">
-                  <CardTitle className="flex items-center gap-3 text-lg md:text-xl">
-                    <div className="w-6 h-6 md:w-8 md:h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-semibold text-sm md:text-base">
-                      4
-                    </div>
-                    Installation, Warranties, FAQ
-                  </CardTitle>
-                  <p className="text-sm md:text-base text-gray-600">Everything you need to know about the process</p>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Installation Timeline */}
-                  <Collapsible>
-                    <CollapsibleTrigger className="flex items-center justify-between w-full p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <Calendar className="w-5 h-5 text-gray-600" />
-                        <span className="font-medium">Installation Timeline</span>
-                      </div>
-                      <ChevronDown className="w-4 h-4 text-gray-600" />
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="mt-2 p-4 bg-white border rounded-lg">
-                      <div className="space-y-3">
-                        <div className="flex items-start gap-3">
-                          <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                            <span className="text-xs font-bold text-blue-600">1</span>
+                        💡 How Solar Affects Property Value (example scenario)
+                      </CardTitle>
+                      <p className="text-sm md:text-base text-gray-600">Long-term benefits for your home</p>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid md:grid-cols-3 gap-3">
+                        {/* Property Value Increase Card */}
+                        <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                          <div className="text-center mb-3">
+                            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                              <TrendingUp className="w-6 h-6 text-blue-600" />
+                            </div>
+                            <h4 className="font-semibold text-blue-800">Property Value Increase</h4>
                           </div>
-                          <div>
-                            <h4 className="font-medium">Site Survey & Design (1-2 weeks)</h4>
-                            <p className="text-sm text-gray-600">Technical assessment and system design</p>
+                          <div className="text-center">
+                            <div className="text-2xl font-bold text-blue-600 mb-1">+2% to +6%</div>
+                            <p className="text-sm text-gray-600">~€8,000–24,000 on a €400,000 home</p>
                           </div>
                         </div>
-                        <div className="flex items-start gap-3">
-                          <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                            <span className="text-xs font-bold text-blue-600">2</span>
+
+                        {/* BER Rating Improvement Card */}
+                        <div className="bg-green-50 p-3 rounded-lg border border-green-200">
+                          <div className="text-center mb-3">
+                            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                              <Home className="w-6 h-6 text-green-600" />
+                            </div>
+                            <h4 className="font-semibold text-green-800">BER Rating Improvement</h4>
                           </div>
-                          <div>
-                            <h4 className="font-medium">Planning & Permits (2-4 weeks)</h4>
-                            <p className="text-sm text-gray-600">Grid connection application and permits</p>
+                          <div className="flex items-center justify-center gap-3">
+                            <div className="text-center">
+                              <div className="bg-orange-500 text-white px-2 py-1 rounded font-bold text-sm">C2</div>
+                              <p className="text-xs text-gray-600 mt-1">Before</p>
+                            </div>
+                            <div className="text-xl text-gray-400">→</div>
+                            <div className="text-center">
+                              <div className="bg-green-600 text-white px-2 py-1 rounded font-bold text-sm">B3</div>
+                              <p className="text-xs text-gray-600 mt-1">After</p>
+                            </div>
                           </div>
+                          <p className="text-xs text-green-700 text-center mt-2">Typically improves by 1 BER category</p>
                         </div>
-                        <div className="flex items-start gap-3">
-                          <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                            <span className="text-xs font-bold text-blue-600">3</span>
+
+                        {/* Market Benefits Card */}
+                        <div className="bg-purple-50 p-3 rounded-lg border border-purple-200">
+                          <div className="text-center mb-3">
+                            <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                              <CheckCircle className="w-6 h-6 text-purple-600" />
+                            </div>
+                            <h4 className="font-semibold text-purple-800">Market Benefits</h4>
                           </div>
-                          <div>
-                            <h4 className="font-medium">Installation Day (1-2 days)</h4>
-                            <p className="text-sm text-gray-600">Professional installation and commissioning</p>
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                              <span className="text-xs">20% faster sale times</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                              <span className="text-xs">Appeals to eco-conscious buyers</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                              <span className="text-xs">Better mortgage rates available</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                              <span className="text-xs">89% of buyers value efficiency</span>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </CollapsibleContent>
-                  </Collapsible>
 
-                  {/* Warranty Coverage */}
-                  <Collapsible>
-                    <CollapsibleTrigger className="flex items-center justify-between w-full p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <Shield className="w-5 h-5 text-gray-600" />
-                        <span className="font-medium">Warranty Coverage</span>
-                      </div>
-                      <ChevronDown className="w-4 h-4 text-gray-600" />
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="mt-2 p-4 bg-white border rounded-lg">
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-center p-3 bg-green-50 rounded">
-                          <span className="font-medium">Solar Panels</span>
-                          <span className="text-green-600 font-bold">25 Years Performance</span>
-                        </div>
-                        <div className="flex justify-between items-center p-3 bg-blue-50 rounded">
-                          <span className="font-medium">Inverter</span>
-                          <span className="text-blue-600 font-bold">10 Years Product</span>
-                        </div>
-                        <div className="flex justify-between items-center p-3 bg-purple-50 rounded">
-                          <span className="font-medium">Battery Storage</span>
-                          <span className="text-purple-600 font-bold">10 Years Product</span>
-                        </div>
-                        <div className="flex justify-between items-center p-3 bg-orange-50 rounded">
-                          <span className="font-medium">Installation Work</span>
-                          <span className="text-orange-600 font-bold">5 Years Workmanship</span>
-                        </div>
-                      </div>
-                    </CollapsibleContent>
-                  </Collapsible>
-
-                  {/* What if something breaks */}
-                  <Collapsible>
-                    <CollapsibleTrigger className="flex items-center justify-between w-full p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <Wrench className="w-5 h-5 text-gray-600" />
-                        <span className="font-medium">What if something breaks?</span>
-                      </div>
-                      <ChevronDown className="w-4 h-4 text-gray-600" />
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="mt-2 p-4 bg-white border rounded-lg">
-                      <div className="space-y-3">
-                        <div className="flex items-start gap-3">
-                          <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
-                          <div>
-                            <h4 className="font-medium">24/7 Monitoring</h4>
-                            <p className="text-sm text-gray-600">We monitor your system performance remotely</p>
-                          </div>
-                        </div>
-                        <div className="flex items-start gap-3">
-                          <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
-                          <div>
-                            <h4 className="font-medium">Rapid Response</h4>
-                            <p className="text-sm text-gray-600">Same-day diagnosis, next-day repair in most cases</p>
-                          </div>
-                        </div>
-                        <div className="flex items-start gap-3">
-                          <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
-                          <div>
-                            <h4 className="font-medium">No Cost Repairs</h4>
-                            <p className="text-sm text-gray-600">All warranty repairs covered at no charge</p>
-                          </div>
-                        </div>
-                      </div>
-                    </CollapsibleContent>
-                  </Collapsible>
-                
-                {/* What if I move house */}
-                <Collapsible>
-                  <CollapsibleTrigger className="flex items-center justify-between w-full p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <Home className="w-5 h-5 text-gray-600" />
-                      <span className="font-medium">What happens if I move house?</span>
-                    </div>
-                    <ChevronDown className="w-4 h-4 text-gray-600" />
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="mt-2 p-4 bg-white border rounded-lg">
-                    <div className="space-y-3">
-                      <div className="flex items-start gap-3">
-                        <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
-                        <div>
-                          <h4 className="font-medium">System stays with the house</h4>
-                          <p className="text-sm text-gray-600">Solar systems typically increase property value by 2-6%</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
-                        <div>
-                          <h4 className="font-medium">Warranties transfer to new owner</h4>
-                          <p className="text-sm text-gray-600">All manufacturer warranties remain valid</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
-                        <div>
-                          <h4 className="font-medium">Strong selling point</h4>
-                          <p className="text-sm text-gray-600">89% of buyers value energy-efficient homes</p>
-                        </div>
-                      </div>
-                    </div>
-                  </CollapsibleContent>
-                </Collapsible>
-
-                {/* Can I add more panels later */}
-                <Collapsible>
-                  <CollapsibleTrigger className="flex items-center justify-between w-full p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <Plus className="w-5 h-5 text-gray-600" />
-                      <span className="font-medium">Can I add more panels later?</span>
-                    </div>
-                    <ChevronDown className="w-4 h-4 text-gray-600" />
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="mt-2 p-4 bg-white border rounded-lg">
-                    <div className="space-y-3">
-                      <div className="flex items-start gap-3">
-                        <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
-                        <div>
-                          <h4 className="font-medium">Yes, but it's more expensive</h4>
-                          <p className="text-sm text-gray-600">Adding panels later costs 20-30% more due to separate installation</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <AlertCircle className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
-                        <div>
-                          <h4 className="font-medium">Inverter capacity limits</h4>
-                          <p className="text-sm text-gray-600">Your inverter must have spare capacity for additional panels</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
-                        <div>
-                          <h4 className="font-medium">Plan ahead and save</h4>
-                          <p className="text-sm text-gray-600">Size your system for future needs (EV, heat pump) from the start</p>
-                        </div>
-                      </div>
-                    </div>
-                  </CollapsibleContent>
-                </Collapsible>
-
-                {/* What maintenance is required */}
-                <Collapsible>
-                  <CollapsibleTrigger className="flex items-center justify-between w-full p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <Wrench className="w-5 h-5 text-gray-600" />
-                      <span className="font-medium">What maintenance is required?</span>
-                    </div>
-                    <ChevronDown className="w-4 h-4 text-gray-600" />
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="mt-2 p-4 bg-white border rounded-lg">
-                    <div className="space-y-3">
-                      <div className="flex items-start gap-3">
-                        <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
-                        <div>
-                          <h4 className="font-medium">Minimal maintenance required</h4>
-                          <p className="text-sm text-gray-600">Solar panels are self-cleaning in Irish weather</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
-                        <div>
-                          <h4 className="font-medium">Annual visual inspection</h4>
-                          <p className="text-sm text-gray-600">Check for debris, damage, or shading issues</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
-                        <div>
-                          <h4 className="font-medium">Monitor performance</h4>
-                          <p className="text-sm text-gray-600">We provide monitoring app to track system performance</p>
-                        </div>
-                      </div>
-                    </div>
-                  </CollapsibleContent>
-                </Collapsible>
-                </CardContent>
-              </Card>
-            </div>
-
-
-            {/* Updated Sidebar with Circular Progress Design */}
-            <div className="lg:col-span-1">
-              <Card className="sticky top-4 bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-blue-900 text-base md:text-lg">Your Solar Benefits</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Key Metrics */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <Card
-                      className="bg-gradient-to-br from-green-50 to-green-100 cursor-pointer hover:shadow-lg hover:scale-105 transition-all duration-300 group relative border-2 border-green-200 hover:border-green-400 h-24"
-                      onClick={() => {
-                        setShowSavingsModal(true)
-                        // Tab will be set by useEffect based on includeBattery state
-                      }}
-                    >
-                      <CardContent className="p-3 text-center h-full flex flex-col justify-center">
-                        <p className="text-xs text-gray-600 mb-1">ANNUAL SAVINGS</p>
-                        <p className="text-xl font-bold text-green-600">
-                          €{totalAnnualSavings}
+                      <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                        <p className="text-xs text-gray-600 text-center">
+                          Based on industry averages for solar, battery, and EV charger installations. Actual impact depends
+                          on the condition of the home and local property market. This is not a valuation.
                         </p>
-                        <div className="absolute top-2 right-2 bg-blue-600 text-white rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
-                          <Eye className="w-3 h-3" />
-                        </div>
-                        <div className="absolute bottom-1 right-1 text-xs text-gray-500 opacity-70">
-                          Click for details
-                        </div>
-                      </CardContent>
-                    </Card>
-                    <Card
-                      className="bg-gradient-to-br from-blue-50 to-blue-100 cursor-pointer hover:shadow-lg hover:scale-105 transition-all duration-300 group relative border-2 border-blue-200 hover:border-blue-400 h-24"
-                      onClick={() => {
-                        setShowSavingsModal(true)
-                        // Tab will be set by useEffect based on includeBattery state
-                      }}
-                    >
-                      <CardContent className="p-3 text-center h-full flex flex-col justify-center">
-                        <p className="text-xs text-gray-600 mb-1">PAYBACK PERIOD</p>
-                        <p className="text-xl font-bold text-blue-600">{paybackPeriod} yrs</p>
-                        <div className="absolute top-2 right-2 bg-blue-600 text-white rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
-                          <Eye className="w-3 h-3" />
-                        </div>
-                        <div className="absolute bottom-1 right-1 text-xs text-gray-500 opacity-70">
-                          Click for details
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
+                      </div>
+                    </CardContent>
+                  </Card>
 
-                  {/* Investment Breakdown */}
-                  <div className="space-y-3">
-                    <h3 className="text-lg font-bold text-gray-800">Your Investment</h3>
+                  {/* Section 5: Installation, Warranties, FAQ */}
+                  <Card>
+                    <CardHeader className="pb-4">
+                      <CardTitle className="flex items-center gap-3 text-lg md:text-xl">
+                        <div className="w-6 h-6 md:w-8 md:h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-semibold text-sm md:text-base">
+                          4
+                        </div>
+                        Installation, Warranties, FAQ
+                      </CardTitle>
+                      <p className="text-sm md:text-base text-gray-600">Everything you need to know about the process</p>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {/* Installation Timeline */}
+                      <Collapsible>
+                        <CollapsibleTrigger className="flex items-center justify-between w-full p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                          <div className="flex items-center gap-3">
+                            <Calendar className="w-5 h-5 text-gray-600" />
+                            <span className="font-medium">Installation Timeline</span>
+                          </div>
+                          <ChevronDown className="w-4 h-4 text-gray-600" />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="mt-2 p-4 bg-white border rounded-lg">
+                          <div className="space-y-3">
+                            <div className="flex items-start gap-3">
+                              <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <span className="text-xs font-bold text-blue-600">1</span>
+                              </div>
+                              <div>
+                                <h4 className="font-medium">Site Survey & Design (1-2 weeks)</h4>
+                                <p className="text-sm text-gray-600">Technical assessment and system design</p>
+                              </div>
+                            </div>
+                            <div className="flex items-start gap-3">
+                              <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <span className="text-xs font-bold text-blue-600">2</span>
+                              </div>
+                              <div>
+                                <h4 className="font-medium">Planning & Permits (2-4 weeks)</h4>
+                                <p className="text-sm text-gray-600">Grid connection application and permits</p>
+                              </div>
+                            </div>
+                            <div className="flex items-start gap-3">
+                              <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <span className="text-xs font-bold text-blue-600">3</span>
+                              </div>
+                              <div>
+                                <h4 className="font-medium">Installation Day (1-2 days)</h4>
+                                <p className="text-sm text-gray-600">Professional installation and commissioning</p>
+                              </div>
+                            </div>
+                          </div>
+                        </CollapsibleContent>
+                      </Collapsible>
 
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-700">System price</span>
-                        <span className="font-semibold">€{systemBaseCost.toLocaleString()}</span>
+                      {/* Warranty Coverage */}
+                      <Collapsible>
+                        <CollapsibleTrigger className="flex items-center justify-between w-full p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                          <div className="flex items-center gap-3">
+                            <Shield className="w-5 h-5 text-gray-600" />
+                            <span className="font-medium">Warranty Coverage</span>
+                          </div>
+                          <ChevronDown className="w-4 h-4 text-gray-600" />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="mt-2 p-4 bg-white border rounded-lg">
+                          <div className="space-y-3">
+                            <div className="flex justify-between items-center p-3 bg-green-50 rounded">
+                              <span className="font-medium">Solar Panels</span>
+                              <span className="text-green-600 font-bold">25 Years Performance</span>
+                            </div>
+                            <div className="flex justify-between items-center p-3 bg-blue-50 rounded">
+                              <span className="font-medium">Inverter</span>
+                              <span className="text-blue-600 font-bold">10 Years Product</span>
+                            </div>
+                            <div className="flex justify-between items-center p-3 bg-purple-50 rounded">
+                              <span className="font-medium">Battery Storage</span>
+                              <span className="text-purple-600 font-bold">10 Years Product</span>
+                            </div>
+                            <div className="flex justify-between items-center p-3 bg-orange-50 rounded">
+                              <span className="font-medium">Installation Work</span>
+                              <span className="text-orange-600 font-bold">5 Years Workmanship</span>
+                            </div>
+                          </div>
+                        </CollapsibleContent>
+                      </Collapsible>
+
+                      {/* What if something breaks */}
+                      <Collapsible>
+                        <CollapsibleTrigger className="flex items-center justify-between w-full p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                          <div className="flex items-center gap-3">
+                            <Wrench className="w-5 h-5 text-gray-600" />
+                            <span className="font-medium">What if something breaks?</span>
+                          </div>
+                          <ChevronDown className="w-4 h-4 text-gray-600" />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="mt-2 p-4 bg-white border rounded-lg">
+                          <div className="space-y-3">
+                            <div className="flex items-start gap-3">
+                              <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                              <div>
+                                <h4 className="font-medium">24/7 Monitoring</h4>
+                                <p className="text-sm text-gray-600">We monitor your system performance remotely</p>
+                              </div>
+                            </div>
+                            <div className="flex items-start gap-3">
+                              <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                              <div>
+                                <h4 className="font-medium">Rapid Response</h4>
+                                <p className="text-sm text-gray-600">Same-day diagnosis, next-day repair in most cases</p>
+                              </div>
+                            </div>
+                            <div className="flex items-start gap-3">
+                              <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                              <div>
+                                <h4 className="font-medium">No Cost Repairs</h4>
+                                <p className="text-sm text-gray-600">All warranty repairs covered at no charge</p>
+                              </div>
+                            </div>
+                          </div>
+                        </CollapsibleContent>
+                      </Collapsible>
+
+                      {/* What if I move house */}
+                      <Collapsible>
+                        <CollapsibleTrigger className="flex items-center justify-between w-full p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                          <div className="flex items-center gap-3">
+                            <Home className="w-5 h-5 text-gray-600" />
+                            <span className="font-medium">What happens if I move house?</span>
+                          </div>
+                          <ChevronDown className="w-4 h-4 text-gray-600" />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="mt-2 p-4 bg-white border rounded-lg">
+                          <div className="space-y-3">
+                            <div className="flex items-start gap-3">
+                              <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                              <div>
+                                <h4 className="font-medium">System stays with the house</h4>
+                                <p className="text-sm text-gray-600">Solar systems typically increase property value by 2-6%</p>
+                              </div>
+                            </div>
+                            <div className="flex items-start gap-3">
+                              <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                              <div>
+                                <h4 className="font-medium">Warranties transfer to new owner</h4>
+                                <p className="text-sm text-gray-600">All manufacturer warranties remain valid</p>
+                              </div>
+                            </div>
+                            <div className="flex items-start gap-3">
+                              <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                              <div>
+                                <h4 className="font-medium">Strong selling point</h4>
+                                <p className="text-sm text-gray-600">89% of buyers value energy-efficient homes</p>
+                              </div>
+                            </div>
+                          </div>
+                        </CollapsibleContent>
+                      </Collapsible>
+
+                      {/* Can I add more panels later */}
+                      <Collapsible>
+                        <CollapsibleTrigger className="flex items-center justify-between w-full p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                          <div className="flex items-center gap-3">
+                            <Plus className="w-5 h-5 text-gray-600" />
+                            <span className="font-medium">Can I add more panels later?</span>
+                          </div>
+                          <ChevronDown className="w-4 h-4 text-gray-600" />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="mt-2 p-4 bg-white border rounded-lg">
+                          <div className="space-y-3">
+                            <div className="flex items-start gap-3">
+                              <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                              <div>
+                                <h4 className="font-medium">Yes, but it's more expensive</h4>
+                                <p className="text-sm text-gray-600">Adding panels later costs 20-30% more due to separate installation</p>
+                              </div>
+                            </div>
+                            <div className="flex items-start gap-3">
+                              <AlertCircle className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
+                              <div>
+                                <h4 className="font-medium">Inverter capacity limits</h4>
+                                <p className="text-sm text-gray-600">Your inverter must have spare capacity for additional panels</p>
+                              </div>
+                            </div>
+                            <div className="flex items-start gap-3">
+                              <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                              <div>
+                                <h4 className="font-medium">Plan ahead and save</h4>
+                                <p className="text-sm text-gray-600">Size your system for future needs (EV, heat pump) from the start</p>
+                              </div>
+                            </div>
+                          </div>
+                        </CollapsibleContent>
+                      </Collapsible>
+
+                      {/* What maintenance is required */}
+                      <Collapsible>
+                        <CollapsibleTrigger className="flex items-center justify-between w-full p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                          <div className="flex items-center gap-3">
+                            <Wrench className="w-5 h-5 text-gray-600" />
+                            <span className="font-medium">What maintenance is required?</span>
+                          </div>
+                          <ChevronDown className="w-4 h-4 text-gray-600" />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="mt-2 p-4 bg-white border rounded-lg">
+                          <div className="space-y-3">
+                            <div className="flex items-start gap-3">
+                              <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                              <div>
+                                <h4 className="font-medium">Minimal maintenance required</h4>
+                                <p className="text-sm text-gray-600">Solar panels are self-cleaning in Irish weather</p>
+                              </div>
+                            </div>
+                            <div className="flex items-start gap-3">
+                              <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                              <div>
+                                <h4 className="font-medium">Annual visual inspection</h4>
+                                <p className="text-sm text-gray-600">Check for debris, damage, or shading issues</p>
+                              </div>
+                            </div>
+                            <div className="flex items-start gap-3">
+                              <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                              <div>
+                                <h4 className="font-medium">Monitor performance</h4>
+                                <p className="text-sm text-gray-600">We provide monitoring app to track system performance</p>
+                              </div>
+                            </div>
+                          </div>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    </CardContent>
+                  </Card>
+                </div>
+
+
+                {/* Updated Sidebar with Circular Progress Design */}
+                <div className="lg:col-span-1">
+                  <Card className="sticky top-4 bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-blue-900 text-base md:text-lg">Your Solar Benefits</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {/* Key Metrics */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <Card
+                          className="bg-gradient-to-br from-green-50 to-green-100 cursor-pointer hover:shadow-lg hover:scale-105 transition-all duration-300 group relative border-2 border-green-200 hover:border-green-400 h-24"
+                          onClick={() => {
+                            setShowSavingsModal(true)
+                            // Tab will be set by useEffect based on includeBattery state
+                          }}
+                        >
+                          <CardContent className="p-3 text-center h-full flex flex-col justify-center">
+                            <p className="text-xs text-gray-600 mb-1">ANNUAL SAVINGS</p>
+                            <p className="text-xl font-bold text-green-600">
+                              €{totalAnnualSavings}
+                            </p>
+                            <div className="absolute top-2 right-2 bg-blue-600 text-white rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
+                              <Eye className="w-3 h-3" />
+                            </div>
+                            <div className="absolute bottom-1 right-1 text-xs text-gray-500 opacity-70">
+                              Click for details
+                            </div>
+                          </CardContent>
+                        </Card>
+                        <Card
+                          className="bg-gradient-to-br from-blue-50 to-blue-100 cursor-pointer hover:shadow-lg hover:scale-105 transition-all duration-300 group relative border-2 border-blue-200 hover:border-blue-400 h-24"
+                          onClick={() => {
+                            setShowSavingsModal(true)
+                            // Tab will be set by useEffect based on includeBattery state
+                          }}
+                        >
+                          <CardContent className="p-3 text-center h-full flex flex-col justify-center">
+                            <p className="text-xs text-gray-600 mb-1">PAYBACK PERIOD</p>
+                            <p className="text-xl font-bold text-blue-600">{paybackPeriod} yrs</p>
+                            <div className="absolute top-2 right-2 bg-blue-600 text-white rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
+                              <Eye className="w-3 h-3" />
+                            </div>
+                            <div className="absolute bottom-1 right-1 text-xs text-gray-500 opacity-70">
+                              Click for details
+                            </div>
+                          </CardContent>
+                        </Card>
                       </div>
 
-                      {includeBattery && (
-                        <div className="flex justify-between items-center">
-                          <span className="text-gray-700">Battery cost ({batteryCount * (selectedBattery.capacity || 0)}kWh)</span>
-                          <span className="font-semibold">€{batteryCost.toLocaleString()}</span>
-                        </div>
-                      )}
+                      {/* Investment Breakdown */}
+                      <div className="space-y-3">
+                        <h3 className="text-lg font-bold text-gray-800">Your Investment</h3>
 
-                      {includeEVChargerEquipment && (
-                        <div className="flex justify-between items-center">
-                          <span className="text-gray-700">EV charger</span>
-                          <span className="font-semibold">€{(selectedEVCharger.price || 0).toLocaleString()}</span>
-                        </div>
-                      )}
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center">
+                            <span className="text-gray-700">System price</span>
+                            <span className="font-semibold">€{systemBaseCost.toLocaleString()}</span>
+                          </div>
 
-                      <div className="flex justify-between items-center border-t pt-2">
-                        <span className="text-gray-700 font-medium">Price you pay</span>
-                        <div className="flex items-center gap-1">
-                          <span className="font-semibold">€{totalSystemCost.toLocaleString()}</span>
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              {/* <Button variant="ghost" size="icon" className="w-5 h-5 text-blue-600">
+                          {includeBattery && (
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-700">Battery cost ({batteryCount * (selectedBattery?.capacity || 0)}kWh)</span>
+                              <span className="font-semibold">€{batteryCost.toLocaleString()}</span>
+                            </div>
+                          )}
+
+                          {includeEVChargerEquipment && (
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-700">EV charger</span>
+                              <span className="font-semibold">€{(selectedEVCharger?.price || 0).toLocaleString()}</span>
+                            </div>
+                          )}
+
+                          <div className="flex justify-between items-center border-t pt-2">
+                            <span className="text-gray-700 font-medium">Price you pay</span>
+                            <div className="flex items-center gap-1">
+                              <span className="font-semibold">€{totalSystemCost.toLocaleString()}</span>
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  {/* <Button variant="ghost" size="icon" className="w-5 h-5 text-blue-600">
                                 <Info className="w-3 h-3" />
                               </Button> */}
-                            </DialogTrigger>
-                            <DialogContent className="max-w-sm">
-                              <DialogHeader className="relative">
-                                <DialogClose asChild>
-                                  <button
-                                    className="absolute top-0 right-0 w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 hover:text-gray-700 transition-colors"
-                                  >
-                                    ×
-                                  </button>
-                                </DialogClose>
-                                <DialogTitle className="pr-8">System Cost Breakdown</DialogTitle>
-                              </DialogHeader>
-                              <div className="space-y-2 text-sm">
-                                <div className="flex justify-between py-2 border-b">
-                                  <span>Solar Hardware</span>
-                                  <span>€{systemBaseCost.toLocaleString()}</span>
-                                </div>
-                                {includeBattery && (
-                                  <div className="flex justify-between py-2 border-b">
-                                    <span>Battery Hardware ({batteryCount * (selectedBattery.capacity || 0)}kWh)</span>
-                                    <span>€{batteryCost.toLocaleString()}</span>
+                                </DialogTrigger>
+                                <DialogContent className="max-w-sm">
+                                  <DialogHeader className="relative">
+                                    <DialogClose asChild>
+                                      <button
+                                        className="absolute top-0 right-0 w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 hover:text-gray-700 transition-colors"
+                                      >
+                                        ×
+                                      </button>
+                                    </DialogClose>
+                                    <DialogTitle className="pr-8">System Cost Breakdown</DialogTitle>
+                                  </DialogHeader>
+                                  <div className="space-y-2 text-sm">
+                                    <div className="flex justify-between py-2 border-b">
+                                      <span>Solar Hardware</span>
+                                      <span>€{systemBaseCost.toLocaleString()}</span>
+                                    </div>
+                                    {includeBattery && (
+                                      <div className="flex justify-between py-2 border-b">
+                                        <span>Battery Hardware ({batteryCount * (selectedBattery?.capacity || 0)}kWh)</span>
+                                        <span>€{batteryCost.toLocaleString()}</span>
+                                      </div>
+                                    )}
+                                    {includeEVChargerEquipment && (
+                                      <div className="flex justify-between py-2 border-b">
+                                        <span>EV Charger</span>
+                                        <span>€{(selectedEVCharger?.price || 0).toLocaleString()}</span>
+                                      </div>
+                                    )}
+                                    <div className="flex justify-between py-2 font-bold">
+                                      <span>Total</span>
+                                      <span>€{totalSystemCost.toLocaleString()}</span>
+                                    </div>
                                   </div>
-                                )}
-                                {includeEVChargerEquipment && (
-                                  <div className="flex justify-between py-2 border-b">
-                                    <span>EV Charger</span>
-                                    <span>€{(selectedEVCharger.price || 0).toLocaleString()}</span>
-                                  </div>
-                                )}
-                                <div className="flex justify-between py-2 font-bold">
-                                  <span>Total</span>
-                                  <span>€{totalSystemCost.toLocaleString()}</span>
-                                </div>
-                              </div>
-                            </DialogContent>
-                          </Dialog>
-                        </div>
-                      </div>
-
-                      {isEligibleForSEAIGrant && (
-                        <div className="flex justify-between items-center text-green-600">
-                          <span>SEAI Grant</span>
-                          <div className="flex items-center gap-1">
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button variant="ghost" size="icon" className="w-5 h-5 text-blue-600">
-                                  <Info className="w-3 h-3" />
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent className="max-h-[66vh] overflow-y-auto">
-                                <DialogHeader className="relative">
-                                  <DialogClose asChild>
-                                    <button
-                                      className="absolute top-0 right-0 w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 hover:text-gray-700 transition-colors"
-                                    >
-                                      ×
-                                    </button>
-                                  </DialogClose>
-                                  <DialogTitle className="flex items-center gap-2 text-xl font-bold pr-8">
-                                    <DollarSign className="w-6 h-6 text-green-500" />
-                                    SEAI Grant Information
-                                  </DialogTitle>
-                                  <p className="text-sm text-gray-600">
-                                    Learn about the government grant available for solar PV installations.
-                                  </p>
-                                </DialogHeader>
-                                <div className="space-y-3">
-                                  <p className="text-gray-700">
-                                    The Sustainable Energy Authority of Ireland (SEAI) provides grants up to €1,800 for solar
-                                    PV installations to encourage renewable energy adoption.
-                                  </p>
-                                  
-                                  <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                                    <p className="text-base font-medium text-blue-800 mb-1">
-                                      Was your house built before 31st December 2020?
-                                    </p>
-                                    <p className="text-sm text-blue-700">
-                                      SEAI grant only applies to homes built before this date.
-                                    </p>
-                                  </div>
-
-                                  <ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
-                                    <li>• Max grant amount: €1,800</li>
-                                    <li>• Eligibility criteria apply (e.g., BER rating, property type)</li>
-                                    <li>• Applied directly by your installer</li>
-                                  </ul>
-                                  <div className="bg-gray-50 p-3 rounded-lg text-xs text-gray-700">
-                                    <p>
-                                      Disclaimer: Grant amounts and eligibility are subject to SEAI terms and conditions and may change.
-                                    </p>
-                                  </div>
-                                </div>
-                              </DialogContent>
-                            </Dialog>
-                            <span className="font-semibold">-€{seaiGrant.toLocaleString()}</span>
+                                </DialogContent>
+                              </Dialog>
+                            </div>
                           </div>
-                        </div>
-                      )}
 
-                      {includeEVChargerEquipment && (
-                        <div className="flex justify-between items-center text-green-600">
-                          <span>EV Charger Grant</span>
-                          <span className="font-semibold">-€{evChargerGrant.toLocaleString()}</span>
-                        </div>
-                      )}
-                    </div>
+                          {isEligibleForSEAIGrant && (
+                            <div className="flex justify-between items-center text-green-600">
+                              <span>SEAI Grant</span>
+                              <div className="flex items-center gap-1">
+                                <Dialog>
+                                  <DialogTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="w-5 h-5 text-blue-600">
+                                      <Info className="w-3 h-3" />
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent className="max-h-[66vh] overflow-y-auto">
+                                    <DialogHeader className="relative">
+                                      <DialogClose asChild>
+                                        <button
+                                          className="absolute top-0 right-0 w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 hover:text-gray-700 transition-colors"
+                                        >
+                                          ×
+                                        </button>
+                                      </DialogClose>
+                                      <DialogTitle className="flex items-center gap-2 text-xl font-bold pr-8">
+                                        <DollarSign className="w-6 h-6 text-green-500" />
+                                        SEAI Grant Information
+                                      </DialogTitle>
+                                      <p className="text-sm text-gray-600">
+                                        Learn about the government grant available for solar PV installations.
+                                      </p>
+                                    </DialogHeader>
+                                    <div className="space-y-3">
+                                      <p className="text-gray-700">
+                                        The Sustainable Energy Authority of Ireland (SEAI) provides grants up to €1,800 for solar
+                                        PV installations to encourage renewable energy adoption.
+                                      </p>
 
-                    <div className="border-t pt-3">
-                      <div className="flex justify-between items-center">
-                        <span className="text-xl font-bold text-gray-800">Net investment</span>
-                        <span className="text-2xl font-bold text-green-600">€{finalPrice.toLocaleString()}</span>
-                      </div>
-                        {/* <p className="text-center text-sm text-gray-600 mt-1">
+                                      <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                                        <p className="text-base font-medium text-blue-800 mb-1">
+                                          Was your house built before 31st December 2020?
+                                        </p>
+                                        <p className="text-sm text-blue-700">
+                                          SEAI grant only applies to homes built before this date.
+                                        </p>
+                                      </div>
+
+                                      <ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
+                                        <li>• Max grant amount: €1,800</li>
+                                        <li>• Eligibility criteria apply (e.g., BER rating, property type)</li>
+                                        <li>• Applied directly by your installer</li>
+                                      </ul>
+                                      <div className="bg-gray-50 p-3 rounded-lg text-xs text-gray-700">
+                                        <p>
+                                          Disclaimer: Grant amounts and eligibility are subject to SEAI terms and conditions and may change.
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </DialogContent>
+                                </Dialog>
+                                <span className="font-semibold">-€{seaiGrant.toLocaleString()}</span>
+                              </div>
+                            </div>
+                          )}
+
+                          {includeEVChargerEquipment && (
+                            <div className="flex justify-between items-center text-green-600">
+                              <span>EV Charger Grant</span>
+                              <span className="font-semibold">-€{evChargerGrant.toLocaleString()}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="border-t pt-3">
+                          <div className="flex justify-between items-center">
+                            <span className="text-xl font-bold text-gray-800">Net investment</span>
+                            <span className="text-2xl font-bold text-green-600">€{finalPrice.toLocaleString()}</span>
+                          </div>
+                          {/* <p className="text-center text-sm text-gray-600 mt-1">
                         or from €{(() => {
                           // 5 year term, 4.99% APR, finalPrice is principal
                           const principal = (systemBaseCost + batteryCost);
@@ -2537,1050 +2613,1044 @@ export default function SolarEnergyPlanner() {
                           return Math.round(payment);
                         })()}/month with financing
                         </p> */}
-                    </div>
-                  </div>
+                        </div>
+                      </div>
 
-                  {/* CTA Buttons */}
-                  <div className="space-y-3 pt-2">
-                    {/* Primary CTA - Book Free Consultation */}
-                    <Button 
-                      className="w-full h-12 !px-6 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold text-sm shadow-lg transform transition-all duration-200 hover:scale-[1.02] hover:shadow-xl" 
-                      onClick={() => router.push('/call-page')}
-                    >
-                      <Calendar className="w-5 h-5" />
-                      Book Free Consultation
-                      <span className="text-xs bg-white/20 px-2 py-1 rounded-full">
-                        No Obligation
-                      </span>
-                    </Button>
-                    
-                   
-
-                    {/* Secondary CTA - Download Plan */}
-                    <Dialog 
-                      open={showSavePlanDialog} 
-                      onOpenChange={(open) => {
-                        setShowSavePlanDialog(open);
-                        if (!open) {
-                          // Reset form state when dialog closes
-                          setSubmitError("");
-                          setIsSubmitting(false);
-                        }
-                      }}
-                    >
-                      <DialogTrigger asChild>
-                        <Button 
-                          variant="outline" 
-                          className="w-full h-10 bg-white hover:bg-gray-50 border-2 border-gray-200 hover:border-gray-300 text-gray-700 font-medium text-sm transition-all duration-200"
+                      {/* CTA Buttons */}
+                      <div className="space-y-3 pt-2">
+                        {/* Primary CTA - Book Free Consultation */}
+                        <Button
+                          className="w-full h-12 !px-6 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold text-sm shadow-lg transform transition-all duration-200 hover:scale-[1.02] hover:shadow-xl"
+                          onClick={() => router.push('/call-page')}
                         >
-                          <Download className="w-4 h-4 mr-2" />
-                          Download Detailed Plan
+                          <Calendar className="w-5 h-5" />
+                          Book Free Consultation
+                          <span className="text-xs bg-white/20 px-2 py-1 rounded-full">
+                            No Obligation
+                          </span>
                         </Button>
-                      </DialogTrigger>
-                      <DialogContent className="sm:max-w-md">
-                        {emailSubmissionSuccess ? (
-                          // Success State
-                          <div className="space-y-2 sm:space-y-3 p-3 sm:p-4 lg:p-5 relative">
-                            {/* Close Button */}
-                            <DialogClose asChild>
-                              <button
-                                className="absolute top-3 right-3 w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 hover:text-gray-700 transition-colors z-10"
-                              >
-                                ×
-                              </button>
-                            </DialogClose>
-                            
-                            {/* Header Section - More friendly */}
-                            <div className="text-center space-y-1 sm:space-y-2">
-                              <div className="mx-auto w-10 h-10 sm:w-12 sm:h-12 bg-blue-50 rounded-full flex items-center justify-center border-2 border-blue-200">
-                                <ThumbsUp className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
-                              </div>
-                              <div>
-                                <h1 className="text-base sm:text-lg font-bold text-foreground">Your Report is On Its Way! 🚀</h1>
-                                <p className="text-xs sm:text-sm text-muted-foreground">We've got your solar plan ready</p>
-                              </div>
-                            </div>
 
-                            {/* Email Confirmation - More friendly */}
-                            <div className="bg-blue-50 rounded-lg p-2 sm:p-3 lg:p-4 space-y-1 sm:space-y-2 border border-blue-200">
-                              <div className="flex items-center gap-2">
-                                <Mail className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600 flex-shrink-0" />
-                                <p className="text-xs sm:text-sm font-medium text-foreground break-all">Sent to: {email}</p>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Clock className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600 flex-shrink-0" />
-                                <p className="text-xs text-muted-foreground">Should arrive within 60 seconds</p>
-                              </div>
-                              <div className="bg-yellow-100 border border-yellow-300 rounded p-2">
-                                <p className="text-xs font-medium text-gray-800">
-                                  📧 Check your inbox, spam & promotions folders (just in case) 😊
-                                </p>
-                              </div>
-                            </div>
 
-                            {/* Value Proposition - More friendly */}
-                            <div className="text-center bg-blue-50 rounded-lg p-2 sm:p-3 border border-blue-200">
-                              <p className="text-xs sm:text-sm font-medium text-foreground mb-1">Got questions about your plan? 🤔</p>
-                              <p className="text-xs text-muted-foreground">
-                                Let's chat! No pressure, just friendly advice on design & grants
-                              </p>
-                            </div>
 
-                            {/* Action Buttons - More human phrasing */}
-                            <div className="space-y-1 sm:space-y-2">
-                              <Button
-                                onClick={() => {
-                                  setShowSavePlanDialog(false);
-                                  setAppNavigation();
-                                  router.push('/call-page');
-                                }}
-                                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 sm:py-2.5 text-xs sm:text-sm shadow-md hover:shadow-lg transition-all duration-200"
-                              >
-                                <Calendar className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
-                                Let's Chat - No Pressure! ☎️
-                              </Button>
+                        {/* Secondary CTA - Download Plan */}
+                        <Dialog
+                          open={showSavePlanDialog}
+                          onOpenChange={(open) => {
+                            setShowSavePlanDialog(open);
+                            if (!open) {
+                              // Reset form state when dialog closes
+                              setSubmitError("");
+                              setIsSubmitting(false);
+                            }
+                          }}
+                        >
+                          <DialogTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className="w-full h-10 bg-white hover:bg-gray-50 border-2 border-gray-200 hover:border-gray-300 text-gray-700 font-medium text-sm transition-all duration-200"
+                            >
+                              <Download className="w-4 h-4 mr-2" />
+                              Download Detailed Plan
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="sm:max-w-md">
+                            {emailSubmissionSuccess ? (
+                              // Success State
+                              <div className="space-y-2 sm:space-y-3 p-3 sm:p-4 lg:p-5 relative">
+                                {/* Close Button */}
+                                <DialogClose asChild>
+                                  <button
+                                    className="absolute top-3 right-3 w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 hover:text-gray-700 transition-colors z-10"
+                                  >
+                                    ×
+                                  </button>
+                                </DialogClose>
 
-                              <Button
-                                variant="outline"
-                                onClick={() => {
-                                  setShowSavePlanDialog(false);
-                                  router.push('/review-report');
-                                }}
-                                className="w-full border border-blue-200 text-gray-700 hover:bg-blue-50 font-medium py-2 sm:py-2.5 text-xs sm:text-sm transition-all duration-200 bg-white"
-                              >
-                                <FileText className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
-                                I'll Take a Look First 👀
-                              </Button>
-                            </div>
+                                {/* Header Section - More friendly */}
+                                <div className="text-center space-y-1 sm:space-y-2">
+                                  <div className="mx-auto w-10 h-10 sm:w-12 sm:h-12 bg-blue-50 rounded-full flex items-center justify-center border-2 border-blue-200">
+                                    <ThumbsUp className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
+                                  </div>
+                                  <div>
+                                    <h1 className="text-base sm:text-lg font-bold text-foreground">Your Report is On Its Way! 🚀</h1>
+                                    <p className="text-xs sm:text-sm text-muted-foreground">We've got your solar plan ready</p>
+                                  </div>
+                                </div>
 
-                            {/* Footer - Minimal */}
-                            <div className="text-center pt-1 sm:pt-2 border-t border-blue-100">
-                              <p className="text-xs text-gray-600">
-                                Questions or need help?{" "}
-                                    {branding.email && (
+                                {/* Email Confirmation - More friendly */}
+                                <div className="bg-blue-50 rounded-lg p-2 sm:p-3 lg:p-4 space-y-1 sm:space-y-2 border border-blue-200">
+                                  <div className="flex items-center gap-2">
+                                    <Mail className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600 flex-shrink-0" />
+                                    <p className="text-xs sm:text-sm font-medium text-foreground break-all">Sent to: {email}</p>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <Clock className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600 flex-shrink-0" />
+                                    <p className="text-xs text-muted-foreground">Should arrive within 60 seconds</p>
+                                  </div>
+                                  <div className="bg-yellow-100 border border-yellow-300 rounded p-2">
+                                    <p className="text-xs font-medium text-gray-800">
+                                      📧 Check your inbox, spam & promotions folders (just in case) 😊
+                                    </p>
+                                  </div>
+                                </div>
+
+                                {/* Value Proposition - More friendly */}
+                                <div className="text-center bg-blue-50 rounded-lg p-2 sm:p-3 border border-blue-200">
+                                  <p className="text-xs sm:text-sm font-medium text-foreground mb-1">Got questions about your plan? 🤔</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    Let's chat! No pressure, just friendly advice on design & grants
+                                  </p>
+                                </div>
+
+                                {/* Action Buttons - More human phrasing */}
+                                <div className="space-y-1 sm:space-y-2">
+                                  <Button
+                                    onClick={() => {
+                                      setShowSavePlanDialog(false);
+                                      setAppNavigation();
+                                      router.push('/call-page');
+                                    }}
+                                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 sm:py-2.5 text-xs sm:text-sm shadow-md hover:shadow-lg transition-all duration-200"
+                                  >
+                                    <Calendar className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
+                                    Let's Chat - No Pressure! ☎️
+                                  </Button>
+
+                                  <Button
+                                    variant="outline"
+                                    onClick={() => {
+                                      setShowSavePlanDialog(false);
+                                      router.push('/review-report');
+                                    }}
+                                    className="w-full border border-blue-200 text-gray-700 hover:bg-blue-50 font-medium py-2 sm:py-2.5 text-xs sm:text-sm transition-all duration-200 bg-white"
+                                  >
+                                    <FileText className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
+                                    I'll Take a Look First 👀
+                                  </Button>
+                                </div>
+
+                                {/* Footer - Minimal */}
+                                <div className="text-center pt-1 sm:pt-2 border-t border-blue-100">
+                                  <p className="text-xs text-gray-600">
+                                    Questions or need help?{" "}
+                                    {branding?.email && (
                                       <a href={`mailto:${branding.email}`} className="text-blue-600 hover:text-blue-700 font-medium hover:underline">
-                                      {branding.email}
+                                        {branding.email}
                                       </a>
                                     )}
-                              </p>
+                                  </p>
+                                </div>
+                              </div>
+
+                            ) : (
+                              // Form State
+                              <>
+                                <DialogHeader className="text-center pb-4 relative">
+                                  <DialogClose asChild>
+                                    <button
+                                      className="absolute top-0 right-0 w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 hover:text-gray-700 transition-colors"
+                                    >
+                                      ×
+                                    </button>
+                                  </DialogClose>
+                                  <DialogTitle className="text-2xl font-bold text-gray-900 pr-8">
+                                    Download Your Solar Plan
+                                  </DialogTitle>
+                                  <p className="text-gray-600 mt-2">
+                                    Get your detailed plan emailed to you with financing options and next steps.
+                                  </p>
+                                </DialogHeader>
+
+                                <div className="space-y-4">
+                                  {/* Full Name Field */}
+                                  <div className="space-y-2">
+                                    <label className="text-sm font-medium text-gray-700">
+                                      Full Name <span className="text-red-500">*</span>
+                                    </label>
+                                    <div className="relative">
+                                      <User className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                                      <Input
+                                        type="text"
+                                        placeholder="Your Full Name"
+                                        value={fullName}
+                                        onChange={handleFullNameChange}
+                                        className="pl-10 h-12 text-gray-600"
+                                        required
+                                      />
+                                    </div>
+                                  </div>
+
+                                  {/* Email Field */}
+                                  <div className="space-y-2">
+                                    <label className="text-sm font-medium text-gray-700">
+                                      Email Address <span className="text-red-500">*</span>
+                                    </label>
+                                    <div className="relative">
+                                      <Mail className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                                      <Input
+                                        type="email"
+                                        placeholder="you@example.com"
+                                        value={email}
+                                        onChange={handleEmailChange}
+                                        className="pl-10 h-12 text-gray-600"
+                                        required
+                                      />
+                                    </div>
+                                  </div>
+
+                                  {/* Agreement Checkbox */}
+                                  <div className="flex items-start space-x-2 pt-2">
+                                    <Checkbox
+                                      id="agree-terms"
+                                      checked={agreeToTerms}
+                                      onCheckedChange={(checked) => setAgreeToTerms(checked === true)}
+                                      className="mt-1"
+                                    />
+                                    <label htmlFor="agree-terms" className="text-sm text-gray-700 leading-5">
+                                      I agree to receive my personalised energy upgrade report by email from Voltflo. No spam, no follow-ups. <span className="text-red-500">*</span>
+                                    </label>
+                                  </div>
+
+                                  {/* Error Message */}
+                                  {submitError && (
+                                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                                      <p className="text-sm text-red-600">{submitError}</p>
+                                    </div>
+                                  )}
+
+                                  {/* Submit Button */}
+                                  <Button
+                                    onClick={handleSavePlan}
+                                    disabled={!fullName.trim() || !email.trim() || !agreeToTerms || isSubmitting}
+                                    className="w-full h-12 bg-green-600 hover:bg-green-700 text-white font-medium mt-6 disabled:opacity-50"
+                                  >
+                                    {isSubmitting ? (
+                                      <>
+                                        <div className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                        Sending Plan...
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Mail className="w-4 h-4 mr-2" />
+                                        Email My Solar Plan
+                                      </>
+                                    )}
+                                  </Button>
+
+                                  {/* Footer Text */}
+                                  <div className="text-xs text-gray-600 text-center pt-2 leading-4">
+                                    By clicking 'Email My Solar Plan', you agree to Voltflo's{" "}
+                                    <a target="_blank" href="https://voltflo.com/PrivacyPolicy" className="text-green-600 underline">Privacy Policy</a> and{" "}
+                                    <a target="_blank" href="https://voltflo.com/TermsOfUse" className="text-green-600 underline">Terms of Use</a>.
+                                  </div>
+                                </div>
+                              </>
+                            )}
+                          </DialogContent>
+                        </Dialog>
+                      </div>
+
+                      {/* Disclaimer */}
+                      <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-200">
+                        <p className="text-xs text-yellow-800">
+                          <span className="font-medium">Provisional figures</span> - Final costs confirmed after site visit
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            </div>
+          </div>
+          {/* Bill Editor Dialog */}
+          <Dialog open={showBillEditor} onOpenChange={setShowBillEditor}>
+            <DialogContent className="max-w-md">
+              <DialogHeader className="relative">
+                <DialogClose asChild>
+                  <button
+                    className="absolute top-0 right-0 w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 hover:text-gray-700 transition-colors"
+                  >
+                    ×
+                  </button>
+                </DialogClose>
+                <DialogTitle className="pr-8">Edit Your Current Energy Bill</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="text-center">
+                  <p className="text-sm text-gray-600 mb-2">Average Irish household: €2,200-€3,000/year</p>
+                </div>
+
+                {/* Toggle between monthly/annual */}
+                <div className="flex justify-center">
+                  <div className="bg-gray-100 p-1 rounded-lg">
+                    <button
+                      onClick={() => setBillInputMode("monthly")}
+                      className={`px-3 py-1 rounded text-sm ${billInputMode === "monthly" ? "bg-white shadow-sm font-medium" : "text-gray-600"
+                        }`}
+                    >
+                      Monthly
+                    </button>
+                    <button
+                      onClick={() => setBillInputMode("annual")}
+                      className={`px-3 py-1 rounded text-sm ${billInputMode === "annual" ? "bg-white shadow-sm font-medium" : "text-gray-600"
+                        }`}
+                    >
+                      Annual
+                    </button>
+                  </div>
+                </div>
+
+                {/* Slider and input */}
+                <div className="space-y-3">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-blue-600">
+                      €{billInputMode === "monthly" ? Math.round(customAnnualBill / 12) : customAnnualBill}
+                    </div>
+                    <div className="text-sm text-gray-600">{billInputMode === "monthly" ? "per month" : "per year"}</div>
+                  </div>
+
+                  <input
+                    type="range"
+                    min={billInputMode === "monthly" ? 100 : 1200}
+                    max={billInputMode === "monthly" ? 500 : 6000}
+                    step={billInputMode === "monthly" ? 10 : 100}
+                    value={billInputMode === "monthly" ? Math.round(customAnnualBill / 12) : customAnnualBill}
+                    onChange={(e) => {
+                      const value = Number.parseInt(e.target.value)
+                      setCustomAnnualBill(billInputMode === "monthly" ? value * 12 : value)
+                    }}
+                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                  />
+
+                  <div className="flex justify-between text-xs text-gray-500">
+                    <span>€{billInputMode === "monthly" ? "100" : "1,200"}</span>
+                    <span>€{billInputMode === "monthly" ? "500" : "6,000"}</span>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-4">
+                  <Button variant="outline" onClick={() => setCustomAnnualBill(2640)} className="flex-1">
+                    Reset to Default
+                  </Button>
+                  <Button onClick={() => setShowBillEditor(false)} className="flex-1">
+                    Save Changes
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Success Modal */}
+          <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
+            <DialogContent className="max-w-[90vw] sm:max-w-lg lg:max-w-xl mx-auto bg-background border-0 shadow-2xl">
+              <div className="space-y-2 sm:space-y-3 p-3 sm:p-4 lg:p-5">
+                {/* Header Section - More friendly */}
+                <div className="text-center space-y-1 sm:space-y-2">
+                  <div className="mx-auto w-10 h-10 sm:w-12 sm:h-12 bg-blue-50 rounded-full flex items-center justify-center border-2 border-blue-200">
+                    <ThumbsUp className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <h1 className="text-base sm:text-lg font-bold text-foreground">Your Report is On Its Way! 🚀</h1>
+                    <p className="text-xs sm:text-sm text-muted-foreground">We've got your solar plan ready</p>
+                  </div>
+                </div>
+
+                {/* Email Confirmation - More friendly */}
+                <div className="bg-blue-50 rounded-lg p-2 sm:p-3 lg:p-4 space-y-1 sm:space-y-2 border border-blue-200">
+                  <div className="flex items-center gap-2">
+                    <Mail className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600 flex-shrink-0" />
+                    <p className="text-xs sm:text-sm font-medium text-foreground break-all">Sent to: {email}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600 flex-shrink-0" />
+                    <p className="text-xs text-muted-foreground">Should arrive within 60 seconds</p>
+                  </div>
+                  <div className="bg-yellow-100 border border-yellow-300 rounded p-2">
+                    <p className="text-xs font-medium text-gray-800">
+                      📧 Check your inbox, spam & promotions folders (just in case) 😊
+                    </p>
+                  </div>
+                </div>
+
+                {/* Value Proposition - More friendly */}
+                <div className="text-center bg-blue-50 rounded-lg p-2 sm:p-3 border border-blue-200">
+                  <p className="text-xs sm:text-sm font-medium text-foreground mb-1">Got questions about your plan? 🤔</p>
+                  <p className="text-xs text-muted-foreground">
+                    Let's chat! No pressure, just friendly advice on design & grants
+                  </p>
+                </div>
+
+                {/* Action Buttons - More human phrasing */}
+                <div className="space-y-1 sm:space-y-2">
+                  <Button
+                    onClick={() => {
+                      setShowSuccessModal(false);
+                      router.push('/call-page');
+                    }}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 sm:py-2.5 text-xs sm:text-sm shadow-md hover:shadow-lg transition-all duration-200"
+                  >
+                    <Calendar className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
+                    Let's Chat - No Pressure! ☎️
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowSuccessModal(false);
+                      router.push('/review-report');
+                    }}
+                    className="w-full border border-blue-200 text-gray-700 hover:bg-blue-50 font-medium py-2 sm:py-2.5 text-xs sm:text-sm transition-all duration-200 bg-white"
+                  >
+                    <FileText className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
+                    I'll Take a Look First 👀
+                  </Button>
+                </div>
+
+                {/* Footer - Minimal */}
+                <div className="text-center pt-1 sm:pt-2 border-t border-blue-100">
+                  <p className="text-xs text-gray-600">
+                    Questions or need help?{" "}
+                    {branding?.email && (
+                      <a href={`mailto:${branding.email}`} className="text-blue-600 hover:text-blue-700 font-medium hover:underline">
+                        {branding.email}
+                      </a>
+                    )}
+                  </p>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Enhanced Savings Modal */}
+          <Dialog open={showSavingsModal} onOpenChange={setShowSavingsModal}>
+            <DialogContent className="max-w-4xl w-[90vw]">
+              <DialogHeader className="relative">
+                <DialogClose asChild>
+                  <button
+                    className="absolute top-0 right-0 w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 hover:text-gray-700 transition-colors"
+                    aria-label="Close modal"
+                  >
+                    ×
+                  </button>
+                </DialogClose>
+                <DialogTitle className="flex items-center gap-2 pr-8">
+                  <div className="bg-green-100 p-2 rounded-full">
+                    <TrendingUp className="w-5 h-5 text-green-600" />
+                  </div>
+                  How Your Savings Are Calculated
+                </DialogTitle>
+              </DialogHeader>
+              <Tabs value={savingsModalTab} onValueChange={(value) => {
+                setSavingsModalTab(value)
+                // Sync with main battery toggle
+                if (value === "solarOnly") {
+                  setIncludeBattery(false)
+                } else if (value === "hybrid" || value === "nightCharge") {
+                  setIncludeBattery(true)
+                }
+              }}>
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="solarOnly">Solar Only</TabsTrigger>
+                  <TabsTrigger value="nightCharge">Solar + Battery (Arbitrage)</TabsTrigger>
+                  <TabsTrigger value="hybrid">Solar + Battery</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="solarOnly" className="space-y-4">
+                  <div className="grid lg:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      <div
+                        className="bg-blue-100 p-4 rounded-lg cursor-pointer hover:bg-blue-200 transition-colors"
+                        onClick={() => setShowEnergyProfileModal(true)}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-blue-800">
+                              Current Profile:{" "}
+                              {energyProfile === "family"
+                                ? "Family home"
+                                : energyProfile === "small"
+                                  ? "Small home"
+                                  : energyProfile === "big"
+                                    ? "Big energy use"
+                                    : "Custom"}
+                            </p>
+                            <p className="text-xs text-blue-600">
+                              Daily usage: {dailyUsageKwh} kWh • Monthly bill: €{monthlyBill}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-1 text-blue-600">
+                            <span className="text-xs">Edit</span>
+                            <ChevronRight className="w-4 h-4" />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-yellow-50 p-4 rounded-lg">
+                        <h3 className="font-semibold text-lg mb-2">Solar Only</h3>
+                        <p className="text-sm text-gray-600 mb-4">
+                          Your panels power your home during the day. Extra energy is sold back to the grid.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="border border-gray-200 rounded-lg">
+                        <div className="p-4 bg-gray-50 space-y-3 text-sm">
+                          <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-2">
+                              <span>Direct Solar Use</span>
+                              <div className="relative group">
+                                <Info className="w-4 h-4 text-gray-400 cursor-help" />
+                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-white text-gray-800 text-xs rounded-lg shadow-lg border opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 w-48">
+                                  30% × annual generation × €0.35
+                                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-white"></div>
+                                </div>
+                              </div>
+                            </div>
+                            <span className="text-green-600 font-medium">€{scenarios.solarOnly.directSavings}</span>
+                          </div>
+
+                          <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-2">
+                              <span>Export Income</span>
+                              <div className="relative group">
+                                <Info className="w-4 h-4 text-gray-400 cursor-help" />
+                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-white text-gray-800 text-xs rounded-lg shadow-lg border opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 w-48">
+                                  70% × annual generation × €0.20
+                                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-white"></div>
+                                </div>
+                              </div>
+                            </div>
+                            <span className="text-blue-600 font-medium">€{scenarios.solarOnly.exportIncome}</span>
+                          </div>
+
+                          <div className="border-t pt-3 flex justify-between font-bold">
+                            <span>Total Benefit</span>
+                            <span className="text-green-600 text-lg">€{scenarios.solarOnly.total}</span>
+                          </div>
+                        </div>
+
+                        <div className="border-t">
+                          <button
+                            onClick={() => setShowMaths(showMaths === "solarOnly" ? null : "solarOnly")}
+                            className="w-full p-3 text-left text-sm text-gray-600 hover:bg-gray-50 flex items-center justify-between"
+                          >
+                            <span>Show calculation breakdown</span>
+                            <ChevronDown
+                              className={`w-4 h-4 transition-transform ${showMaths === "solarOnly" ? "rotate-180" : ""}`}
+                            />
+                          </button>
+                          {showMaths === "solarOnly" && (
+                            <div className="px-3 pb-3 text-xs text-gray-600 bg-gray-50 border-t">
+                              <div className="space-y-1">
+                                <div>• Annual generation: {scenarios.solarOnly.calculations.generation} kWh</div>
+                                <div>
+                                  • Direct use (
+                                  {Math.round(
+                                    (scenarios.solarOnly.calculations.baseSelfUseKWh /
+                                      scenarios.solarOnly.calculations.generation) *
+                                    100,
+                                  )}
+                                  %): {scenarios.solarOnly.calculations.baseSelfUseKWh} kWh × €0.35 = €
+                                  {scenarios.solarOnly.directSavings}
+                                </div>
+                                <div>
+                                  • Export (
+                                  {Math.round(
+                                    (scenarios.solarOnly.calculations.exportKWh /
+                                      scenarios.solarOnly.calculations.generation) *
+                                    100,
+                                  )}
+                                  %): {scenarios.solarOnly.calculations.exportKWh} kWh × €0.20 = €
+                                  {scenarios.solarOnly.exportIncome}
+                                </div>
+                                <div className="font-medium pt-1 border-t">Total: €{scenarios.solarOnly.total}</div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <p className="text-xs text-gray-500">
+                        Figures are estimates based on your inputs, typical Irish tariffs, and average conditions. Final
+                        design and pricing confirmed after site visit.
+                      </p>
+                    </div>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="hybrid" className="space-y-4">
+                  <div className="grid lg:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      <div
+                        className="bg-blue-100 p-4 rounded-lg cursor-pointer hover:bg-blue-200 transition-colors"
+                        onClick={() => setShowEnergyProfileModal(true)}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-blue-800">
+                              Current Profile:{" "}
+                              {energyProfile === "family"
+                                ? "Family home"
+                                : energyProfile === "small"
+                                  ? "Small home"
+                                  : energyProfile === "big"
+                                    ? "Big energy use"
+                                    : "Custom"}
+                            </p>
+                            <p className="text-xs text-blue-600">
+                              Daily usage: {dailyUsageKwh} kWh • Monthly bill: €{monthlyBill}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-1 text-blue-600">
+                            <span className="text-xs">Edit</span>
+                            <ChevronRight className="w-4 h-4" />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-green-50 p-4 rounded-lg">
+                        <div className="flex items-center gap-2 mb-2">
+                          <h3 className="font-semibold text-lg">Solar + Battery</h3>
+                          <div className="relative group">
+                            <Info className="w-4 h-4 text-blue-500 cursor-help hover:text-blue-600 transition-colors" />
+                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-80 p-3 bg-white border border-gray-200 rounded-lg shadow-lg text-sm opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                              <div className="font-medium mb-2">Battery Benefits</div>
+                              <div className="text-gray-600 mb-2">
+                                Maximize your solar energy consumption and reduce grid dependency:
+                              </div>
+                              <div className="text-xs text-gray-700 space-y-1.5">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-2 h-2 bg-red-400 rounded-full"></div>
+                                  <span><strong>Without battery:</strong> Only 30% solar consumption</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
+                                  <span><strong>With 1 battery:</strong> 70-80% solar consumption</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                                  <span><strong>With 2 batteries:</strong> 80-90% solar consumption</span>
+                                </div>
+                                <div className="pt-2 border-t border-gray-200">
+                                  <div className="text-gray-600 mb-1">
+                                    <strong>Economic Benefit:</strong>
+                                  </div>
+                                  <div>• Grid rate: €0.35/kWh</div>
+                                  <div>• Export rate: €0.20/kWh</div>
+                                  <div className="text-green-600 font-medium mt-1">
+                                    Self-consumption saves €0.15/kWh more than exporting!
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-white"></div>
                             </div>
                           </div>
-                        
-                        ) : (
-                          // Form State
-                          <>
-                            <DialogHeader className="text-center pb-4 relative">
-                              <DialogClose asChild>
-                                <button
-                                  className="absolute top-0 right-0 w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 hover:text-gray-700 transition-colors"
-                                >
-                                  ×
-                                </button>
-                              </DialogClose>
-                              <DialogTitle className="text-2xl font-bold text-gray-900 pr-8">
-                                Download Your Solar Plan
-                              </DialogTitle>
-                              <p className="text-gray-600 mt-2">
-                                Get your detailed plan emailed to you with financing options and next steps.
-                              </p>
-                            </DialogHeader>
-                            
-                            <div className="space-y-4">
-                              {/* Full Name Field */}
-                              <div className="space-y-2">
-                                <label className="text-sm font-medium text-gray-700">
-                                  Full Name <span className="text-red-500">*</span>
-                                </label>
-                                <div className="relative">
-                                  <User className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                                  <Input
-                                    type="text"
-                                    placeholder="Your Full Name"
-                                    value={fullName}
-                                    onChange={handleFullNameChange}
-                                    className="pl-10 h-12 text-gray-600"
-                                    required
-                                  />
+                        </div>
+
+                        <p className="text-sm text-gray-600 mb-4">
+                          Solar powers your home first. Extra solar charges your battery for evening use. Any leftover is sold
+                          back to the grid.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="border border-gray-200 rounded-lg">
+                        <div className="p-4 bg-gray-50 space-y-3 text-sm">
+                          <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-2">
+                              <span>Direct Solar + Battery Use</span>
+                              <div className="relative group">
+                                <Info className="w-4 h-4 text-gray-400 cursor-help" />
+                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-white text-gray-800 text-xs rounded-lg shadow-lg border opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 w-48">
+                                  Self-use includes baseline + battery benefit.
+                                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-white"></div>
                                 </div>
                               </div>
+                            </div>
+                            <span className="text-green-600 font-medium">€{scenarios.hybrid.directSavings}</span>
+                          </div>
 
-                              {/* Email Field */}
-                              <div className="space-y-2">
-                                <label className="text-sm font-medium text-gray-700">
-                                  Email Address <span className="text-red-500">*</span>
-                                </label>
-                                <div className="relative">
-                                  <Mail className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                                  <Input
-                                    type="email"
-                                    placeholder="you@example.com"
-                                    value={email}
-                                    onChange={handleEmailChange}
-                                    className="pl-10 h-12 text-gray-600"
-                                    required
-                                  />
+                          <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-2">
+                              <span>Export Income</span>
+                              <div className="relative group">
+                                <Info className="w-4 h-4 text-gray-400 cursor-help" />
+                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-white text-gray-800 text-xs rounded-lg shadow-lg border opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 w-48">
+                                  Any remaining generation sold at €0.20/kWh.
+                                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-white"></div>
                                 </div>
                               </div>
+                            </div>
+                            <span className="text-blue-600 font-medium">€{scenarios.hybrid.exportIncome}</span>
+                          </div>
 
-                              {/* Agreement Checkbox */}
-                              <div className="flex items-start space-x-2 pt-2">
-                                <Checkbox 
-                                  id="agree-terms"
-                                  checked={agreeToTerms}
-                                  onCheckedChange={(checked) => setAgreeToTerms(checked === true)}
-                                  className="mt-1"
-                                />
-                                <label htmlFor="agree-terms" className="text-sm text-gray-700 leading-5">
-                                  I agree to receive my personalised energy upgrade report by email from Voltflo. No spam, no follow-ups. <span className="text-red-500">*</span>
-                                </label>
-                              </div>
+                          <div className="border-t pt-3 flex justify-between font-bold">
+                            <span>Total Benefit</span>
+                            <span className="text-green-600 text-lg">€{scenarios.hybrid.total}</span>
+                          </div>
+                        </div>
 
-                              {/* Error Message */}
-                              {submitError && (
-                                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                                  <p className="text-sm text-red-600">{submitError}</p>
+                        <div className="border-t">
+                          <button
+                            onClick={() => setShowMaths(showMaths === "hybrid" ? null : "hybrid")}
+                            className="w-full p-3 text-left text-sm text-gray-600 hover:bg-gray-50 flex items-center justify-between"
+                          >
+                            <span>Show calculation breakdown</span>
+                            <ChevronDown
+                              className={`w-4 h-4 transition-transform ${showMaths === "hybrid" ? "rotate-180" : ""}`}
+                            />
+                          </button>
+                          {showMaths === "hybrid" && (
+                            <div className="px-3 pb-3 text-xs text-gray-600 bg-gray-50 border-t">
+                              <div className="space-y-1">
+                                <div>• Annual generation: {scenarios.hybrid.calculations.generation} kWh</div>
+                                <div>
+                                  • Total self-use: {scenarios.hybrid.calculations.totalSelfUseKWh} kWh × €0.35 = €
+                                  {scenarios.hybrid.directSavings}
                                 </div>
-                              )}
+                                <div>
+                                  • Export: {scenarios.hybrid.calculations.exportKWh} kWh × €0.20 = €
+                                  {scenarios.hybrid.exportIncome}
+                                </div>
+                                <div>• Battery throughput: {scenarios.hybrid.calculations.batteryThroughput} kWh/year</div>
+                                <div className="font-medium pt-1 border-t">Total: €{scenarios.hybrid.total}</div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
 
-                              {/* Submit Button */}
-                              <Button 
-                                onClick={handleSavePlan}
-                                disabled={!fullName.trim() || !email.trim() || !agreeToTerms || isSubmitting}
-                                className="w-full h-12 bg-green-600 hover:bg-green-700 text-white font-medium mt-6 disabled:opacity-50"
+                      <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                              <span className="text-sm font-bold text-blue-600">⚡</span>
+                            </div>
+                            <div>
+                              <span className="text-sm font-semibold text-gray-800">Battery Configuration</span>
+                              <p className="text-xs text-gray-600">Choose your storage capacity</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <span className="text-sm text-gray-600 font-medium">Units:</span>
+                            <div className="flex bg-white rounded-lg p-1 shadow-sm border">
+                              <button
+                                onClick={() => setBatteryCount(1)}
+                                className={`px-4 py-2 text-sm rounded-md font-medium transition-all duration-200 ${batteryCount === 1
+                                    ? "bg-blue-500 text-white shadow-sm"
+                                    : "text-gray-600 hover:text-gray-800 hover:bg-gray-50"
+                                  }`}
                               >
-                                {isSubmitting ? (
-                                  <>
-                                    <div className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                    Sending Plan...
-                                  </>
-                                ) : (
-                                  <>
-                                    <Mail className="w-4 h-4 mr-2" />
-                                    Email My Solar Plan
-                                  </>
-                                )}
-                              </Button>
-
-                              {/* Footer Text */}
-                              <div className="text-xs text-gray-600 text-center pt-2 leading-4">
-                                By clicking 'Email My Solar Plan', you agree to Voltflo's{" "}
-                                <a target="_blank" href="https://voltflo.com/PrivacyPolicy" className="text-green-600 underline">Privacy Policy</a> and{" "}
-                                <a target="_blank" href="https://voltflo.com/TermsOfUse" className="text-green-600 underline">Terms of Use</a>. 
-                              </div>
-                            </div>
-                          </>
-                        )}
-                      </DialogContent>
-                    </Dialog>
-                  </div>
-
-                  {/* Disclaimer */}
-                  <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-200">
-                    <p className="text-xs text-yellow-800">
-                      <span className="font-medium">Provisional figures</span> - Final costs confirmed after site visit
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </div>
-      </div>
-      {/* Bill Editor Dialog */}
-      <Dialog open={showBillEditor} onOpenChange={setShowBillEditor}>
-        <DialogContent className="max-w-md">
-          <DialogHeader className="relative">
-            <DialogClose asChild>
-              <button
-                className="absolute top-0 right-0 w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 hover:text-gray-700 transition-colors"
-              >
-                ×
-              </button>
-            </DialogClose>
-            <DialogTitle className="pr-8">Edit Your Current Energy Bill</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="text-center">
-              <p className="text-sm text-gray-600 mb-2">Average Irish household: €2,200-€3,000/year</p>
-            </div>
-
-            {/* Toggle between monthly/annual */}
-            <div className="flex justify-center">
-              <div className="bg-gray-100 p-1 rounded-lg">
-                <button
-                  onClick={() => setBillInputMode("monthly")}
-                  className={`px-3 py-1 rounded text-sm ${
-                    billInputMode === "monthly" ? "bg-white shadow-sm font-medium" : "text-gray-600"
-                  }`}
-                >
-                  Monthly
-                </button>
-                <button
-                  onClick={() => setBillInputMode("annual")}
-                  className={`px-3 py-1 rounded text-sm ${
-                    billInputMode === "annual" ? "bg-white shadow-sm font-medium" : "text-gray-600"
-                  }`}
-                >
-                  Annual
-                </button>
-              </div>
-            </div>
-
-            {/* Slider and input */}
-            <div className="space-y-3">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">
-                  €{billInputMode === "monthly" ? Math.round(customAnnualBill / 12) : customAnnualBill}
-                </div>
-                <div className="text-sm text-gray-600">{billInputMode === "monthly" ? "per month" : "per year"}</div>
-              </div>
-
-              <input
-                type="range"
-                min={billInputMode === "monthly" ? 100 : 1200}
-                max={billInputMode === "monthly" ? 500 : 6000}
-                step={billInputMode === "monthly" ? 10 : 100}
-                value={billInputMode === "monthly" ? Math.round(customAnnualBill / 12) : customAnnualBill}
-                onChange={(e) => {
-                  const value = Number.parseInt(e.target.value)
-                  setCustomAnnualBill(billInputMode === "monthly" ? value * 12 : value)
-                }}
-                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
-              />
-
-              <div className="flex justify-between text-xs text-gray-500">
-                <span>€{billInputMode === "monthly" ? "100" : "1,200"}</span>
-                <span>€{billInputMode === "monthly" ? "500" : "6,000"}</span>
-              </div>
-            </div>
-
-            <div className="flex gap-2 pt-4">
-              <Button variant="outline" onClick={() => setCustomAnnualBill(2640)} className="flex-1">
-                Reset to Default
-              </Button>
-              <Button onClick={() => setShowBillEditor(false)} className="flex-1">
-                Save Changes
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Success Modal */}
-      <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
-        <DialogContent className="max-w-[90vw] sm:max-w-lg lg:max-w-xl mx-auto bg-background border-0 shadow-2xl">
-          <div className="space-y-2 sm:space-y-3 p-3 sm:p-4 lg:p-5">
-            {/* Header Section - More friendly */}
-            <div className="text-center space-y-1 sm:space-y-2">
-              <div className="mx-auto w-10 h-10 sm:w-12 sm:h-12 bg-blue-50 rounded-full flex items-center justify-center border-2 border-blue-200">
-                <ThumbsUp className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
-              </div>
-              <div>
-                <h1 className="text-base sm:text-lg font-bold text-foreground">Your Report is On Its Way! 🚀</h1>
-                <p className="text-xs sm:text-sm text-muted-foreground">We've got your solar plan ready</p>
-              </div>
-            </div>
-
-            {/* Email Confirmation - More friendly */}
-            <div className="bg-blue-50 rounded-lg p-2 sm:p-3 lg:p-4 space-y-1 sm:space-y-2 border border-blue-200">
-              <div className="flex items-center gap-2">
-                <Mail className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600 flex-shrink-0" />
-                <p className="text-xs sm:text-sm font-medium text-foreground break-all">Sent to: {email}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <Clock className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600 flex-shrink-0" />
-                <p className="text-xs text-muted-foreground">Should arrive within 60 seconds</p>
-              </div>
-              <div className="bg-yellow-100 border border-yellow-300 rounded p-2">
-                <p className="text-xs font-medium text-gray-800">
-                  📧 Check your inbox, spam & promotions folders (just in case) 😊
-                </p>
-              </div>
-            </div>
-
-            {/* Value Proposition - More friendly */}
-            <div className="text-center bg-blue-50 rounded-lg p-2 sm:p-3 border border-blue-200">
-              <p className="text-xs sm:text-sm font-medium text-foreground mb-1">Got questions about your plan? 🤔</p>
-              <p className="text-xs text-muted-foreground">
-                Let's chat! No pressure, just friendly advice on design & grants
-              </p>
-            </div>
-
-            {/* Action Buttons - More human phrasing */}
-            <div className="space-y-1 sm:space-y-2">
-              <Button
-                onClick={() => {
-                  setShowSuccessModal(false);
-                  router.push('/call-page');
-                }}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 sm:py-2.5 text-xs sm:text-sm shadow-md hover:shadow-lg transition-all duration-200"
-              >
-                <Calendar className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
-                Let's Chat - No Pressure! ☎️
-              </Button>
-
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowSuccessModal(false);
-                  router.push('/review-report');
-                }}
-                className="w-full border border-blue-200 text-gray-700 hover:bg-blue-50 font-medium py-2 sm:py-2.5 text-xs sm:text-sm transition-all duration-200 bg-white"
-              >
-                <FileText className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
-                I'll Take a Look First 👀
-              </Button>
-            </div>
-
-            {/* Footer - Minimal */}
-            <div className="text-center pt-1 sm:pt-2 border-t border-blue-100">
-              <p className="text-xs text-gray-600">
-               Questions or need help?{" "}
-                {branding.email && (
-                  <a href={`mailto:${branding.email}`} className="text-blue-600 hover:text-blue-700 font-medium hover:underline">
-                  {branding.email}
-                  </a>
-                )}
-              </p>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Enhanced Savings Modal */}
-      <Dialog open={showSavingsModal} onOpenChange={setShowSavingsModal}>
-        <DialogContent className="max-w-4xl w-[90vw]">
-          <DialogHeader className="relative">
-            <DialogClose asChild>
-              <button
-                className="absolute top-0 right-0 w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 hover:text-gray-700 transition-colors"
-                aria-label="Close modal"
-              >
-                ×
-              </button>
-            </DialogClose>
-            <DialogTitle className="flex items-center gap-2 pr-8">
-              <div className="bg-green-100 p-2 rounded-full">
-                <TrendingUp className="w-5 h-5 text-green-600" />
-              </div>
-              How Your Savings Are Calculated
-            </DialogTitle>
-          </DialogHeader>
-          <Tabs value={savingsModalTab} onValueChange={(value) => {
-            setSavingsModalTab(value)
-            // Sync with main battery toggle
-            if (value === "solarOnly") {
-              setIncludeBattery(false)
-            } else if (value === "hybrid" || value === "nightCharge") {
-              setIncludeBattery(true)
-            }
-          }}>
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="solarOnly">Solar Only</TabsTrigger>
-              <TabsTrigger value="nightCharge">Solar + Battery (Arbitrage)</TabsTrigger>
-              <TabsTrigger value="hybrid">Solar + Battery</TabsTrigger>  
-            </TabsList>
-
-            <TabsContent value="solarOnly" className="space-y-4">
-              <div className="grid lg:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div
-                    className="bg-blue-100 p-4 rounded-lg cursor-pointer hover:bg-blue-200 transition-colors"
-                    onClick={() => setShowEnergyProfileModal(true)}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-blue-800">
-                          Current Profile:{" "}
-                          {energyProfile === "family"
-                            ? "Family home"
-                            : energyProfile === "small"
-                              ? "Small home"
-                              : energyProfile === "big"
-                                ? "Big energy use"
-                                : "Custom"}
-                        </p>
-                        <p className="text-xs text-blue-600">
-                          Daily usage: {dailyUsageKwh} kWh • Monthly bill: €{monthlyBill}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-1 text-blue-600">
-                        <span className="text-xs">Edit</span>
-                        <ChevronRight className="w-4 h-4" />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-yellow-50 p-4 rounded-lg">
-                    <h3 className="font-semibold text-lg mb-2">Solar Only</h3>
-                    <p className="text-sm text-gray-600 mb-4">
-                      Your panels power your home during the day. Extra energy is sold back to the grid.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="border border-gray-200 rounded-lg">
-                    <div className="p-4 bg-gray-50 space-y-3 text-sm">
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                          <span>Direct Solar Use</span>
-                          <div className="relative group">
-                            <Info className="w-4 h-4 text-gray-400 cursor-help" />
-                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-white text-gray-800 text-xs rounded-lg shadow-lg border opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 w-48">
-                              30% × annual generation × €0.35
-                              <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-white"></div>
+                                1 Battery
+                              </button>
+                              <button
+                                onClick={() => setBatteryCount(2)}
+                                className={`px-4 py-2 text-sm rounded-md font-medium transition-all duration-200 ${batteryCount === 2
+                                    ? "bg-blue-500 text-white shadow-sm"
+                                    : "text-gray-600 hover:text-gray-800 hover:bg-gray-50"
+                                  }`}
+                              >
+                                2 Batteries
+                              </button>
                             </div>
                           </div>
                         </div>
-                        <span className="text-green-600 font-medium">€{scenarios.solarOnly.directSavings}</span>
-                      </div>
-
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                          <span>Export Income</span>
-                          <div className="relative group">
-                            <Info className="w-4 h-4 text-gray-400 cursor-help" />
-                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-white text-gray-800 text-xs rounded-lg shadow-lg border opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 w-48">
-                              70% × annual generation × €0.20
-                              <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-white"></div>
-                            </div>
-                          </div>
+                        <div className="mt-3 flex items-center justify-between text-sm text-gray-600">
+                          <span></span>
+                          <span>Total Capacity: {batteryCount * (selectedBattery?.capacity || 0)}kWh</span>
                         </div>
-                        <span className="text-blue-600 font-medium">€{scenarios.solarOnly.exportIncome}</span>
                       </div>
 
-                      <div className="border-t pt-3 flex justify-between font-bold">
-                        <span>Total Benefit</span>
-                        <span className="text-green-600 text-lg">€{scenarios.solarOnly.total}</span>
-                      </div>
-                    </div>
-
-                    <div className="border-t">
-                      <button
-                        onClick={() => setShowMaths(showMaths === "solarOnly" ? null : "solarOnly")}
-                        className="w-full p-3 text-left text-sm text-gray-600 hover:bg-gray-50 flex items-center justify-between"
-                      >
-                        <span>Show calculation breakdown</span>
-                        <ChevronDown
-                          className={`w-4 h-4 transition-transform ${showMaths === "solarOnly" ? "rotate-180" : ""}`}
-                        />
-                      </button>
-                      {showMaths === "solarOnly" && (
-                        <div className="px-3 pb-3 text-xs text-gray-600 bg-gray-50 border-t">
-                          <div className="space-y-1">
-                            <div>• Annual generation: {scenarios.solarOnly.calculations.generation} kWh</div>
-                            <div>
-                              • Direct use (
-                              {Math.round(
-                                (scenarios.solarOnly.calculations.baseSelfUseKWh /
-                                  scenarios.solarOnly.calculations.generation) *
-                                  100,
-                              )}
-                              %): {scenarios.solarOnly.calculations.baseSelfUseKWh} kWh × €0.35 = €
-                              {scenarios.solarOnly.directSavings}
-                            </div>
-                            <div>
-                              • Export (
-                              {Math.round(
-                                (scenarios.solarOnly.calculations.exportKWh /
-                                  scenarios.solarOnly.calculations.generation) *
-                                  100,
-                              )}
-                              %): {scenarios.solarOnly.calculations.exportKWh} kWh × €0.20 = €
-                              {scenarios.solarOnly.exportIncome}
-                            </div>
-                            <div className="font-medium pt-1 border-t">Total: €{scenarios.solarOnly.total}</div>
-                          </div>
+                      {batteryCount === 2 && scenarios.hybrid.batteryUtilization < 70 && !hasEV && !hasHeatPump && (
+                        <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                          <span className="text-amber-600">⚠️</span>
+                          <span className="text-sm text-amber-700">
+                            Second battery may be under-used (~{Math.round(scenarios.hybrid.batteryUtilization)}%). Best
+                            value if adding EV or heat pump.
+                          </span>
                         </div>
                       )}
+
+                      <p className="text-xs text-gray-500">
+                        Figures are estimates based on your inputs, typical Irish tariffs, and average conditions. Final
+                        design and pricing confirmed after site visit.
+                      </p>
                     </div>
                   </div>
+                </TabsContent>
 
-                  <p className="text-xs text-gray-500">
-                    Figures are estimates based on your inputs, typical Irish tariffs, and average conditions. Final
-                    design and pricing confirmed after site visit.
-                  </p>
-                </div>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="hybrid" className="space-y-4">
-              <div className="grid lg:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div
-                    className="bg-blue-100 p-4 rounded-lg cursor-pointer hover:bg-blue-200 transition-colors"
-                    onClick={() => setShowEnergyProfileModal(true)}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-blue-800">
-                          Current Profile:{" "}
-                          {energyProfile === "family"
-                            ? "Family home"
-                            : energyProfile === "small"
-                              ? "Small home"
-                              : energyProfile === "big"
-                                ? "Big energy use"
-                                : "Custom"}
-                        </p>
-                        <p className="text-xs text-blue-600">
-                          Daily usage: {dailyUsageKwh} kWh • Monthly bill: €{monthlyBill}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-1 text-blue-600">
-                        <span className="text-xs">Edit</span>
-                        <ChevronRight className="w-4 h-4" />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-green-50 p-4 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h3 className="font-semibold text-lg">Solar + Battery</h3>
-                      <div className="relative group">
-                        <Info className="w-4 h-4 text-blue-500 cursor-help hover:text-blue-600 transition-colors" />
-                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-80 p-3 bg-white border border-gray-200 rounded-lg shadow-lg text-sm opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-                          <div className="font-medium mb-2">Battery Benefits</div>
-                          <div className="text-gray-600 mb-2">
-                            Maximize your solar energy consumption and reduce grid dependency:
-                          </div>
-                          <div className="text-xs text-gray-700 space-y-1.5">
-                            <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 bg-red-400 rounded-full"></div>
-                              <span><strong>Without battery:</strong> Only 30% solar consumption</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
-                              <span><strong>With 1 battery:</strong> 70-80% solar consumption</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                              <span><strong>With 2 batteries:</strong> 80-90% solar consumption</span>
-                            </div>
-                            <div className="pt-2 border-t border-gray-200">
-                              <div className="text-gray-600 mb-1">
-                                <strong>Economic Benefit:</strong>
-                              </div>
-                              <div>• Grid rate: €0.35/kWh</div>
-                              <div>• Export rate: €0.20/kWh</div>
-                              <div className="text-green-600 font-medium mt-1">
-                                Self-consumption saves €0.15/kWh more than exporting!
-                              </div>
-                            </div>
-                          </div>
-                          <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-white"></div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <p className="text-sm text-gray-600 mb-4">
-                      Solar powers your home first. Extra solar charges your battery for evening use. Any leftover is sold
-                      back to the grid.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="border border-gray-200 rounded-lg">
-                    <div className="p-4 bg-gray-50 space-y-3 text-sm">
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                          <span>Direct Solar + Battery Use</span>
-                          <div className="relative group">
-                            <Info className="w-4 h-4 text-gray-400 cursor-help" />
-                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-white text-gray-800 text-xs rounded-lg shadow-lg border opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 w-48">
-                              Self-use includes baseline + battery benefit.
-                              <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-white"></div>
-                            </div>
-                          </div>
-                        </div>
-                        <span className="text-green-600 font-medium">€{scenarios.hybrid.directSavings}</span>
-                      </div>
-
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                          <span>Export Income</span>
-                          <div className="relative group">
-                            <Info className="w-4 h-4 text-gray-400 cursor-help" />
-                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-white text-gray-800 text-xs rounded-lg shadow-lg border opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 w-48">
-                              Any remaining generation sold at €0.20/kWh.
-                              <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-white"></div>
-                            </div>
-                          </div>
-                        </div>
-                        <span className="text-blue-600 font-medium">€{scenarios.hybrid.exportIncome}</span>
-                      </div>
-
-                      <div className="border-t pt-3 flex justify-between font-bold">
-                        <span>Total Benefit</span>
-                        <span className="text-green-600 text-lg">€{scenarios.hybrid.total}</span>
-                      </div>
-                    </div>
-
-                    <div className="border-t">
-                      <button
-                        onClick={() => setShowMaths(showMaths === "hybrid" ? null : "hybrid")}
-                        className="w-full p-3 text-left text-sm text-gray-600 hover:bg-gray-50 flex items-center justify-between"
+                <TabsContent value="nightCharge" className="space-y-4">
+                  <div className="grid lg:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      <div
+                        className="bg-blue-100 p-4 rounded-lg cursor-pointer hover:bg-blue-200 transition-colors"
+                        onClick={() => setShowEnergyProfileModal(true)}
                       >
-                        <span>Show calculation breakdown</span>
-                        <ChevronDown
-                          className={`w-4 h-4 transition-transform ${showMaths === "hybrid" ? "rotate-180" : ""}`}
-                        />
-                      </button>
-                      {showMaths === "hybrid" && (
-                        <div className="px-3 pb-3 text-xs text-gray-600 bg-gray-50 border-t">
-                          <div className="space-y-1">
-                            <div>• Annual generation: {scenarios.hybrid.calculations.generation} kWh</div>
-                            <div>
-                              • Total self-use: {scenarios.hybrid.calculations.totalSelfUseKWh} kWh × €0.35 = €
-                              {scenarios.hybrid.directSavings}
-                            </div>
-                            <div>
-                              • Export: {scenarios.hybrid.calculations.exportKWh} kWh × €0.20 = €
-                              {scenarios.hybrid.exportIncome}
-                            </div>
-                            <div>• Battery throughput: {scenarios.hybrid.calculations.batteryThroughput} kWh/year</div>
-                            <div className="font-medium pt-1 border-t">Total: €{scenarios.hybrid.total}</div>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-blue-800">
+                              Current Profile:{" "}
+                              {energyProfile === "family"
+                                ? "Family home"
+                                : energyProfile === "small"
+                                  ? "Small home"
+                                  : energyProfile === "big"
+                                    ? "Big energy use"
+                                    : "Custom"}
+                            </p>
+                            <p className="text-xs text-blue-600">
+                              Daily usage: {dailyUsageKwh} kWh • Monthly bill: €{monthlyBill}
+                            </p>
                           </div>
+                          <div className="flex items-center gap-1 text-blue-600">
+                            <span className="text-xs">Edit</span>
+                            <ChevronRight className="w-4 h-4" />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-green-50 p-4 rounded-lg">
+                        <div className="flex items-center gap-2 mb-2">
+                          <h3 className="font-semibold text-lg">Solar + Battery (Night Charge)</h3>
+                          <div className="relative group">
+                            <Info className="w-4 h-4 text-blue-500 cursor-help hover:text-blue-600 transition-colors" />
+                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-80 p-3 bg-white border border-gray-200 rounded-lg shadow-lg text-sm opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                              <div className="font-medium mb-2">Night Charge Strategy</div>
+                              <div className="text-gray-600 mb-2">
+                                Maximize battery value by storing cheap night electricity and selling solar to grid:
+                              </div>
+                              <div className="text-xs text-gray-700 space-y-1.5">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
+                                  <span><strong>Solar Export:</strong> Sell solar generation to grid at €0.20/kWh</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                                  <span><strong>Night Charging:</strong> Store cheap electricity (€{branding?.energy?.gridRateNight?.toFixed(2) || '0.08'}/kWh) at night</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                                  <span><strong>Peak Usage:</strong> Use stored battery power during expensive peak hours</span>
+                                </div>
+                                <div className="pt-2 border-t border-gray-200">
+                                  <div className="text-gray-600 mb-1">
+                                    <strong>Economic Benefit:</strong>
+                                  </div>
+                                  <div>• Night rate: €{branding?.energy?.gridRateNight?.toFixed(2) || '0.08'}/kWh</div>
+                                  <div>• Peak rate: €0.35/kWh</div>
+                                  <div className="text-green-600 font-medium mt-1">
+                                    Night charging saves €0.27/kWh on battery cycles!
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-white"></div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <p className="text-sm text-gray-600 mb-4">
+                          Solar export provides steady income. Battery charges at night with cheap electricity and powers your home during peak hours.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="border border-gray-200 rounded-lg">
+                        <div className="p-4 bg-gray-50 space-y-3 text-sm">
+                          <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-2">
+                              <span>Solar Export Income</span>
+                              <div className="relative group">
+                                <Info className="w-4 h-4 text-gray-400 cursor-help" />
+                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-white text-gray-800 text-xs rounded-lg shadow-lg border opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 w-48">
+                                  100% of annual generation sold at €0.20/kWh.
+                                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-white"></div>
+                                </div>
+                              </div>
+                            </div>
+                            <span className="text-blue-600 font-medium">€{Math.round(annualPVGeneration * 1.0 * (exportRate || 0))}</span>
+                          </div>
+
+                          <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-2">
+                              <span>Battery Night Charge Savings</span>
+                              <div className="relative group">
+                                <Info className="w-4 h-4 text-gray-400 cursor-help" />
+                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-white text-gray-800 text-xs rounded-lg shadow-lg border opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 w-48">
+                                  {batteryCount * (selectedBattery?.capacity || 0)}kW × 90% efficiency × 315 cycles × €0.27 savings.
+                                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-white"></div>
+                                </div>
+                              </div>
+                            </div>
+                            <span className="text-green-600 font-medium">€{Math.round(batteryCount * (selectedBattery?.capacity || 0) * 0.9 * 315 * 0.27)}</span>
+                          </div>
+
+                          <div className="border-t pt-3 flex justify-between font-bold">
+                            <span>Total Benefit</span>
+                            <span className="text-green-600 text-lg">€{Math.round(annualPVGeneration * 1.0 * (exportRate || 0) + batteryCount * (selectedBattery?.capacity || 0) * 0.9 * 315 * 0.27)}</span>
+                          </div>
+                        </div>
+
+                        <div className="border-t">
+                          <button
+                            onClick={() => setShowMaths(showMaths === "nightCharge" ? null : "nightCharge")}
+                            className="w-full p-3 text-left text-sm text-gray-600 hover:bg-gray-50 flex items-center justify-between"
+                          >
+                            <span>Show calculation breakdown</span>
+                            <ChevronDown
+                              className={`w-4 h-4 transition-transform ${showMaths === "nightCharge" ? "rotate-180" : ""}`}
+                            />
+                          </button>
+                          {showMaths === "nightCharge" && (
+                            <div className="px-3 pb-3 text-xs text-gray-600 bg-gray-50 border-t">
+                              <div className="space-y-1">
+                                <div>• Annual generation: {annualPVGeneration} kWh</div>
+                                <div>
+                                  • Solar export (100%): {Math.round(annualPVGeneration * 1.0)} kWh × €0.20 = €{Math.round(annualPVGeneration * 1.0 * (exportRate || 0))}
+                                </div>
+                                <div>
+                                  • Battery capacity: {batteryCount * (selectedBattery?.capacity || 0)}kWh × 90% efficiency = {Math.round(batteryCount * (selectedBattery?.capacity || 0) * 0.9)}kWh usable
+                                </div>
+                                <div>
+                                  • Night charge cycles: 315 cycles/year × €0.27 savings = €{Math.round(batteryCount * (selectedBattery?.capacity || 0) * 0.9 * 315 * 0.27)}
+                                </div>
+                                <div className="font-medium pt-1 border-t">Total: €{Math.round(annualPVGeneration * 1.0 * (exportRate || 0) + batteryCount * (selectedBattery?.capacity || 0) * 0.9 * 315 * 0.27)}</div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                              <span className="text-sm font-bold text-green-600">🌙</span>
+                            </div>
+                            <div>
+                              <span className="text-sm font-semibold text-gray-800">Night Charge Strategy</span>
+                              <p className="text-xs text-gray-600">Arbitrage with off-peak electricity</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <span className="text-sm text-gray-600 font-medium">Units:</span>
+                            <div className="flex bg-white rounded-lg p-1 shadow-sm border">
+                              <button
+                                onClick={() => setBatteryCount(1)}
+                                className={`px-4 py-2 text-sm rounded-md font-medium transition-all duration-200 ${batteryCount === 1
+                                    ? "bg-green-500 text-white shadow-sm"
+                                    : "text-gray-600 hover:text-gray-800 hover:bg-gray-50"
+                                  }`}
+                              >
+                                1 Battery
+                              </button>
+                              <button
+                                onClick={() => setBatteryCount(2)}
+                                className={`px-4 py-2 text-sm rounded-md font-medium transition-all duration-200 ${batteryCount === 2
+                                    ? "bg-green-500 text-white shadow-sm"
+                                    : "text-gray-600 hover:text-gray-800 hover:bg-gray-50"
+                                  }`}
+                              >
+                                2 Batteries
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="mt-3 flex items-center justify-between text-sm text-gray-600">
+                          <span>Night cycles: {Math.round(batteryCount * (selectedBattery?.capacity || 0) * 0.9 * 315)} kWh/year</span>
+                          <span>Arbitrage savings: €{Math.round(batteryCount * (selectedBattery?.capacity || 0) * 0.9 * 315 * 0.27)}/year</span>
+                        </div>
+                      </div>
+
+                      {batteryCount === 2 && (
+                        <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                          <span className="text-amber-600">💡</span>
+                          <span className="text-sm text-amber-700">
+                            Adding a second battery extends your backup time and maximizes savings under time-of-use tariffs.
+                          </span>
                         </div>
                       )}
+
+                      <p className="text-xs text-gray-500">
+                        Figures are estimates based on your inputs, typical Irish tariffs, and average conditions. Final
+                        design and pricing confirmed after site visit.
+                      </p>
                     </div>
                   </div>
+                </TabsContent>
+              </Tabs>
+            </DialogContent>
+          </Dialog>
 
-                  <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                          <span className="text-sm font-bold text-blue-600">⚡</span>
-                        </div>
-                        <div>
-                          <span className="text-sm font-semibold text-gray-800">Battery Configuration</span>
-                          <p className="text-xs text-gray-600">Choose your storage capacity</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <span className="text-sm text-gray-600 font-medium">Units:</span>
-                        <div className="flex bg-white rounded-lg p-1 shadow-sm border">
-                          <button
-                            onClick={() => setBatteryCount(1)}
-                            className={`px-4 py-2 text-sm rounded-md font-medium transition-all duration-200 ${
-                              batteryCount === 1 
-                                ? "bg-blue-500 text-white shadow-sm" 
-                                : "text-gray-600 hover:text-gray-800 hover:bg-gray-50"
-                            }`}
-                          >
-                            1 Battery
-                          </button>
-                          <button
-                            onClick={() => setBatteryCount(2)}
-                            className={`px-4 py-2 text-sm rounded-md font-medium transition-all duration-200 ${
-                              batteryCount === 2 
-                                ? "bg-blue-500 text-white shadow-sm" 
-                                : "text-gray-600 hover:text-gray-800 hover:bg-gray-50"
-                            }`}
-                          >
-                            2 Batteries
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="mt-3 flex items-center justify-between text-sm text-gray-600">
-                      <span></span>
-                      <span>Total Capacity: {batteryCount * (selectedBattery.capacity || 0)}kWh</span>
-                    </div>
+          {/* Energy Profile Edit Modal */}
+          <Dialog open={showEnergyProfileModal} onOpenChange={setShowEnergyProfileModal}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <div className="bg-blue-100 p-2 rounded-full">
+                    <Edit3 className="w-5 h-5 text-blue-600" />
                   </div>
+                  Edit Your Energy Profile
+                </DialogTitle>
+              </DialogHeader>
 
-                  {batteryCount === 2 && scenarios.hybrid.batteryUtilization < 70 && !hasEV && !hasHeatPump && (
-                    <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                      <span className="text-amber-600">⚠️</span>
-                      <span className="text-sm text-amber-700">
-                        Second battery may be under-used (~{Math.round(scenarios.hybrid.batteryUtilization)}%). Best
-                        value if adding EV or heat pump.
-                      </span>
-                    </div>
-                  )}
-
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label htmlFor="monthlyBill" className="text-sm font-medium text-gray-700">
+                    Monthly Electricity Bill (€)
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">€</span>
+                    <input
+                      id="monthlyBill"
+                      type="number"
+                      value={tempMonthlyBill}
+                      onChange={(e) => setTempMonthlyBill(e.target.value)}
+                      className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="220"
+                      min="50"
+                      max="1000"
+                    />
+                  </div>
                   <p className="text-xs text-gray-500">
-                    Figures are estimates based on your inputs, typical Irish tariffs, and average conditions. Final
-                    design and pricing confirmed after site visit.
+                    Annual bill: €{((parseFloat(tempMonthlyBill) || 0) * 12).toLocaleString()} • Daily usage: ~{Math.round(((parseFloat(tempMonthlyBill) || 0) * 12) / (gridRate || 1) / 365)} kWh
                   </p>
                 </div>
-              </div>
-            </TabsContent>
 
-            <TabsContent value="nightCharge" className="space-y-4">
-              <div className="grid lg:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div
-                    className="bg-blue-100 p-4 rounded-lg cursor-pointer hover:bg-blue-200 transition-colors"
-                    onClick={() => setShowEnergyProfileModal(true)}
+                <div className="bg-blue-50 p-3 rounded-lg">
+                  <h4 className="text-sm font-medium text-blue-900 mb-2">Energy Profile Guide</h4>
+                  <div className="space-y-1 text-xs text-blue-700">
+                    <div>• Small home: €50-150/month</div>
+                    <div>• Family home: €150-250/month</div>
+                    <div>• Big energy use: €250+/month</div>
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setTempMonthlyBill(monthlyBill.toString()) // Reset to original value
+                      setShowEnergyProfileModal(false)
+                    }}
+                    className="flex-1"
                   >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-blue-800">
-                          Current Profile:{" "}
-                          {energyProfile === "family"
-                            ? "Family home"
-                            : energyProfile === "small"
-                              ? "Small home"
-                              : energyProfile === "big"
-                                ? "Big energy use"
-                                : "Custom"}
-                        </p>
-                        <p className="text-xs text-blue-600">
-                          Daily usage: {dailyUsageKwh} kWh • Monthly bill: €{monthlyBill}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-1 text-blue-600">
-                        <span className="text-xs">Edit</span>
-                        <ChevronRight className="w-4 h-4" />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-green-50 p-4 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h3 className="font-semibold text-lg">Solar + Battery (Night Charge)</h3>
-                      <div className="relative group">
-                        <Info className="w-4 h-4 text-blue-500 cursor-help hover:text-blue-600 transition-colors" />
-                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-80 p-3 bg-white border border-gray-200 rounded-lg shadow-lg text-sm opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-                          <div className="font-medium mb-2">Night Charge Strategy</div>
-                          <div className="text-gray-600 mb-2">
-                            Maximize battery value by storing cheap night electricity and selling solar to grid:
-                          </div>
-                          <div className="text-xs text-gray-700 space-y-1.5">
-                            <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
-                              <span><strong>Solar Export:</strong> Sell solar generation to grid at €0.20/kWh</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                              <span><strong>Night Charging:</strong> Store cheap electricity (€{branding.energy.gridRateNight.toFixed(2)}/kWh) at night</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                              <span><strong>Peak Usage:</strong> Use stored battery power during expensive peak hours</span>
-                            </div>
-                            <div className="pt-2 border-t border-gray-200">
-                              <div className="text-gray-600 mb-1">
-                                <strong>Economic Benefit:</strong>
-                              </div>
-                              <div>• Night rate: €{branding.energy.gridRateNight.toFixed(2)}/kWh</div>
-                              <div>• Peak rate: €0.35/kWh</div>
-                              <div className="text-green-600 font-medium mt-1">
-                                Night charging saves €0.27/kWh on battery cycles!
-                              </div>
-                            </div>
-                          </div>
-                          <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-white"></div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <p className="text-sm text-gray-600 mb-4">
-                      Solar export provides steady income. Battery charges at night with cheap electricity and powers your home during peak hours.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="border border-gray-200 rounded-lg">
-                    <div className="p-4 bg-gray-50 space-y-3 text-sm">
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                          <span>Solar Export Income</span>
-                          <div className="relative group">
-                            <Info className="w-4 h-4 text-gray-400 cursor-help" />
-                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-white text-gray-800 text-xs rounded-lg shadow-lg border opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 w-48">
-                              100% of annual generation sold at €0.20/kWh.
-                              <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-white"></div>
-                            </div>
-                          </div>
-                        </div>
-                        <span className="text-blue-600 font-medium">€{Math.round(annualPVGeneration * 1.0 * exportRate)}</span>
-                      </div>
-
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                          <span>Battery Night Charge Savings</span>
-                          <div className="relative group">
-                            <Info className="w-4 h-4 text-gray-400 cursor-help" />
-                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-white text-gray-800 text-xs rounded-lg shadow-lg border opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 w-48">
-                              {batteryCount * (selectedBattery.capacity || 0)}kW × 90% efficiency × 315 cycles × €0.27 savings.
-                              <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-white"></div>
-                            </div>
-                          </div>
-                        </div>
-                        <span className="text-green-600 font-medium">€{Math.round(batteryCount * (selectedBattery.capacity || 0) * 0.9 * 315 * 0.27)}</span>
-                      </div>
-
-                      <div className="border-t pt-3 flex justify-between font-bold">
-                        <span>Total Benefit</span>
-                        <span className="text-green-600 text-lg">€{Math.round(annualPVGeneration * 1.0 * exportRate + batteryCount * (selectedBattery.capacity || 0) * 0.9 * 315 * 0.27)}</span>
-                      </div>
-                    </div>
-
-                    <div className="border-t">
-                      <button
-                        onClick={() => setShowMaths(showMaths === "nightCharge" ? null : "nightCharge")}
-                        className="w-full p-3 text-left text-sm text-gray-600 hover:bg-gray-50 flex items-center justify-between"
-                      >
-                        <span>Show calculation breakdown</span>
-                        <ChevronDown
-                          className={`w-4 h-4 transition-transform ${showMaths === "nightCharge" ? "rotate-180" : ""}`}
-                        />
-                      </button>
-                      {showMaths === "nightCharge" && (
-                        <div className="px-3 pb-3 text-xs text-gray-600 bg-gray-50 border-t">
-                          <div className="space-y-1">
-                            <div>• Annual generation: {annualPVGeneration} kWh</div>
-                            <div>
-                              • Solar export (100%): {Math.round(annualPVGeneration * 1.0)} kWh × €0.20 = €{Math.round(annualPVGeneration * 1.0 * exportRate)}
-                            </div>
-                            <div>
-                              • Battery capacity: {batteryCount * (selectedBattery.capacity || 0)}kWh × 90% efficiency = {Math.round(batteryCount * (selectedBattery.capacity || 0) * 0.9)}kWh usable
-                            </div>
-                            <div>
-                              • Night charge cycles: 315 cycles/year × €0.27 savings = €{Math.round(batteryCount * (selectedBattery.capacity || 0) * 0.9 * 315 * 0.27)}
-                            </div>
-                            <div className="font-medium pt-1 border-t">Total: €{Math.round(annualPVGeneration * 1.0 * exportRate + batteryCount * (selectedBattery.capacity || 0) * 0.9 * 315 * 0.27)}</div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                          <span className="text-sm font-bold text-green-600">🌙</span>
-                        </div>
-                        <div>
-                          <span className="text-sm font-semibold text-gray-800">Night Charge Strategy</span>
-                          <p className="text-xs text-gray-600">Arbitrage with off-peak electricity</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <span className="text-sm text-gray-600 font-medium">Units:</span>
-                        <div className="flex bg-white rounded-lg p-1 shadow-sm border">
-                          <button
-                            onClick={() => setBatteryCount(1)}
-                            className={`px-4 py-2 text-sm rounded-md font-medium transition-all duration-200 ${
-                              batteryCount === 1 
-                                ? "bg-green-500 text-white shadow-sm" 
-                                : "text-gray-600 hover:text-gray-800 hover:bg-gray-50"
-                            }`}
-                          >
-                            1 Battery
-                          </button>
-                          <button
-                            onClick={() => setBatteryCount(2)}
-                            className={`px-4 py-2 text-sm rounded-md font-medium transition-all duration-200 ${
-                              batteryCount === 2 
-                                ? "bg-green-500 text-white shadow-sm" 
-                                : "text-gray-600 hover:text-gray-800 hover:bg-gray-50"
-                            }`}
-                          >
-                            2 Batteries
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="mt-3 flex items-center justify-between text-sm text-gray-600">
-                      <span>Night cycles: {Math.round(batteryCount * (selectedBattery.capacity || 0) * 0.9 * 315)} kWh/year</span>
-                      <span>Arbitrage savings: €{Math.round(batteryCount * (selectedBattery.capacity || 0) * 0.9 * 315 * 0.27)}/year</span>
-                    </div>
-                  </div>
-
-                  {batteryCount === 2 && (
-                    <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                      <span className="text-amber-600">💡</span>
-                      <span className="text-sm text-amber-700">
-                        Adding a second battery extends your backup time and maximizes savings under time-of-use tariffs.
-                      </span>
-                    </div>
-                  )}
-
-                  <p className="text-xs text-gray-500">
-                    Figures are estimates based on your inputs, typical Irish tariffs, and average conditions. Final
-                    design and pricing confirmed after site visit.
-                  </p>
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleSaveBillAmount}
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    Save Changes
+                  </Button>
                 </div>
               </div>
-            </TabsContent>
-          </Tabs>
-        </DialogContent>
-      </Dialog>
+            </DialogContent>
+          </Dialog>
 
-      {/* Energy Profile Edit Modal */}
-      <Dialog open={showEnergyProfileModal} onOpenChange={setShowEnergyProfileModal}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <div className="bg-blue-100 p-2 rounded-full">
-                <Edit3 className="w-5 h-5 text-blue-600" />
-              </div>
-              Edit Your Energy Profile
-            </DialogTitle>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <label htmlFor="monthlyBill" className="text-sm font-medium text-gray-700">
-                Monthly Electricity Bill (€)
-              </label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">€</span>
-                <input
-                  id="monthlyBill"
-                  type="number"
-                  value={tempMonthlyBill}
-                  onChange={(e) => setTempMonthlyBill(e.target.value)}
-                  className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="220"
-                  min="50"
-                  max="1000"
-                />
-              </div>
-              <p className="text-xs text-gray-500">
-                Annual bill: €{((parseFloat(tempMonthlyBill) || 0) * 12).toLocaleString()} • Daily usage: ~{Math.round(((parseFloat(tempMonthlyBill) || 0) * 12) / gridRate / 365)} kWh
-              </p>
-            </div>
-
-            <div className="bg-blue-50 p-3 rounded-lg">
-              <h4 className="text-sm font-medium text-blue-900 mb-2">Energy Profile Guide</h4>
-              <div className="space-y-1 text-xs text-blue-700">
-                <div>• Small home: €50-150/month</div>
-                <div>• Family home: €150-250/month</div>
-                <div>• Big energy use: €250+/month</div>
-              </div>
-            </div>
-
-            <div className="flex gap-3 pt-2">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setTempMonthlyBill(monthlyBill.toString()) // Reset to original value
-                  setShowEnergyProfileModal(false)
-                }}
-                className="flex-1"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleSaveBillAmount}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                Save Changes
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-        {/* ==================== DESKTOP VIEW END ==================== */}
+          {/* ==================== DESKTOP VIEW END ==================== */}
         </div>
       )}
     </>
@@ -3780,7 +3850,7 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
 
   // Equipment selection state
   const [showSolarEquipment, setShowSolarEquipment] = useState(false)
-  
+
   // Panel sizing feedback - Mobile optimized with shorter messages
   const getPanelSizingMessage = () => {
     // Check if at maximum roof capacity
@@ -3801,7 +3871,7 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
         bgColor: "bg-blue-50",
         borderColor: "border-blue-200",
       }
-    } 
+    }
     // else if (basePanelCount < recommendedPanelCount) {
     //   const missingPanels = recommendedPanelCount - basePanelCount
     //   const coveragePercent = Math.round((basePanelCount / recommendedPanelCount) * 100)
@@ -3817,7 +3887,7 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
   }
 
   const panelSizingMessage = getPanelSizingMessage()
-  
+
   // Scroll state for sticky bar visibility
   const [showStickyBar, setShowStickyBar] = useState(true)
 
@@ -3889,18 +3959,18 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
 
             {/* Panel Count Control */}
             <div className="flex items-center justify-between gap-4 bg-gray-100 p-2 rounded-lg">
-              <Button 
-                variant="outline" 
-                size="icon" 
+              <Button
+                variant="outline"
+                size="icon"
                 onClick={() => setBasePanelCount(Math.max(8, basePanelCount - 1))}
                 disabled={basePanelCount <= 8}
               >
                 <Minus className="w-4 h-4" />
               </Button>
               <span className="text-2xl font-bold">{totalPanelCount}</span>
-              <Button 
-                variant="outline" 
-                size="icon" 
+              <Button
+                variant="outline"
+                size="icon"
                 onClick={() => {
                   const newBasePanelCount = Math.min(maxPanels, basePanelCount + 1)
                   setBasePanelCount(newBasePanelCount)
@@ -3974,7 +4044,7 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                         <strong>Most installers don't tell you this:</strong> To use your solar and battery during power outages, you need specific equipment installed from the start.
                       </p>
                     </div>
-                    
+
                     <div className="space-y-2">
                       <div className="bg-white p-3 rounded border-2 border-green-200">
                         <div className="flex items-center gap-2 mb-1">
@@ -3988,7 +4058,7 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                           <li>• Premium option</li>
                         </ul>
                       </div>
-                      
+
                       <div className="bg-white p-3 rounded border-2 border-orange-200">
                         <div className="flex items-center gap-2 mb-1">
                           <AlertCircle className="w-4 h-4 text-orange-500" />
@@ -4002,7 +4072,7 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                         </ul>
                       </div>
                     </div>
-                    
+
                     <div className="bg-gray-50 p-2 rounded-lg text-[10px] text-gray-700">
                       <p>
                         Important: This cannot be easily added later - it must be planned and installed with your solar system.
@@ -4037,7 +4107,7 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                     <span className="text-xs text-gray-700">Night charge savings:</span>
                     <span className="font-semibold text-sm text-green-600">€{batteryNightChargeSavings}/year</span>
                   </div>
-                  
+
                   {/* Battery Quantity Controls - Mobile */}
                   <div className="flex items-center justify-center gap-3 bg-gray-100 p-3 rounded-lg">
                     <Button
@@ -4051,10 +4121,10 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                     </Button>
                     <div className="text-center">
                       <div className="text-sm font-bold">
-                        {batteryCount}x {selectedBattery.capacity || 0}kWh
+                        {batteryCount}x {selectedBattery?.capacity || 0}kWh
                       </div>
                       <div className="text-xs text-gray-600">
-                        Total: {batteryCount * (selectedBattery.capacity || 0)}kWh storage
+                        Total: {batteryCount * (selectedBattery?.capacity || 0)}kWh storage
                       </div>
                     </div>
                     <Button
@@ -4079,9 +4149,8 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                   {/* Solar Only Card - Clickable */}
                   <button
                     onClick={() => setIncludeBattery(false)}
-                    className={`p-2 rounded-lg border-2 transition-all duration-300 ${
-                      !includeBattery ? "border-orange-400 bg-white shadow-sm" : "border-gray-200 bg-white/70"
-                    }`}
+                    className={`p-2 rounded-lg border-2 transition-all duration-300 ${!includeBattery ? "border-orange-400 bg-white shadow-sm" : "border-gray-200 bg-white/70"
+                      }`}
                   >
                     <div className="text-center">
                       <div className="w-6 h-6 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-1">
@@ -4097,14 +4166,12 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                   {/* Solar + Battery Card - Clickable */}
                   <button
                     onClick={() => setIncludeBattery(true)}
-                    className={`p-2 rounded-lg border-2 transition-all duration-300 ${
-                      includeBattery ? "border-blue-500 bg-white shadow-lg ring-1 ring-blue-100" : "border-gray-200 bg-white/70"
-                    }`}
+                    className={`p-2 rounded-lg border-2 transition-all duration-300 ${includeBattery ? "border-blue-500 bg-white shadow-lg ring-1 ring-blue-100" : "border-gray-200 bg-white/70"
+                      }`}
                   >
                     <div className="text-center">
-                      <div className={`w-6 h-6 rounded-full flex items-center justify-center mx-auto mb-1 ${
-                        includeBattery ? 'bg-blue-100' : 'bg-green-100'
-                      }`}>
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center mx-auto mb-1 ${includeBattery ? 'bg-blue-100' : 'bg-green-100'
+                        }`}>
                         <Battery className={`w-4 h-4 ${includeBattery ? 'text-blue-600' : 'text-green-600'}`} />
                       </div>
                       <h5 className={`font-bold text-xs mb-1 ${includeBattery ? 'text-blue-700' : 'text-green-700'}`}>Solar + Battery</h5>
@@ -4117,19 +4184,17 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
 
                 {/* Bottom Insight */}
                 <div
-                  className={`p-2 rounded-lg border ${
-                    includeBattery ? "bg-blue-50 border-blue-200" : "bg-orange-50 border-orange-200"
-                  }`}
+                  className={`p-2 rounded-lg border ${includeBattery ? "bg-blue-50 border-blue-200" : "bg-orange-50 border-orange-200"
+                    }`}
                 >
                   <div className="flex items-start gap-2">
                     <Info
-                      className={`w-3 h-3 flex-shrink-0 mt-0.5 ${
-                        includeBattery ? "text-blue-500" : "text-orange-500"
-                      }`}
+                      className={`w-3 h-3 flex-shrink-0 mt-0.5 ${includeBattery ? "text-blue-500" : "text-orange-500"
+                        }`}
                     />
                     <p className={`text-xs ${includeBattery ? "text-blue-800" : "text-orange-700"}`}>
                       {includeBattery
-                        ? `With ${batteryCount > 1 ? `${batteryCount} batteries` : 'battery storage'} (${batteryCount * (selectedBattery.capacity || 0)}kWh total), you'll use your own solar power even after sunset, ${batteryCount >= 2 ? 'achieving near-complete' : 'dramatically reducing'} grid dependence.`
+                        ? `With ${batteryCount > 1 ? `${batteryCount} batteries` : 'battery storage'} (${batteryCount * (selectedBattery?.capacity || 0)}kWh total), you'll use your own solar power even after sunset, ${batteryCount >= 2 ? 'achieving near-complete' : 'dramatically reducing'} grid dependence.`
                         : "Adding battery storage can increase your energy independence from 30% to 85%, powering your home through nights and outages."}
                     </p>
                   </div>
@@ -4150,31 +4215,30 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                 <MobileEquipmentSelector
                   title="Solar Panel"
                   options={solarPanelOptions}
-                  value={selectedSolarPanel.id}
+                  value={selectedSolarPanel?.id}
                   onChange={(value: string) => {
                     const found = solarPanelOptions.find((p: any) => p.id === value)
                     if (found) setSelectedSolarPanel(found)
                   }}
-                  extra={`${selectedSolarPanel.efficiency} • ${selectedSolarPanel.reason}`}
-                  imagePath={selectedSolarPanel.image || `/images/solar-panels/${selectedSolarPanel.id}.png`}
-                  downloadUrl={selectedSolarPanel.datasheet || "/pdf/jinko_panel.pdf"}
+                  extra={`${selectedSolarPanel?.efficiency} • ${selectedSolarPanel?.reason}`}
+                  imagePath={selectedSolarPanel?.image || `/images/solar-panels/${selectedSolarPanel?.id}.png`}
+                  downloadUrl={selectedSolarPanel?.datasheet || "/pdf/jinko_panel.pdf"}
                   downloadName="JinkoSolar_440W_Spec_Sheet.pdf"
                 />
                 {/* Inverter Selection */}
                 <MobileEquipmentSelector
                   title="Inverter"
                   options={inverterOptions}
-                  value={selectedInverter.id}
+                  value={selectedInverter?.id}
                   onChange={(value: string) => {
                     const found = inverterOptions.find((i: any) => i.id === value)
                     if (found) setSelectedInverter(found)
                   }}
-                  extra={`${selectedInverter.efficiency} • ${selectedInverter.reason}${
-                    powerOutageBackup ? " • Hybrid recommended for backup" : ""
-                  }`}
+                  extra={`${selectedInverter?.efficiency} • ${selectedInverter?.reason}${powerOutageBackup ? " • Hybrid recommended for backup" : ""
+                    }`}
                   rightBadge={powerOutageBackup ? "Hybrid" : undefined}
-                  imagePath={selectedInverter.image || `/images/inverters/${selectedInverter.id}.png`}
-                  downloadUrl={selectedInverter.datasheet || "/pdf/sig_inverter.pdf"}
+                  imagePath={selectedInverter?.image || `/images/inverters/${selectedInverter?.id}.png`}
+                  downloadUrl={selectedInverter?.datasheet || "/pdf/sig_inverter.pdf"}
                   downloadName="Sigenergy_Inverter_Spec_Sheet.pdf"
                 />
                 {/* Battery Selection - Show when battery is enabled */}
@@ -4182,15 +4246,15 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                   <MobileEquipmentSelector
                     title="Battery"
                     options={batteryOptions}
-                    value={selectedBattery.id}
+                    value={selectedBattery?.id}
                     onChange={(value: string) => {
                       const found = batteryOptions.find((b: any) => b.id === value)
                       if (found) setSelectedBattery(found)
                     }}
-                    extra={`${batteryCount}x ${selectedBattery.capacity || 0} kWh (${batteryCount * (selectedBattery.capacity || 0)} kWh total) • ${selectedBattery.reason}`}
-                    imagePath={selectedBattery.image || `/images/batteries/${selectedBattery.id}.png`}
-                    downloadUrl={selectedBattery.datasheet || "/pdf/sig_battery.pdf"}
-                    downloadName={`SigEnergy_Battery_${selectedBattery.capacity || 0}kWh_Spec_Sheet.pdf`}
+                    extra={`${batteryCount}x ${selectedBattery?.capacity || 0} kWh (${batteryCount * (selectedBattery?.capacity || 0)} kWh total) • ${selectedBattery?.reason}`}
+                    imagePath={selectedBattery?.image || `/images/batteries/${selectedBattery?.id}.png`}
+                    downloadUrl={selectedBattery?.datasheet || "/pdf/sig_battery.pdf"}
+                    downloadName={`SigEnergy_Battery_${selectedBattery?.capacity || 0}kWh_Spec_Sheet.pdf`}
                   />
                 )}
               </CollapsibleContent>
@@ -4214,8 +4278,8 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                 <Zap className="w-4 h-4 text-blue-600" />
                 <span className="text-sm font-medium">Planning for an EV?</span>
               </div>
-              <Switch 
-                checked={includeEVCharger} 
+              <Switch
+                checked={includeEVCharger}
                 onCheckedChange={(checked) => {
                   setIncludeEVCharger(checked)
                   // When EV planning is enabled, automatically enable EV charger equipment
@@ -4225,7 +4289,7 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                     // When EV planning is disabled, automatically disable EV charger equipment
                     setIncludeEVChargerEquipment(false)
                   }
-                }} 
+                }}
               />
             </div>
             {includeEVCharger && (
@@ -4263,7 +4327,7 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                 {includeEVChargerEquipment && (
                   <div className="mt-2">
                     <div className="text-sm font-bold">€{(evChargerCost || 0).toLocaleString()}</div>
-                    <div className="text-xs text-gray-600">€{selectedEVCharger.grant || 0} Grant Available</div>
+                    <div className="text-xs text-gray-600">€{selectedEVCharger?.grant || 0} Grant Available</div>
                   </div>
                 )}
               </div>
@@ -4274,14 +4338,14 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                   <MobileEquipmentSelector
                     title="EV Charger"
                     options={evChargerOptions}
-                    value={selectedEVCharger.id}
+                    value={selectedEVCharger?.id}
                     onChange={(value: string) => {
                       const found = evChargerOptions.find((c: any) => c.id === value)
                       if (found) setSelectedEVCharger(found)
                     }}
-                    extra={`${selectedEVCharger.power} • ${selectedEVCharger.reason}`}
-                    imagePath={selectedEVCharger.image || `/images/ev-chargers/${selectedEVCharger.id}.png`}
-                    downloadUrl={selectedEVCharger.datasheet || "/pdf/ev_charger.pdf"}
+                    extra={`${selectedEVCharger?.power} • ${selectedEVCharger?.reason}`}
+                    imagePath={selectedEVCharger?.image || `/images/ev-chargers/${selectedEVCharger?.id}.png`}
+                    downloadUrl={selectedEVCharger?.datasheet || "/pdf/ev_charger.pdf"}
                     downloadName="EV_Charger_Spec_Sheet.pdf"
                   />
                 </div>
@@ -4320,174 +4384,174 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
 
         {/* Insights */}
 
-      {false && (<Card>
+        {false && (<Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Insights</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {/* Savings Calculation Dialog */}
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button variant="outline" className="w-full justify-between bg-white">
-                    <span className="font-medium text-sm">See How Your Savings Are Calculated</span>
-                    <Info className="w-4 h-4" />
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
-                  <DialogHeader className="pb-2 relative">
-                    <DialogClose asChild>
-                      <button
-                        className="absolute top-0 right-0 w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 hover:text-gray-700 transition-colors"
-                      >
-                        ×
-                      </button>
-                    </DialogClose>
-                    <DialogTitle className="text-lg flex items-center gap-2 pr-8">
-                      <div className="w-8 h-8 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center">
-                        <DollarSign className="w-5 h-5 text-white" />
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="w-full justify-between bg-white">
+                  <span className="font-medium text-sm">See How Your Savings Are Calculated</span>
+                  <Info className="w-4 h-4" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+                <DialogHeader className="pb-2 relative">
+                  <DialogClose asChild>
+                    <button
+                      className="absolute top-0 right-0 w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 hover:text-gray-700 transition-colors"
+                    >
+                      ×
+                    </button>
+                  </DialogClose>
+                  <DialogTitle className="text-lg flex items-center gap-2 pr-8">
+                    <div className="w-8 h-8 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center">
+                      <DollarSign className="w-5 h-5 text-white" />
+                    </div>
+                    How Your Savings Are Calculated
+                  </DialogTitle>
+                </DialogHeader>
+
+                <Tabs defaultValue="solar-only" className="w-full">
+                  <TabsList className="grid w-full grid-cols-3 mb-4">
+                    <TabsTrigger value="solar-only" className="text-xs">
+                      Solar Only
+                    </TabsTrigger>
+                    <TabsTrigger value="solar-battery-night" className="text-xs">
+                      Battery (Night)
+                    </TabsTrigger>
+                    <TabsTrigger value="solar-battery-solar" className="text-xs">
+                      Solar + Battery
+                    </TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="solar-only" className="space-y-3">
+                    <div className="bg-yellow-50 p-3 rounded border border-yellow-200">
+                      <p className="text-sm mb-2">Your panels power your home directly during the day. Any unused solar is exported to the grid for payment.</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <MobileStatBox
+                          icon={<Sun className="w-6 h-6 text-yellow-500" />}
+                          label="Annual Benefit"
+                          value={`€${Math.round(annualPVGeneration * 0.3 * 0.35) + Math.round(annualPVGeneration * 0.7 * 0.2)}`}
+                          tone="green"
+                        />
+                        <MobileStatBox
+                          icon={<Home className="w-6 h-6 text-blue-500" />}
+                          label="kWh Generated"
+                          value={`${annualPVGeneration.toLocaleString()}`}
+                          tone="blue"
+                        />
                       </div>
-                      How Your Savings Are Calculated
-                    </DialogTitle>
-                  </DialogHeader>
-
-                  <Tabs defaultValue="solar-only" className="w-full">
-                    <TabsList className="grid w-full grid-cols-3 mb-4">
-                      <TabsTrigger value="solar-only" className="text-xs">
-                        Solar Only
-                      </TabsTrigger>
-                      <TabsTrigger value="solar-battery-night" className="text-xs">
-                        Battery (Night)
-                      </TabsTrigger>
-                      <TabsTrigger value="solar-battery-solar" className="text-xs">
-                        Solar + Battery
-                      </TabsTrigger>
-                    </TabsList>
-
-                    <TabsContent value="solar-only" className="space-y-3">
-                      <div className="bg-yellow-50 p-3 rounded border border-yellow-200">
-                        <p className="text-sm mb-2">Your panels power your home directly during the day. Any unused solar is exported to the grid for payment.</p>
-                        <div className="grid grid-cols-2 gap-2">
-                          <MobileStatBox
-                            icon={<Sun className="w-6 h-6 text-yellow-500" />}
-                            label="Annual Benefit"
-                            value={`€${Math.round(annualPVGeneration * 0.3 * 0.35) + Math.round(annualPVGeneration * 0.7 * 0.2)}`}
-                            tone="green"
-                          />
-                          <MobileStatBox
-                            icon={<Home className="w-6 h-6 text-blue-500" />}
-                            label="kWh Generated"
-                            value={`${annualPVGeneration.toLocaleString()}`}
-                            tone="blue"
-                          />
-                        </div>
-                        <div className="mt-3 space-y-2 text-sm">
-                          <MobileBreakdownRow
-                            title="Self-Use Savings"
-                            detail={`30% × ${annualPVGeneration.toLocaleString()} kWh × €0.35`}
-                            value={`€${Math.round(annualPVGeneration * 0.3 * 0.35)}`}
-                            color="green"
-                          />
-                          <MobileBreakdownRow
-                            title="Export Income"
-                            detail={`70% × ${annualPVGeneration.toLocaleString()} kWh × €0.20`}
-                            value={`€${Math.round(annualPVGeneration * 0.7 * 0.2)}`}
-                            color="blue"
-                          />
-                          <MobileTotalRow value={`€${Math.round(annualPVGeneration * 0.3 * 0.35) + Math.round(annualPVGeneration * 0.7 * 0.2)}`} />
-                        </div>
+                      <div className="mt-3 space-y-2 text-sm">
+                        <MobileBreakdownRow
+                          title="Self-Use Savings"
+                          detail={`30% × ${annualPVGeneration.toLocaleString()} kWh × €0.35`}
+                          value={`€${Math.round(annualPVGeneration * 0.3 * 0.35)}`}
+                          color="green"
+                        />
+                        <MobileBreakdownRow
+                          title="Export Income"
+                          detail={`70% × ${annualPVGeneration.toLocaleString()} kWh × €0.20`}
+                          value={`€${Math.round(annualPVGeneration * 0.7 * 0.2)}`}
+                          color="blue"
+                        />
+                        <MobileTotalRow value={`€${Math.round(annualPVGeneration * 0.3 * 0.35) + Math.round(annualPVGeneration * 0.7 * 0.2)}`} />
                       </div>
-                    </TabsContent>
+                    </div>
+                  </TabsContent>
 
-                    <TabsContent value="solar-battery-night" className="space-y-3">
-                      <div className="bg-blue-50 p-3 rounded border border-blue-200">
-                        <p className="text-sm mb-2">
-                          The battery charges overnight on a cheap night-rate tariff. All solar generation is exported to the grid.
-                        </p>
-                        <div className="grid grid-cols-3 gap-2">
-                          <MobileStatBox
-                            icon={<Sun className="w-6 h-6 text-yellow-500" />}
-                            label="Solar Export"
-                            value={`€${Math.round(annualPVGeneration * 1.0 * 0.2)}`}
-                            tone="blue"
-                          />
-                          <MobileStatBox
-                            icon={<Battery className="w-6 h-6 text-purple-500" />}
-                            label="Arbitrage"
-                            value={`€${Math.round(8 * (gridRate - 0.08) * 365)}`}
-                            tone="purple"
-                          />
-                          <MobileStatBox
-                            icon={<TrendingUp className="w-6 h-6 text-green-600" />}
-                            label="Total"
-                            value={`€${Math.round(annualPVGeneration * 1.0 * 0.2) + Math.round(8 * (gridRate - 0.08) * 365)}`}
-                            tone="green"
-                          />
-                        </div>
-                        <div className="mt-3 space-y-2 text-sm">
-                          <MobileBreakdownRow
-                            title="Solar Export Income"
-                            detail={`${annualPVGeneration.toLocaleString()} kWh × €0.20`}
-                            value={`€${Math.round(annualPVGeneration * 1.0 * 0.2)}`}
-                            color="blue"
-                          />
-                          <MobileBreakdownRow
-                            title="Battery Savings (Arbitrage)"
-                            detail={`${batteryCount * (selectedBattery.capacity || 0)} kWh × (€${gridRate.toFixed(2)} − €0.08) × 365`}
-                            value={`€${Math.round(batteryCount * (selectedBattery.capacity || 0) * (gridRate - 0.08) * 365)}`}
-                            color="purple"
-                          />
-                          <MobileTotalRow value={`€${Math.round(annualPVGeneration * 1.0 * 0.2) + Math.round(batteryCount * (selectedBattery.capacity || 0) * (gridRate - 0.08) * 365)}`} />
-                        </div>
+                  <TabsContent value="solar-battery-night" className="space-y-3">
+                    <div className="bg-blue-50 p-3 rounded border border-blue-200">
+                      <p className="text-sm mb-2">
+                        The battery charges overnight on a cheap night-rate tariff. All solar generation is exported to the grid.
+                      </p>
+                      <div className="grid grid-cols-3 gap-2">
+                        <MobileStatBox
+                          icon={<Sun className="w-6 h-6 text-yellow-500" />}
+                          label="Solar Export"
+                          value={`€${Math.round(annualPVGeneration * 1.0 * 0.2)}`}
+                          tone="blue"
+                        />
+                        <MobileStatBox
+                          icon={<Battery className="w-6 h-6 text-purple-500" />}
+                          label="Arbitrage"
+                          value={`€${Math.round(8 * (gridRate - 0.08) * 365)}`}
+                          tone="purple"
+                        />
+                        <MobileStatBox
+                          icon={<TrendingUp className="w-6 h-6 text-green-600" />}
+                          label="Total"
+                          value={`€${Math.round(annualPVGeneration * 1.0 * 0.2) + Math.round(8 * (gridRate - 0.08) * 365)}`}
+                          tone="green"
+                        />
                       </div>
-                    </TabsContent>
-
-                    <TabsContent value="solar-battery-solar" className="space-y-3">
-                      <div className="bg-orange-50 p-3 rounded border border-orange-200">
-                        <p className="text-sm mb-2">The battery charges from both solar and the night-rate tariff. Solar powers the home first, then the battery covers evening use. Excess solar is still exported.</p>
-                        <div className="grid grid-cols-3 gap-2">
-                          <MobileStatBox
-                            icon={<Home className="w-6 h-6 text-green-600" />}
-                            label="Self-Use"
-                            value={`€${Math.round(annualPVGeneration * scenarioFractions.selfUse * 0.35)}`}
-                            tone="green"
-                          />
-                          <MobileStatBox
-                            icon={<Sun className="w-6 h-6 text-blue-500" />}
-                            label="Export"
-                            value={`€${Math.round(annualPVGeneration * scenarioFractions.export * 0.2)}`}
-                            tone="blue"
-                          />
-                          <MobileStatBox
-                            icon={<TrendingUp className="w-6 h-6 text-green-600" />}
-                            label="Total"
-                            value={`€${Math.round(annualPVGeneration * scenarioFractions.selfUse * 0.35) + Math.round(annualPVGeneration * scenarioFractions.export * 0.2)}`}
-                            tone="green"
-                          />
-                        </div>
-                        <div className="mt-3 space-y-2 text-sm">
-                          <MobileBreakdownRow
-                            title="Self-Use Savings"
-                            detail={`${Math.round(scenarioFractions.selfUse * 100)}% × ${annualPVGeneration.toLocaleString()} kWh × €0.35`}
-                            value={`€${Math.round(annualPVGeneration * scenarioFractions.selfUse * 0.35)}`}
-                            color="green"
-                          />
-                          <MobileBreakdownRow
-                            title="Export Income"
-                            detail={`${Math.round(scenarioFractions.export * 100)}% × ${annualPVGeneration.toLocaleString()} kWh × €0.20`}
-                            value={`€${Math.round(annualPVGeneration * scenarioFractions.export * 0.2)}`}
-                            color="blue"
-                          />
-                          <MobileTotalRow value={`€${Math.round(annualPVGeneration * scenarioFractions.selfUse * 0.35) + Math.round(annualPVGeneration * scenarioFractions.export * 0.2)}`} />
-                        </div>
+                      <div className="mt-3 space-y-2 text-sm">
+                        <MobileBreakdownRow
+                          title="Solar Export Income"
+                          detail={`${annualPVGeneration.toLocaleString()} kWh × €0.20`}
+                          value={`€${Math.round(annualPVGeneration * 1.0 * 0.2)}`}
+                          color="blue"
+                        />
+                        <MobileBreakdownRow
+                          title="Battery Savings (Arbitrage)"
+                          detail={`${batteryCount * (selectedBattery?.capacity || 0)} kWh × (€${gridRate.toFixed(2)} − €0.08) × 365`}
+                          value={`€${Math.round(batteryCount * (selectedBattery?.capacity || 0) * (gridRate - 0.08) * 365)}`}
+                          color="purple"
+                        />
+                        <MobileTotalRow value={`€${Math.round(annualPVGeneration * 1.0 * 0.2) + Math.round(batteryCount * (selectedBattery?.capacity || 0) * (gridRate - 0.08) * 365)}`} />
                       </div>
-                    </TabsContent>
-                  </Tabs>
+                    </div>
+                  </TabsContent>
 
-                  <div className="bg-gray-50 p-3 rounded text-xs text-gray-700 border-l-4 border-gray-400">
-                    Figures are estimates and vary by usage, weather, and tariffs.
-                  </div>
-                </DialogContent>
-              </Dialog>
+                  <TabsContent value="solar-battery-solar" className="space-y-3">
+                    <div className="bg-orange-50 p-3 rounded border border-orange-200">
+                      <p className="text-sm mb-2">The battery charges from both solar and the night-rate tariff. Solar powers the home first, then the battery covers evening use. Excess solar is still exported.</p>
+                      <div className="grid grid-cols-3 gap-2">
+                        <MobileStatBox
+                          icon={<Home className="w-6 h-6 text-green-600" />}
+                          label="Self-Use"
+                          value={`€${Math.round(annualPVGeneration * scenarioFractions.selfUse * 0.35)}`}
+                          tone="green"
+                        />
+                        <MobileStatBox
+                          icon={<Sun className="w-6 h-6 text-blue-500" />}
+                          label="Export"
+                          value={`€${Math.round(annualPVGeneration * scenarioFractions.export * 0.2)}`}
+                          tone="blue"
+                        />
+                        <MobileStatBox
+                          icon={<TrendingUp className="w-6 h-6 text-green-600" />}
+                          label="Total"
+                          value={`€${Math.round(annualPVGeneration * scenarioFractions.selfUse * 0.35) + Math.round(annualPVGeneration * scenarioFractions.export * 0.2)}`}
+                          tone="green"
+                        />
+                      </div>
+                      <div className="mt-3 space-y-2 text-sm">
+                        <MobileBreakdownRow
+                          title="Self-Use Savings"
+                          detail={`${Math.round(scenarioFractions.selfUse * 100)}% × ${annualPVGeneration.toLocaleString()} kWh × €0.35`}
+                          value={`€${Math.round(annualPVGeneration * scenarioFractions.selfUse * 0.35)}`}
+                          color="green"
+                        />
+                        <MobileBreakdownRow
+                          title="Export Income"
+                          detail={`${Math.round(scenarioFractions.export * 100)}% × ${annualPVGeneration.toLocaleString()} kWh × €0.20`}
+                          value={`€${Math.round(annualPVGeneration * scenarioFractions.export * 0.2)}`}
+                          color="blue"
+                        />
+                        <MobileTotalRow value={`€${Math.round(annualPVGeneration * scenarioFractions.selfUse * 0.35) + Math.round(annualPVGeneration * scenarioFractions.export * 0.2)}`} />
+                      </div>
+                    </div>
+                  </TabsContent>
+                </Tabs>
+
+                <div className="bg-gray-50 p-3 rounded text-xs text-gray-700 border-l-4 border-gray-400">
+                  Figures are estimates and vary by usage, weather, and tariffs.
+                </div>
+              </DialogContent>
+            </Dialog>
 
             {/* Bill Impact Dialog */}
             <Dialog>
@@ -4596,7 +4660,7 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
           </CardContent>
         </Card>)}
 
-        
+
 
         {/* Property Value */}
         <Collapsible>
@@ -4639,8 +4703,8 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
               <CardHeader className="flex flex-row items-center justify-between py-4">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <span className="w-6 h-6 md:w-8 md:h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-semibold text-sm md:text-base">
-                      4
-                    </span>
+                    4
+                  </span>
                   Installation, Warranties, FAQ</CardTitle>
                 <ChevronDown className="w-4 h-4 text-gray-500 data-[state=open]:rotate-180 transition-transform" />
               </CardHeader>
@@ -4955,7 +5019,7 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                               The Sustainable Energy Authority of Ireland (SEAI) provides grants up to €1,800 for solar
                               PV installations to encourage renewable energy adoption.
                             </p>
-                            
+
                             <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
                               <p className="text-sm font-medium text-blue-800 mb-1">
                                 Was your house built before 31st December 2020?
@@ -4979,7 +5043,7 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                         </DialogContent>
                       </Dialog>
                       <span className="font-semibold">-€{seaiGrant.toLocaleString()}</span>
-                      
+
                     </div>
                   </div>
                 )}
@@ -5015,8 +5079,8 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
             {/* CTA Buttons */}
             <div className="space-y-3">
               {/* Primary CTA - Book Free Consultation */}
-              <Button 
-                className="w-full h-auto !px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold text-sm shadow-lg transform transition-all duration-200 hover:scale-[1.02] hover:shadow-xl" 
+              <Button
+                className="w-full h-auto !px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold text-sm shadow-lg transform transition-all duration-200 hover:scale-[1.02] hover:shadow-xl"
                 onClick={() => router.push('/call-page')}
               >
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-0">
@@ -5030,8 +5094,8 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                 </div>
               </Button>
               {/* Secondary CTA - Download Plan */}
-              <Dialog 
-                open={showSavePlanDialog} 
+              <Dialog
+                open={showSavePlanDialog}
                 onOpenChange={(open) => {
                   // Prevent layout shift by locking body width
                   if (open) {
@@ -5042,7 +5106,7 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                     document.body.style.paddingRight = '';
                     document.body.style.overflow = '';
                   }
-                  
+
                   setShowSavePlanDialog(open);
                   if (!open) {
                     // Reset form state when dialog closes (but not if email was successfully submitted)
@@ -5055,8 +5119,8 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                 }}
               >
                 <DialogTrigger asChild>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     className="w-full h-10 bg-white hover:bg-gray-50 border-2 border-gray-200 hover:border-gray-300 text-gray-700 font-medium text-sm transition-all duration-200"
                   >
                     <Download className="w-4 h-4 mr-2" />
@@ -5075,7 +5139,7 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                           ×
                         </button>
                       </DialogClose>
-                      
+
                       {/* Header Section - More friendly */}
                       <div className="text-center space-y-1 sm:space-y-2">
                         <div className="mx-auto w-10 h-10 sm:w-12 sm:h-12 bg-blue-50 rounded-full flex items-center justify-center border-2 border-blue-200">
@@ -5170,7 +5234,7 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                           Get your detailed plan emailed to you with financing options and next steps.
                         </p>
                       </DialogHeader>
-                      
+
                       <div className="space-y-4">
                         {/* Full Name Field */}
                         <div className="space-y-2">
@@ -5210,7 +5274,7 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
 
                         {/* Agreement Checkbox */}
                         <div className="flex items-start space-x-2 pt-2">
-                          <Checkbox 
+                          <Checkbox
                             id="agree-terms-mobile"
                             checked={agreeToTerms}
                             onCheckedChange={(checked) => setAgreeToTerms(checked === true)}
@@ -5229,7 +5293,7 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                         )}
 
                         {/* Submit Button */}
-                        <Button 
+                        <Button
                           onClick={handleSavePlan}
                           disabled={!fullName.trim() || !email.trim() || !agreeToTerms || isSubmitting}
                           className="w-full h-12 bg-green-600 hover:bg-green-700 text-white font-medium mt-6 disabled:opacity-50"
@@ -5251,7 +5315,7 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                         <div className="text-xs text-gray-600 text-center pt-2 leading-4">
                           By clicking 'Email My Solar Plan', you agree to Voltflo's{" "}
                           <a target="_blank" href="/privacy-policy" className="text-green-600 underline">Privacy Policy</a> and{" "}
-                          <a target="_blank" href="/terms-of-use" className="text-green-600 underline">Terms of Use</a>. 
+                          <a target="_blank" href="/terms-of-use" className="text-green-600 underline">Terms of Use</a>.
                         </div>
                       </div>
                     </>
@@ -5286,17 +5350,15 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
               <div className="bg-gray-100 p-1 rounded-lg">
                 <button
                   onClick={() => setBillInputMode("monthly")}
-                  className={`px-3 py-1 rounded text-sm ${
-                    billInputMode === "monthly" ? "bg-white shadow-sm font-medium" : "text-gray-600"
-                  }`}
+                  className={`px-3 py-1 rounded text-sm ${billInputMode === "monthly" ? "bg-white shadow-sm font-medium" : "text-gray-600"
+                    }`}
                 >
                   Monthly
                 </button>
                 <button
                   onClick={() => setBillInputMode("annual")}
-                  className={`px-3 py-1 rounded text-sm ${
-                    billInputMode === "annual" ? "bg-white shadow-sm font-medium" : "text-gray-600"
-                  }`}
+                  className={`px-3 py-1 rounded text-sm ${billInputMode === "annual" ? "bg-white shadow-sm font-medium" : "text-gray-600"
+                    }`}
                 >
                   Annual
                 </button>
@@ -5344,9 +5406,8 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
 
       {/* Sticky Bottom CTA Bar - Shows/Hides based on scroll */}
       <div
-        className={`fixed bottom-0 left-0 right-0 bg-gradient-to-br from-blue-50 to-blue-100 border-t border-blue-200 shadow-lg p-3 z-50 transition-all duration-500 ease-in-out ${
-          showStickyBar ? "translate-y-0 opacity-100" : "translate-y-full opacity-0"
-        }`}
+        className={`fixed bottom-0 left-0 right-0 bg-gradient-to-br from-blue-50 to-blue-100 border-t border-blue-200 shadow-lg p-3 z-50 transition-all duration-500 ease-in-out ${showStickyBar ? "translate-y-0 opacity-100" : "translate-y-full opacity-0"
+          }`}
       >
         <div className="flex items-center justify-between gap-3">
           <div className="flex-1 grid grid-cols-3 gap-2 text-center">
@@ -5386,7 +5447,7 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
           </div>
         </div>
       </div>
-      
+
       {/* Success Modal for Mobile */}
       <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
         <DialogContent className="max-w-[90vw] sm:max-w-lg lg:max-w-xl mx-auto bg-background border-0 shadow-2xl">
@@ -5725,21 +5786,19 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                       <div className="flex bg-white rounded-lg p-1 shadow-sm border">
                         <button
                           onClick={() => setBatteryCount(1)}
-                          className={`px-2 sm:px-3 py-1.5 text-xs sm:text-sm rounded-md font-medium transition-all duration-200 ${
-                            batteryCount === 1 
-                              ? "bg-blue-500 text-white shadow-sm" 
+                          className={`px-2 sm:px-3 py-1.5 text-xs sm:text-sm rounded-md font-medium transition-all duration-200 ${batteryCount === 1
+                              ? "bg-blue-500 text-white shadow-sm"
                               : "text-gray-600 hover:text-gray-800 hover:bg-gray-50"
-                          }`}
+                            }`}
                         >
                           1<span className="hidden sm:inline"> Battery</span>
                         </button>
                         <button
                           onClick={() => setBatteryCount(2)}
-                          className={`px-2 sm:px-3 py-1.5 text-xs sm:text-sm rounded-md font-medium transition-all duration-200 ${
-                            batteryCount === 2 
-                              ? "bg-blue-500 text-white shadow-sm" 
+                          className={`px-2 sm:px-3 py-1.5 text-xs sm:text-sm rounded-md font-medium transition-all duration-200 ${batteryCount === 2
+                              ? "bg-blue-500 text-white shadow-sm"
                               : "text-gray-600 hover:text-gray-800 hover:bg-gray-50"
-                          }`}
+                            }`}
                         >
                           2<span className="hidden sm:inline"> Batteries</span>
                         </button>
@@ -5747,7 +5806,7 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                     </div>
                   </div>
                   <div className="mt-2 flex items-center justify-between text-xs text-gray-600">
-                    <span>Capacity: {batteryCount * (selectedBattery.capacity || 0)}kWh total</span>
+                    <span>Capacity: {batteryCount * (selectedBattery?.capacity || 0)}kWh total</span>
                     <span>{batteryCount === 1 ? '1 day' : '2 days'} backup power</span>
                   </div>
                 </div>
@@ -5853,17 +5912,17 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                         <div className="relative group">
                           <Info className="w-3 h-3 text-gray-400 cursor-help" />
                           <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-white text-gray-800 text-xs rounded-lg shadow-lg border opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 w-40">
-                            {batteryCount * (selectedBattery.capacity || 0)}kW × 90% efficiency × 315 cycles × €0.27 savings.
+                            {batteryCount * (selectedBattery?.capacity || 0)}kW × 90% efficiency × 315 cycles × €0.27 savings.
                             <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-white"></div>
                           </div>
                         </div>
                       </div>
-                      <span className="text-green-600 font-medium">€{Math.round(batteryCount * (selectedBattery.capacity || 0) * 0.9 * 315 * 0.27)}</span>
+                      <span className="text-green-600 font-medium">€{Math.round(batteryCount * (selectedBattery?.capacity || 0) * 0.9 * 315 * 0.27)}</span>
                     </div>
 
                     <div className="border-t pt-2 flex justify-between font-bold text-sm">
                       <span>Total Benefit</span>
-                      <span className="text-green-600">€{Math.round(annualPVGeneration * 1.0 * 0.2 + batteryCount * (selectedBattery.capacity || 0) * 0.9 * 315 * 0.27)}</span>
+                      <span className="text-green-600">€{Math.round(annualPVGeneration * 1.0 * 0.2 + batteryCount * (selectedBattery?.capacity || 0) * 0.9 * 315 * 0.27)}</span>
                     </div>
                   </div>
 
@@ -5876,9 +5935,9 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                       <div className="space-y-1">
                         <div>• Annual generation: {annualPVGeneration} kWh</div>
                         <div>• Solar export (100%): {Math.round(annualPVGeneration * 1.0)} kWh × €0.20 = €{Math.round(annualPVGeneration * 1.0 * 0.2)}</div>
-                        <div>• Battery capacity: {batteryCount * (selectedBattery.capacity || 0)}kW × 90% efficiency = {Math.round(batteryCount * (selectedBattery.capacity || 0) * 0.9)}kW usable</div>
-                        <div>• Night charge cycles: 315 cycles/year × €0.27 savings = €{Math.round(batteryCount * (selectedBattery.capacity || 0) * 0.9 * 315 * 0.27)}</div>
-                        <div className="font-medium pt-1 border-t">Total: €{Math.round(annualPVGeneration * 1.0 * 0.2 + batteryCount * (selectedBattery.capacity || 0) * 0.9 * 315 * 0.27)}</div>
+                        <div>• Battery capacity: {batteryCount * (selectedBattery?.capacity || 0)}kW × 90% efficiency = {Math.round(batteryCount * (selectedBattery?.capacity || 0) * 0.9)}kW usable</div>
+                        <div>• Night charge cycles: 315 cycles/year × €0.27 savings = €{Math.round(batteryCount * (selectedBattery?.capacity || 0) * 0.9 * 315 * 0.27)}</div>
+                        <div className="font-medium pt-1 border-t">Total: €{Math.round(annualPVGeneration * 1.0 * 0.2 + batteryCount * (selectedBattery?.capacity || 0) * 0.9 * 315 * 0.27)}</div>
                       </div>
                     </CollapsibleContent>
                   </Collapsible>
@@ -5897,21 +5956,19 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                       <div className="flex bg-white rounded-lg p-1 shadow-sm border">
                         <button
                           onClick={() => setBatteryCount(1)}
-                          className={`px-3 py-1.5 text-sm rounded-md font-medium transition-all duration-200 ${
-                            batteryCount === 1 
-                              ? "bg-green-500 text-white shadow-sm" 
+                          className={`px-3 py-1.5 text-sm rounded-md font-medium transition-all duration-200 ${batteryCount === 1
+                              ? "bg-green-500 text-white shadow-sm"
                               : "text-gray-600 hover:text-gray-800 hover:bg-gray-50"
-                          }`}
+                            }`}
                         >
                           1 Battery
                         </button>
                         <button
                           onClick={() => setBatteryCount(2)}
-                          className={`px-3 py-1.5 text-sm rounded-md font-medium transition-all duration-200 ${
-                            batteryCount === 2 
-                              ? "bg-green-500 text-white shadow-sm" 
+                          className={`px-3 py-1.5 text-sm rounded-md font-medium transition-all duration-200 ${batteryCount === 2
+                              ? "bg-green-500 text-white shadow-sm"
                               : "text-gray-600 hover:text-gray-800 hover:bg-gray-50"
-                          }`}
+                            }`}
                         >
                           2 Batteries
                         </button>
@@ -5919,8 +5976,8 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                     </div>
                   </div>
                   <div className="mt-2 flex items-center justify-between text-xs text-gray-600">
-                    <span>Night cycles: {Math.round(batteryCount * (selectedBattery.capacity || 0) * 0.9 * 315)} kWh/year</span>
-                    <span>Arbitrage: €{Math.round(batteryCount * (selectedBattery.capacity || 0) * 0.9 * 315 * 0.27)}/year</span>
+                    <span>Night cycles: {Math.round(batteryCount * (selectedBattery?.capacity || 0) * 0.9 * 315)} kWh/year</span>
+                    <span>Arbitrage: €{Math.round(batteryCount * (selectedBattery?.capacity || 0) * 0.9 * 315 * 0.27)}/year</span>
                   </div>
                 </div>
 
@@ -5953,7 +6010,7 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
               Edit Your Energy Profile
             </DialogTitle>
           </DialogHeader>
-          
+
           <div className="space-y-4">
             <div className="space-y-2">
               <label htmlFor="monthlyBill" className="text-sm font-medium text-gray-700">
@@ -6043,7 +6100,7 @@ function MobileEquipmentSelector({
         <h4 className="font-medium text-sm">{title}</h4>
         {rightBadge && <Badge className="bg-orange-600">{rightBadge}</Badge>}
       </div>
-      
+
       {/* Equipment Image */}
       {imagePath && (
         <div className="mb-3">
@@ -6054,7 +6111,7 @@ function MobileEquipmentSelector({
           />
         </div>
       )}
-      
+
       <Select value={value} onValueChange={onChange}>
         <SelectTrigger className="h-9">
           <SelectValue placeholder={`Select ${title}`} />
@@ -6063,7 +6120,7 @@ function MobileEquipmentSelector({
           {options.map((opt) => (
             <SelectItem key={opt.id} value={opt.id} className="text-sm">
               <div className="flex items-center justify-between w-full">
-                <span style={{textAlign:'left', fontSize: "11px"}}>
+                <span style={{ textAlign: 'left', fontSize: "11px" }}>
                   {opt.name}
                   {opt.capacity ? ` (${opt.capacity}kWh)` : ""}
                   {/* {typeof opt.priceAdjustment === "number" && opt.priceAdjustment !== 0
@@ -6071,7 +6128,7 @@ function MobileEquipmentSelector({
                     : ""} */}
                   {/* {typeof opt.price === "number" ? ` (€${opt.price})` : ""} */}
                 </span>
-                {opt.recommended && <Badge className="ml-2 bg-green-600" style={{fontSize: "10px", padding:"2px 5px"}}>Recommended</Badge>}
+                {opt.recommended && <Badge className="ml-2 bg-green-600" style={{ fontSize: "10px", padding: "2px 5px" }}>Recommended</Badge>}
               </div>
             </SelectItem>
           ))}

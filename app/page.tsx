@@ -16,7 +16,7 @@ import { Progress } from "@/components/ui/progress"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
-import { getBranding } from "@/lib/branding"
+// import { getBranding } from "@/lib/branding"
 import { AvatarAssistant } from "@/components/avatar-assistant"
 import { AppHeader } from "@/components/app-header"
 import { setAppNavigation } from "@/lib/navigation-tracker"
@@ -29,6 +29,8 @@ import {
   AddressTemplate4, 
   AddressTemplate5 
 } from "@/components/address-templates"
+import companyService from "./api/company"
+import { Branding } from "@/lib/branding"
 
 const ProgressStep = ({ icon: Icon, label, isActive = false }: { icon: any; label: string; isActive?: boolean }) => (
   <div className="flex flex-col items-center">
@@ -252,14 +254,37 @@ function ManualEntryModal({ isOpen, onClose, onSubmit }: ManualEntryModalProps) 
 }
 
 export default function AddressPage() {
-  const branding = getBranding()
+  // const branding = getBranding()
+  const [branding, setBranding] = useState<Branding | null>(null)
   const router = useRouter()
   const [address, setAddress] = useState("")
 
   // Set navigation marker for this app session
   useEffect(() => {
     setAppNavigation()
+    getCompanyData()
   }, [])
+
+  const getCompanyData = async () => {
+    const payload={
+      "sub_domain": "jr",
+      "required_fields": ["address_template","logo","colors","name"]
+    }
+    await companyService.getCompanyDatabySubDomain(payload).then((res) => {
+      setBranding({
+        ...branding as Branding,
+        name: res?.data?.data?.name,
+        address_template: res?.data?.data?.address_template,
+        logo: res?.data?.data?.logo,
+        colors: {
+          primary: res?.data?.data?.colors?.primary,
+          secondary: res?.data?.data?.colors?.secondary,
+          accent: res?.data?.data?.colors?.accent
+        }
+      })
+    })
+    
+  }
   
   const [isMapVisible, setIsMapVisible] = useState(false)
   const [selectedLocation, setSelectedLocation] = useState<google.maps.LatLng | null>(null)
@@ -2011,9 +2036,10 @@ export default function AddressPage() {
         <>
           {/* Template Switching Logic */}
           {(() => {
-            const templateId = branding.address_template || 0
+            if (!branding) return null
+            const templateId = branding?.address_template || 0
             const templateProps = {
-              branding,
+              branding: branding as Branding,
               address,
               handleAddressChange,
               handleSubmit: () => {

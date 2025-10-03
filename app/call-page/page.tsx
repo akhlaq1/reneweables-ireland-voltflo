@@ -14,7 +14,8 @@ import { format, addDays } from "date-fns"
 import { cn } from "@/lib/utils"
 import { hasAppNavigation, setAppNavigation } from "@/lib/navigation-tracker"
 import { useIsMobile } from "@/hooks/use-mobile"
-import { getEmailBranding } from "@/lib/branding"
+import { resolveBrandSlugFromHostname } from "@/lib/branding"
+import companyService from "../api/company"
 
 export default function CallPage() {
   const router = useRouter()
@@ -414,32 +415,42 @@ export default function CallPage() {
       // Format the date for API
       const dateForApi = selectedDate ? format(selectedDate, "MMMM d, yyyy") : ""
 
-      // Prepare API request body
-      const requestBody = {
-        email: finalEmail,
-        name: finalName,
-        phone: finalPhone,
-        call_date: dateForApi,
-        call_time: selectedTime,
-        solar_plan_data: solarPlanData ? JSON.parse(solarPlanData) : null,
-        personalise_answers: personaliseAnswers ? JSON.parse(personaliseAnswers) : null,
-        selectedLocation: selectedLocation ? JSON.parse(selectedLocation) : null,
-        branding: getEmailBranding(),
-      }
+      await companyService.getCompanyDatabySubDomain({
+        "sub_domain": resolveBrandSlugFromHostname(typeof window !== "undefined" ? window.location.hostname : ""),
+        "required_fields": ["emailBranding"]
+      }).then(async (res) => {
+        // Prepare API request body
+        const requestBody = {
+          email: finalEmail,
+          name: finalName,
+          phone: finalPhone,
+          call_date: dateForApi,
+          call_time: selectedTime,
+          solar_plan_data: solarPlanData ? JSON.parse(solarPlanData) : null,
+          personalise_answers: personaliseAnswers ? JSON.parse(personaliseAnswers) : null,
+          selectedLocation: selectedLocation ? JSON.parse(selectedLocation) : null,
+          branding: res?.data?.data?.emailBranding,
+        }
 
-      // Make API call to the same endpoint as plan page
-      const response = await api.post('public_users/new-journey-installer-user', requestBody)
+        // Make API call to the same endpoint as plan page
+        const response = await api.post('public_users/new-journey-installer-user', requestBody)
 
-      // Save contact info to localStorage for future use
-      const contactInfoToSave = {
-        email: finalEmail,
-        fullName: finalName,
-        phone: finalPhone
-      }
-      localStorage.setItem("user_contact_info", JSON.stringify(contactInfoToSave))
+        // Save contact info to localStorage for future use
+        const contactInfoToSave = {
+          email: finalEmail,
+          fullName: finalName,
+          phone: finalPhone
+        }
+        localStorage.setItem("user_contact_info", JSON.stringify(contactInfoToSave))
 
-      // Show the booking success terminal UI
-      setStep("booking-success")
+        // Show the booking success terminal UI
+        setStep("booking-success")
+
+      }).catch((error) => {
+        console.error('Failed to fetch email branding, using fallback:', error);
+      });
+
+
 
     } catch (error: any) {
       setSubmitError(
@@ -559,7 +570,7 @@ export default function CallPage() {
                           </div>
                         </div>
                       </div>
-                      <p className="text-sm text-blue-800 mb-0" style={{ textDecoration: "underline", textAlign: 'right', cursor:"pointer" }} onClick={() =>
+                      <p className="text-sm text-blue-800 mb-0" style={{ textDecoration: "underline", textAlign: 'right', cursor: "pointer" }} onClick={() =>
                         setStep("select-time")
                       }>Change Date</p>
                     </div>
