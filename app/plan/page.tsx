@@ -329,7 +329,9 @@ export default function SolarEnergyPlanner() {
 
   // totalAnnualSavings now computed above using scenario fractions (0 batteries: 30/70, 1 battery: 70/30, 2 batteries: 90/10)
 
-  const paybackPeriod = (finalPrice / totalAnnualSavings).toFixed(1)
+  const paybackPeriod = useMemo(() => 
+    totalAnnualSavings > 0 ? (finalPrice / totalAnnualSavings).toFixed(1) : '0.0'
+  , [finalPrice, totalAnnualSavings])
   const billOffset = includeBattery ? 94 : 65
   const gridIndependence = batteryCount >= 2 ? 95 : (includeBattery ? 90 : 30)
   const gridRelianceWithoutBattery = 70 // Changed from 65 to 70
@@ -1175,9 +1177,9 @@ export default function SolarEnergyPlanner() {
             </p>
           </div>
 
-          <div className="grid lg:grid-cols-3 gap-6 md:gap-8">
+          <div className="grid lg:grid-cols-3 gap-6 md:gap-8" style={{alignItems: 'start'}}>
             {/* Main Content */}
-            <div className="lg:col-span-2 space-y-6 md:space-y-8">
+            <div className="lg:col-span-2 space-y-6 md:space-y-8" style={{contain: 'layout'}}>
               {/* Enhanced Hero Image */}
               <div className="relative overflow-hidden rounded-xl">
                 <div className="relative h-48 md:h-80">
@@ -2339,8 +2341,8 @@ export default function SolarEnergyPlanner() {
 
 
             {/* Updated Sidebar with Circular Progress Design */}
-            <div className="lg:col-span-1">
-              <Card className="sticky top-4 bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+            <div className="lg:col-span-1 relative z-20">
+              <Card className="sticky top-4 bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200" style={{willChange: 'transform'}}>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-blue-900 text-base md:text-lg">Your Solar Benefits</CardTitle>
                 </CardHeader>
@@ -2356,7 +2358,7 @@ export default function SolarEnergyPlanner() {
                     >
                       <CardContent className="p-3 text-center h-full flex flex-col justify-center">
                         <p className="text-xs text-gray-600 mb-1">ANNUAL SAVINGS</p>
-                        <p className="text-xl font-bold text-green-600">
+                        <p className="text-xl font-bold text-green-600" style={{minWidth: '80px', fontVariantNumeric: 'tabular-nums'}}>
                           €{totalAnnualSavings}
                         </p>
                         <div className="absolute top-2 right-2 bg-blue-600 text-white rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
@@ -2376,7 +2378,7 @@ export default function SolarEnergyPlanner() {
                     >
                       <CardContent className="p-3 text-center h-full flex flex-col justify-center">
                         <p className="text-xs text-gray-600 mb-1">PAYBACK PERIOD</p>
-                        <p className="text-xl font-bold text-blue-600">{paybackPeriod} yrs</p>
+                        <p className="text-xl font-bold text-blue-600" style={{minWidth: '70px', fontVariantNumeric: 'tabular-nums'}}>{paybackPeriod} yrs</p>
                         <div className="absolute top-2 right-2 bg-blue-600 text-white rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
                           <Eye className="w-3 h-3" />
                         </div>
@@ -2394,27 +2396,27 @@ export default function SolarEnergyPlanner() {
                     <div className="space-y-2">
                       <div className="flex justify-between items-center">
                         <span className="text-gray-700">System price</span>
-                        <span className="font-semibold">€{systemBaseCost.toLocaleString()}</span>
+                        <span className="font-semibold" style={{fontVariantNumeric: 'tabular-nums', minWidth: '80px', textAlign: 'right'}}>€{systemBaseCost.toLocaleString()}</span>
                       </div>
 
                       {includeBattery && (
                         <div className="flex justify-between items-center">
                           <span className="text-gray-700">Battery cost ({batteryCount * (selectedBattery.capacity || 0)}kWh)</span>
-                          <span className="font-semibold">€{batteryCost.toLocaleString()}</span>
+                          <span className="font-semibold" style={{fontVariantNumeric: 'tabular-nums', minWidth: '80px', textAlign: 'right'}}>€{batteryCost.toLocaleString()}</span>
                         </div>
                       )}
 
                       {includeEVChargerEquipment && (
                         <div className="flex justify-between items-center">
                           <span className="text-gray-700">EV charger</span>
-                          <span className="font-semibold">€{(selectedEVCharger.price || 0).toLocaleString()}</span>
+                          <span className="font-semibold" style={{fontVariantNumeric: 'tabular-nums', minWidth: '80px', textAlign: 'right'}}>€{(selectedEVCharger.price || 0).toLocaleString()}</span>
                         </div>
                       )}
 
                       <div className="flex justify-between items-center border-t pt-2">
                         <span className="text-gray-700 font-medium">Price you pay</span>
                         <div className="flex items-center gap-1">
-                          <span className="font-semibold">€{totalSystemCost.toLocaleString()}</span>
+                          <span className="font-semibold" style={{fontVariantNumeric: 'tabular-nums', minWidth: '90px', textAlign: 'right'}}>€{totalSystemCost.toLocaleString()}</span>
                           <Dialog>
                             <DialogTrigger asChild>
                               {/* <Button variant="ghost" size="icon" className="w-5 h-5 text-blue-600">
@@ -4827,7 +4829,7 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
               >
                 <CardContent className="p-3 text-center h-full flex flex-col justify-center">
                   <p className="text-xs text-gray-600 mb-1">ANNUAL SAVINGS</p>
-                  <p className="text-xl font-bold text-green-600">
+                  <p className="text-xl font-bold text-green-600" style={{minWidth: '80px', fontVariantNumeric: 'tabular-nums'}}>
                     €{totalAnnualSavings}
                   </p>
                   <div className="absolute top-2 right-2 bg-blue-600 text-white rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
@@ -4847,7 +4849,7 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
               >
                 <CardContent className="p-3 text-center h-full flex flex-col justify-center">
                   <p className="text-xs text-gray-600 mb-1">PAYBACK PERIOD</p>
-                  <p className="text-xl font-bold text-blue-600">{paybackPeriod} yrs</p>
+                  <p className="text-xl font-bold text-blue-600" style={{minWidth: '70px', fontVariantNumeric: 'tabular-nums'}}>{paybackPeriod} yrs</p>
                   <div className="absolute top-2 right-2 bg-blue-600 text-white rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
                     <Eye className="w-3 h-3" />
                   </div>

@@ -289,7 +289,7 @@ const brands: Record<string, Branding> = {
           name: 'Huawei SUN2000 Inverter',
           tier: 'Premium',
           warranty: '10-Year Product',
-          efficiency: '98.4%',
+          efficiency: '98%',
           priceAdjustment: 0,
           recommended: true,
           reason: 'Industry-leading reliability',
@@ -308,7 +308,7 @@ const brands: Record<string, Branding> = {
           recommended: false,
           reason: 'Compact solution, lower capacity',
           datasheet: '/pdf/huawei_battery.pdf',
-          image: '/images/batteries/huwaei.png'
+          image: '/images/batteries/huwaei5kw.jpg'
         },
         {
           id: 'huawei10',
@@ -320,7 +320,7 @@ const brands: Record<string, Branding> = {
           recommended: false,
           reason: 'Compact solution, lower capacity',
           datasheet: '/pdf/huawei_battery.pdf',
-          image: '/images/batteries/huwaei.png'
+          image: '/images/batteries/huawei10kw.jpg'
         },
       ],
       evChargers: [
