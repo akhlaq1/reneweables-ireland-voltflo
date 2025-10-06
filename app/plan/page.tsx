@@ -59,6 +59,13 @@ import { ProgressBars } from "@/components/progress-bars"
 import { setAppNavigation } from "@/lib/navigation-tracker"
 import { getEmailBranding, getBranding, calculateSystemBaseCost } from "@/lib/branding"
 
+// Helper function to extract filename from datasheet path
+const getDownloadFilename = (datasheetPath: string | undefined, fallbackName: string): string => {
+  if (!datasheetPath) return fallbackName
+  const parts = datasheetPath.split('/')
+  return parts[parts.length - 1] || fallbackName
+}
+
 // ProgressStep component for navigation
 const ProgressStep = ({ icon: Icon, label, isActive = false }: { icon: any; label: string; isActive?: boolean }) => (
   <div className="flex flex-col items-center">
@@ -1336,7 +1343,7 @@ export default function SolarEnergyPlanner() {
                             <p className="text-xs text-gray-600">
                               {selectedSolarPanel.reason}
                             </p>
-                            <a href={selectedSolarPanel.datasheet || "/pdf/jinko_panel.pdf"} download="JinkoSolar_440W_Spec_Sheet.pdf">
+                            <a href={selectedSolarPanel.datasheet || "/pdf/jinko_panel.pdf"} download={getDownloadFilename(selectedSolarPanel.datasheet, "JinkoSolar_440W_Spec_Sheet.pdf")}>
                               <Button variant="outline" size="sm" className="h-6 text-xs bg-transparent">
                                 <Download className="w-3 h-3 mr-1" />
                                 Download Spec Sheet
@@ -1391,7 +1398,7 @@ export default function SolarEnergyPlanner() {
                             <p className="text-xs text-gray-600">
                               {selectedInverter.reason}
                             </p>
-                            <a href={selectedInverter.datasheet || "/pdf/sig_inverter.pdf"} download="Sigenergy_Inverter_Spec_Sheet.pdf">
+                            <a href={selectedInverter.datasheet || "/pdf/sig_inverter.pdf"} download={getDownloadFilename(selectedInverter.datasheet, "Sigenergy_Inverter_Spec_Sheet.pdf")}>
                               <Button variant="outline" size="sm" className="h-6 text-xs bg-transparent">
                                 <Download className="w-3 h-3 mr-1" />
                                 Download Spec Sheet
@@ -1688,7 +1695,7 @@ export default function SolarEnergyPlanner() {
                                 <p className="text-xs text-gray-600">
                                   {batteryCount}x {selectedBattery.capacity || 0}kWh = {batteryCount * (selectedBattery.capacity || 0)}kWh total • {selectedBattery.reason}
                                 </p>
-                                <a href={selectedBattery.datasheet || "/pdf/sig_battery.pdf"} download={`SigEnergy_Battery_${selectedBattery.capacity || 0}kWh_Spec_Sheet.pdf`}>
+                                <a href={selectedBattery.datasheet || "/pdf/sig_battery.pdf"} download={getDownloadFilename(selectedBattery.datasheet, `SigEnergy_Battery_${selectedBattery.capacity || 0}kWh_Spec_Sheet.pdf`)}>
                                   <Button variant="outline" size="sm" className="h-6 text-xs bg-transparent">
                                     <Download className="w-3 h-3 mr-1" />
                                     Download Spec Sheet
