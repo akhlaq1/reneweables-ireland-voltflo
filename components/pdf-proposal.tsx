@@ -209,7 +209,7 @@ function SavingsCalculator() {
             </p>
             <p>
               <strong>Assumptions in this report:</strong> Day €0.35/kWh, Night €0.08/kWh, Export €0.20/kWh, battery
-              efficiency ~90%. Energy prices assumed to increase 3% annually (historical average).
+              efficiency ~98%. Energy prices assumed to increase 3% annually (historical average).
             </p>
             <p>Figures update if you change equipment. Final pricing and savings are confirmed during a site survey.</p>
           </div>
