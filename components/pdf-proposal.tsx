@@ -1290,7 +1290,7 @@ export default function PDFProposal({ apiData }: PDFProposalProps) {
                     1
                   </div>
                   <div>
-                    <p className="font-bold text-gray-900 mb-2">Site Survey & Design (1–2 weeks)</p>
+                    <p className="font-bold text-gray-900 mb-2">Site Survey & Design (1 day to 1 week)</p>
                     <p className="text-sm text-gray-600">Technical assessment and final specifications</p>
                   </div>
                 </div>
