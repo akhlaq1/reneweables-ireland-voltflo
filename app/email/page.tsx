@@ -113,7 +113,7 @@ export default function EmailTemplate() {
             <h3 className="text-xl font-bold mb-4">👇</h3>
             <div className="space-y-2 sm:space-y-0 sm:space-x-4 sm:flex sm:justify-center">
               <button className="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 w-full sm:w-auto">
-                Download My Solar Report
+                View My Proposal
               </button>
             </div>
           </div>

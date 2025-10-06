@@ -2581,7 +2581,7 @@ export default function SolarEnergyPlanner() {
                           className="w-full h-10 bg-white hover:bg-gray-50 border-2 border-gray-200 hover:border-gray-300 text-gray-700 font-medium text-sm transition-all duration-200"
                         >
                           <Download className="w-4 h-4 mr-2" />
-                          Download Detailed Plan
+                          View My Proposal
                         </Button>
                       </DialogTrigger>
                       <DialogContent className="sm:max-w-md">
@@ -2685,7 +2685,7 @@ export default function SolarEnergyPlanner() {
                                 </button>
                               </DialogClose>
                               <DialogTitle className="text-2xl font-bold text-gray-900 pr-8">
-                                Download Your Solar Plan
+                                View My Proposal
                               </DialogTitle>
                               <p className="text-gray-600 mt-2">
                                 Get your detailed plan emailed to you with financing options and next steps.
@@ -5067,7 +5067,7 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                     className="w-full h-10 bg-white hover:bg-gray-50 border-2 border-gray-200 hover:border-gray-300 text-gray-700 font-medium text-sm transition-all duration-200"
                   >
                     <Download className="w-4 h-4 mr-2" />
-                    Download Detailed Plan
+                    View My Proposal
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-md">
@@ -5171,7 +5171,7 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                           </button>
                         </DialogClose>
                         <DialogTitle className="text-2xl font-bold text-gray-900 pr-8">
-                          Download Your Solar Plan
+                          View My Proposal
                         </DialogTitle>
                         <p className="text-gray-600 mt-2">
                           Get your detailed plan emailed to you with financing options and next steps.

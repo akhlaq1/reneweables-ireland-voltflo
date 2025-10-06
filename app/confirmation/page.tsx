@@ -47,7 +47,7 @@ export default function ConfirmationPage() {
                 <div className="flex flex-col gap-4">
                   <Button className="bg-green-600 hover:bg-green-700">
                     <Download className="mr-2 h-4 w-4" />
-                    Download Plan Again
+                    View My Proposal
                   </Button>
                   <Button variant="outline">
                     <Calendar className="mr-2 h-4 w-4" />
