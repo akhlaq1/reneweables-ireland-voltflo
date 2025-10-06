@@ -1858,6 +1858,12 @@ export default function SolarEnergyPlanner() {
                                     </Badge>
                                   ))}
                                 </div>
+                                <a href={selectedEVCharger.datasheet || "/pdf/myenergi_zappi.pdf"} download={getDownloadFilename(selectedEVCharger.datasheet, `${selectedEVCharger.name.replace(/\s+/g, '_')}_Spec_Sheet.pdf`)}>
+                                  <Button variant="outline" size="sm" className="h-6 text-xs bg-transparent">
+                                    <Download className="w-3 h-3 mr-1" />
+                                    Download Spec Sheet
+                                  </Button>
+                                </a>
                               </div>
                             </div>
                         </CollapsibleContent>
@@ -2135,7 +2141,7 @@ export default function SolarEnergyPlanner() {
                             <span className="text-xs font-bold text-blue-600">1</span>
                           </div>
                           <div>
-                            <h4 className="font-medium">Site Survey & Design (1-2 weeks)</h4>
+                            <h4 className="font-medium">Site Survey & Design (1 day to 1 week)</h4>
                             <p className="text-sm text-gray-600">Technical assessment and system design</p>
                           </div>
                         </div>
@@ -2408,7 +2414,7 @@ export default function SolarEnergyPlanner() {
 
                       {includeEVChargerEquipment && (
                         <div className="flex justify-between items-center">
-                          <span className="text-gray-700">EV charger</span>
+                          <span className="text-gray-700">EV charger <span className="text-xs text-gray-500">incl. 13.5% VAT</span></span>
                           <span className="font-semibold" style={{fontVariantNumeric: 'tabular-nums', minWidth: '80px', textAlign: 'right'}}>€{(selectedEVCharger.price || 0).toLocaleString()}</span>
                         </div>
                       )}
@@ -2447,7 +2453,7 @@ export default function SolarEnergyPlanner() {
                                 )}
                                 {includeEVChargerEquipment && (
                                   <div className="flex justify-between py-2 border-b">
-                                    <span>EV Charger</span>
+                                    <span>EV Charger <span className="text-xs text-gray-500">incl. 13.5% VAT</span></span>
                                     <span>€{(selectedEVCharger.price || 0).toLocaleString()}</span>
                                   </div>
                                 )}
@@ -4290,8 +4296,8 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                     }}
                     extra={`${selectedEVCharger.power} • ${selectedEVCharger.reason}`}
                     imagePath={selectedEVCharger.image || `/images/ev-chargers/${selectedEVCharger.id}.png`}
-                    downloadUrl={selectedEVCharger.datasheet || "/pdf/ev_charger.pdf"}
-                    downloadName="EV_Charger_Spec_Sheet.pdf"
+                    downloadUrl={selectedEVCharger.datasheet || "/pdf/myenergi_zappi.pdf"}
+                    downloadName={getDownloadFilename(selectedEVCharger.datasheet, `${selectedEVCharger.name.replace(/\s+/g, '_')}_Spec_Sheet.pdf`)}
                   />
                 </div>
               )}
@@ -4879,7 +4885,7 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
 
                 {includeEVChargerEquipment && (
                   <div className="flex justify-between items-center">
-                    <span className="text-gray-700">EV charger</span>
+                    <span className="text-gray-700">EV charger <span className="text-xs text-gray-500">incl. 13.5% VAT</span></span>
                     <span className="font-semibold">€{(evChargerCost || 0).toLocaleString()}</span>
                   </div>
                 )}
@@ -4918,7 +4924,7 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                           )}
                           {includeEVChargerEquipment && (
                             <div className="flex justify-between py-2 border-b">
-                              <span>EV Charger</span>
+                              <span>EV Charger <span className="text-xs text-gray-500">incl. 13.5% VAT</span></span>
                               <span>€{(evChargerCost || 0).toLocaleString()}</span>
                             </div>
                           )}

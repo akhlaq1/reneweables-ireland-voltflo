@@ -328,34 +328,23 @@ const brands: Record<string, Branding> = {
           id: 'myenergi_zappi',
           name: 'Myenergi Zappi 7KW',
           power: '7kW',
-          price: 1450,
-          grant: 196,
+          price: 1650,
+          grant: 300,
           tier: 'Premium',
           warranty: '3-Year Product',
           recommended: true,
           reason: 'Smart charging with solar integration',
           features: ['Solar integration', 'Smart scheduling', 'Load balancing', 'Mobile app control'],
+          datasheet: '/pdf/myenergi_zappi.pdf',
           image: '/images/ev-chargers/myenergi_zappi.png'
         }
       ]
     },
     pricing: {
-      pricingType: 'slab_pricing',
+      pricingType: 'base_plus_incremental',
       basePanelThreshold: 8,
       baseSystemPrice: 7360,
       additionalPanelCost: 200,
-      slabPricing: [
-        { panelCount: 8, price: 7360 },
-        { panelCount: 10, price: 7660 },
-        { panelCount: 12, price: 7960 },
-        { panelCount: 14, price: 8165 },
-        { panelCount: 16, price: 8350 },
-        { panelCount: 18, price: 8535 },
-        { panelCount: 20, price: 8720 },
-        { panelCount: 22, price: 8905 },
-        { panelCount: 24, price: 9090 },
-        { panelCount: 26, price: 9275 },
-      ],
       seaiGrant: 1800,
       defaultEVGrant: 300
     },
@@ -466,6 +455,7 @@ const brands: Record<string, Branding> = {
           recommended: true,
           reason: 'Smart charging with solar integration',
           features: ['Solar integration', 'Smart scheduling', 'Load balancing', 'Mobile app control'],
+          datasheet: '/pdf/myenergi_zappi.pdf',
         }
       ]
     },
