@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { useState, useEffect, useCallback, useMemo } from "react"
+import { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { useRouter } from "next/navigation"
 import {
   Sun,
@@ -64,6 +64,84 @@ const getDownloadFilename = (datasheetPath: string | undefined, fallbackName: st
   if (!datasheetPath) return fallbackName
   const parts = datasheetPath.split('/')
   return parts[parts.length - 1] || fallbackName
+}
+
+// Custom Dropdown Component for Desktop
+interface CustomDropdownProps {
+  value: string
+  options: any[]
+  onChange: (value: string) => void
+  isOpen: boolean
+  onOpen: () => void
+  onClose: () => void
+  placeholder?: string
+  renderOption: (option: any) => React.ReactNode
+  renderValue: (option: any) => React.ReactNode
+}
+
+const CustomDropdown = ({ value, options, onChange, isOpen, onOpen, onClose, placeholder, renderOption, renderValue }: CustomDropdownProps) => {
+  const selectedOption = options.find(option => option.id === value)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        if (isOpen) {
+          onClose()
+        }
+      }
+    }
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [isOpen, onClose])
+
+  const handleToggle = () => {
+    if (isOpen) {
+      onClose()
+    } else {
+      onOpen()
+    }
+  }
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <button
+        type="button"
+        className="w-full h-8 px-3 py-1 text-left text-xs bg-white border border-gray-300 rounded-md shadow-sm hover:border-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none flex items-center justify-between"
+        onClick={handleToggle}
+      >
+        <span className="truncate">
+          {selectedOption ? renderValue(selectedOption) : placeholder}
+        </span>
+        <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+      
+      {isOpen && (
+        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-auto">
+          {options.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              className="w-full px-3 py-2 text-left text-xs hover:bg-gray-100 focus:bg-gray-100 focus:outline-none first:rounded-t-md last:rounded-b-md"
+              onClick={() => {
+                onChange(option.id)
+                onClose()
+              }}
+            >
+              {renderOption(option)}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
 }
 
 // ProgressStep component for navigation
@@ -139,6 +217,41 @@ export default function SolarEnergyPlanner() {
   const [customAnnualBill, setCustomAnnualBill] = useState(2640)
   const [billInputMode, setBillInputMode] = useState<"annual" | "monthly">("annual")
   const [perPanelGeneration, setPerPanelGeneration] = useState(410) // Default fallback value
+  
+  // Custom dropdown states for desktop
+  const [showSolarPanelDropdown, setShowSolarPanelDropdown] = useState(false)
+  const [showInverterDropdown, setShowInverterDropdown] = useState(false)
+  const [showBatteryDropdown, setShowBatteryDropdown] = useState(false)
+  const [showEVChargerDropdown, setShowEVChargerDropdown] = useState(false)
+
+  // Helper function to close all dropdowns
+  const closeAllDropdowns = () => {
+    setShowSolarPanelDropdown(false)
+    setShowInverterDropdown(false)
+    setShowBatteryDropdown(false)
+    setShowEVChargerDropdown(false)
+  }
+
+  // Helper functions to toggle dropdowns while closing others
+  const toggleSolarPanelDropdown = () => {
+    closeAllDropdowns()
+    setShowSolarPanelDropdown(true)
+  }
+
+  const toggleInverterDropdown = () => {
+    closeAllDropdowns()
+    setShowInverterDropdown(true)
+  }
+
+  const toggleBatteryDropdown = () => {
+    closeAllDropdowns()
+    setShowBatteryDropdown(true)
+  }
+
+  const toggleEVChargerDropdown = () => {
+    closeAllDropdowns()
+    setShowEVChargerDropdown(true)
+  }
   
   // Enhanced Savings Modal states
   const [showSavingsModal, setShowSavingsModal] = useState(false)
@@ -1315,33 +1428,36 @@ export default function SolarEnergyPlanner() {
                             <div className="flex items-center justify-between">
                               <h4 className="font-medium text-sm">Solar Panel</h4>
                             </div>
-                            <Select
+                            <CustomDropdown
                               value={selectedSolarPanel.id}
-                              onValueChange={(value) => {
+                              options={solarPanelOptions}
+                              onChange={(value) => {
                                 const panel = solarPanelOptions.find((p) => p.id === value)
                                 if (panel) setSelectedSolarPanel(panel)
                               }}
-                            >
-                              <SelectTrigger className="h-8 text-xs">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {solarPanelOptions.map((panel) => (
-                                  <SelectItem key={panel.id} value={panel.id}>
-                                    <div className="flex items-center justify-between w-full">
-                                      <span className="text-xs">
-                                        {panel.name}{" "}
-                                        {(panel.priceAdjustment || 0) !== 0 &&
-                                          `(${(panel.priceAdjustment || 0) > 0 ? "+" : ""}€${panel.priceAdjustment || 0})`}
-                                      </span>
-                                      {panel.recommended && (
-                                        <Badge className="ml-1 bg-green-600 text-xs px-1">Recommended</Badge>
-                                      )}
-                                    </div>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                              isOpen={showSolarPanelDropdown}
+                              onOpen={toggleSolarPanelDropdown}
+                              onClose={closeAllDropdowns}
+                              renderValue={(panel) => (
+                                <span className="text-xs">
+                                  {panel.name}{" "}
+                                  {(panel.priceAdjustment || 0) !== 0 &&
+                                    `(${(panel.priceAdjustment || 0) > 0 ? "+" : ""}€${panel.priceAdjustment || 0})`}
+                                </span>
+                              )}
+                              renderOption={(panel) => (
+                                <div className="flex items-center justify-between w-full">
+                                  <span className="text-xs">
+                                    {panel.name}{" "}
+                                    {(panel.priceAdjustment || 0) !== 0 &&
+                                      `(${(panel.priceAdjustment || 0) > 0 ? "+" : ""}€${panel.priceAdjustment || 0})`}
+                                  </span>
+                                  {panel.recommended && (
+                                    <Badge className="ml-1 bg-green-600 text-xs px-1">Recommended</Badge>
+                                  )}
+                                </div>
+                              )}
+                            />
                             <p className="text-xs text-gray-600">
                               {selectedSolarPanel.reason}
                             </p>
@@ -1370,33 +1486,36 @@ export default function SolarEnergyPlanner() {
                                 {powerOutageBackup && <Badge className="bg-orange-600 text-xs">Hybrid</Badge>}
                               </div>
                             </div>
-                            <Select
+                            <CustomDropdown
                               value={selectedInverter.id}
-                              onValueChange={(value) => {
+                              options={inverterOptions}
+                              onChange={(value) => {
                                 const inverter = inverterOptions.find((i) => i.id === value)
                                 if (inverter) setSelectedInverter(inverter)
                               }}
-                            >
-                              <SelectTrigger className="h-8 text-xs">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {inverterOptions.map((inverter) => (
-                                  <SelectItem key={inverter.id} value={inverter.id}>
-                                    <div className="flex items-center justify-between w-full">
-                                      <span className="text-xs">
-                                        {inverter.name}{" "}
-                                        {(inverter.priceAdjustment || 0) !== 0 &&
-                                          `(${(inverter.priceAdjustment || 0) > 0 ? "+" : ""}€${inverter.priceAdjustment || 0})`}
-                                      </span>
-                                      {inverter.recommended && !powerOutageBackup && (
-                                        <Badge className="ml-1 bg-green-600 text-xs px-1">Recommended</Badge>
-                                      )}
-                                    </div>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                              isOpen={showInverterDropdown}
+                              onOpen={toggleInverterDropdown}
+                              onClose={closeAllDropdowns}
+                              renderValue={(inverter) => (
+                                <span className="text-xs">
+                                  {inverter.name}{" "}
+                                  {(inverter.priceAdjustment || 0) !== 0 &&
+                                    `(${(inverter.priceAdjustment || 0) > 0 ? "+" : ""}€${inverter.priceAdjustment || 0})`}
+                                </span>
+                              )}
+                              renderOption={(inverter) => (
+                                <div className="flex items-center justify-between w-full">
+                                  <span className="text-xs">
+                                    {inverter.name}{" "}
+                                    {(inverter.priceAdjustment || 0) !== 0 &&
+                                      `(${(inverter.priceAdjustment || 0) > 0 ? "+" : ""}€${inverter.priceAdjustment || 0})`}
+                                  </span>
+                                  {inverter.recommended && !powerOutageBackup && (
+                                    <Badge className="ml-1 bg-green-600 text-xs px-1">Recommended</Badge>
+                                  )}
+                                </div>
+                              )}
+                            />
                             <p className="text-xs text-gray-600">
                               {selectedInverter.reason}
                             </p>
@@ -1669,31 +1788,32 @@ export default function SolarEnergyPlanner() {
                                 <div className="flex items-center justify-between">
                                   <h4 className="font-medium text-sm">Battery Storage</h4>
                                 </div>
-                                <Select
+                                <CustomDropdown
                                   value={selectedBattery.id}
-                                  onValueChange={(value) => {
+                                  options={batteryOptions}
+                                  onChange={(value) => {
                                     const battery = batteryOptions.find((b) => b.id === value)
                                     if (battery) setSelectedBattery(battery)
                                   }}
-                                >
-                                  <SelectTrigger className="h-8 text-xs">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {batteryOptions.map((battery) => (
-                                      <SelectItem key={battery.id} value={battery.id}>
-                                        <div className="flex items-center justify-between w-full">
-                                          <span className="text-xs">
-                                            {battery.name} ({battery.capacity}kWh) - €{battery.price}
-                                          </span>
-                                          {battery.recommended && (
-                                            <Badge className="ml-1 bg-green-600 text-xs px-1">Recommended</Badge>
-                                          )}
-                                        </div>
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
+                                  isOpen={showBatteryDropdown}
+                                  onOpen={toggleBatteryDropdown}
+                                  onClose={closeAllDropdowns}
+                                  renderValue={(battery) => (
+                                    <span className="text-xs">
+                                      {battery.name} ({battery.capacity}kWh) - €{battery.price}
+                                    </span>
+                                  )}
+                                  renderOption={(battery) => (
+                                    <div className="flex items-center justify-between w-full">
+                                      <span className="text-xs">
+                                        {battery.name} ({battery.capacity}kWh) - €{battery.price}
+                                      </span>
+                                      {battery.recommended && (
+                                        <Badge className="ml-1 bg-green-600 text-xs px-1">Recommended</Badge>
+                                      )}
+                                    </div>
+                                  )}
+                                />
                                 <p className="text-xs text-gray-600">
                                   {batteryCount}x {selectedBattery.capacity || 0}kWh = {batteryCount * (selectedBattery.capacity || 0)}kWh total • {selectedBattery.reason}
                                 </p>
@@ -1823,31 +1943,32 @@ export default function SolarEnergyPlanner() {
                                 <div className="flex items-center justify-between">
                                   <h4 className="font-medium text-sm">EV Charger</h4>
                                 </div>
-                                <Select
+                                <CustomDropdown
                                   value={selectedEVCharger.id}
-                                  onValueChange={(value) => {
+                                  options={evChargerOptions}
+                                  onChange={(value) => {
                                     const charger = evChargerOptions.find((c) => c.id === value)
                                     if (charger) setSelectedEVCharger(charger)
                                   }}
-                                >
-                                  <SelectTrigger className="h-8 text-xs">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {evChargerOptions.map((charger) => (
-                                      <SelectItem key={charger.id} value={charger.id}>
-                                        <div className="flex items-center justify-between w-full">
-                                          <span className="text-xs">
-                                            {charger.name} (€{(charger.price || 0) - (charger.grant || 0)} after grant)
-                                          </span>
-                                          {charger.recommended && (
-                                            <Badge className="ml-1 bg-green-600 text-xs px-1">Recommended</Badge>
-                                          )}
-                                        </div>
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
+                                  isOpen={showEVChargerDropdown}
+                                  onOpen={toggleEVChargerDropdown}
+                                  onClose={closeAllDropdowns}
+                                  renderValue={(charger) => (
+                                    <span className="text-xs">
+                                      {charger.name} (€{(charger.price || 0) - (charger.grant || 0)} after grant)
+                                    </span>
+                                  )}
+                                  renderOption={(charger) => (
+                                    <div className="flex items-center justify-between w-full">
+                                      <span className="text-xs">
+                                        {charger.name} (€{(charger.price || 0) - (charger.grant || 0)} after grant)
+                                      </span>
+                                      {charger.recommended && (
+                                        <Badge className="ml-1 bg-green-600 text-xs px-1">Recommended</Badge>
+                                      )}
+                                    </div>
+                                  )}
+                                />
                                 <p className="text-xs text-gray-600">
                                   {selectedEVCharger.power} • {selectedEVCharger.reason}
                                 </p>
