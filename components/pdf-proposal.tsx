@@ -534,7 +534,7 @@ export default function PDFProposal({ apiData }: PDFProposalProps) {
                     </div>
                     <div className="text-xs text-gray-600 bg-yellow-100 px-3 py-2 rounded-md border border-yellow-200">
                       <Shield className="w-3 h-3 inline mr-2" />
-                      25 years performance warranty
+                      30 years performance warranty
                     </div>
                   </div>
                 </div>
@@ -639,20 +639,22 @@ export default function PDFProposal({ apiData }: PDFProposalProps) {
                   </button>
                 )}
 
-                {/* {proposalData.includeEvCharger && (
+                {proposalData.includeEvCharger && (
                   <button
-                    onClick={() => window.open("/specs/ev-charger-spec.pdf", "_blank")}
+                    // onClick={() => window.open("/pdf/myenergi_zappi.pdf", "_blank")}
                     className="w-full p-3 sm:p-4 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-lg transition-all duration-200 text-left shadow-sm hover:shadow-md transform hover:scale-[1.02]"
                   >
                     <div className="flex items-center justify-between">
                       <div className="min-w-0 flex-1">
                         <div className="font-semibold text-purple-800 text-sm sm:text-base">EV Charger Datasheet</div>
-                        <div className="text-xs sm:text-sm text-purple-600 truncate">Zappi 7kW Smart Charger</div>
+                        <div className="text-xs sm:text-sm text-purple-600 truncate">myenergi Zappi 7kW Smart Charger</div>
                       </div>
-                      <Download className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600 ml-2 flex-shrink-0" />
+                      <a href="/pdf/myenergi_zappi.pdf" download="myenergi_Zappi_7kW_Spec_Sheet.pdf">
+                        <Download className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600 ml-2 flex-shrink-0" />
+                      </a>
                     </div>
                   </button>
-                )} */}
+                )}
               </div>
             </div>
 
