@@ -2347,7 +2347,7 @@ export default function SolarEnergyPlanner() {
 
 
             {/* Updated Sidebar with Circular Progress Design */}
-            <div className="lg:col-span-1 relative z-20">
+            <div className="sticky top-4 max-h-screen overflow-y-auto">
               <Card className="sticky top-4 bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200" style={{willChange: 'transform'}}>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-blue-900 text-base md:text-lg">Your Solar Benefits</CardTitle>
