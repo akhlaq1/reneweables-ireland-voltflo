@@ -130,6 +130,7 @@ export interface Branding {
   email: string;
   phone: string;
   logo: string; // Path to logo asset
+  logo_with_name: string;
   description?: string; // Company description
   address_template?: number; // Template ID for address page (0-5, defaults to 0)
   colors: {
@@ -225,6 +226,7 @@ const brands: Record<string, Branding> = {
     email: 'info@renewables-ireland.ie',
     phone: '+353 (0)1 298 6140',
     logo: '/renewables.png',
+    logo_with_name: 'logo_with_name.png',
     description: "Big enough to get the job done & small enough to care",
     address_template: 0, // Default template
     colors: { primary: '#1d4ed8', secondary: '#059669', accent: '#f59e0b' },

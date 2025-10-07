@@ -447,7 +447,7 @@ export default function PDFProposal({ apiData }: PDFProposalProps) {
       <div className="p-4 sm:p-5 bg-gradient-to-br from-blue-50 to-green-50">
         <div className="flex flex-row justify-between items-center mb-4 sm:mb-5">
           <img
-            src={branding.logo}
+            src={branding.logo_with_name}
             alt={`${branding.name} Logo`}
             className="h-8 sm:h-12"
           />
