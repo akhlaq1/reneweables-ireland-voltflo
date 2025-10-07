@@ -328,7 +328,7 @@ const brands: Record<string, Branding> = {
           id: 'myenergi_zappi',
           name: 'Myenergi Zappi 7KW',
           power: '7kW',
-          price: 1650,
+          price: 1580,
           grant: 300,
           tier: 'Premium',
           warranty: '3-Year Product',
