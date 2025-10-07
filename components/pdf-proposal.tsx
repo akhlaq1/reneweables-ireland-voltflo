@@ -354,7 +354,7 @@ export default function PDFProposal({ apiData }: PDFProposalProps) {
     batteryName: apiData?.solar_plan_data?.equipment?.battery?.name || "Huawei LUNA2000 5kWh",
     batteryCapacity: apiData?.solar_plan_data?.equipment?.battery?.capacity || 16,
     batteryDatasheet: apiData?.solar_plan_data?.equipment?.battery?.datasheet || "/pdf/huawei_battery.pdf",
-    evChargerDatasheet: apiData?.solar_plan_data?.systemConfiguration?.selectedEVCharger?.datasheet || "/specs/ev-charger-spec.pdf",
+    evChargerDatasheet: apiData?.solar_plan_data?.systemConfiguration?.selectedEVCharger?.datasheet || "/pdf/myenergi_zappi.pdf",
     evChargerName: apiData?.solar_plan_data?.systemConfiguration?.selectedEVCharger?.name || "EV Charger",
     // Customer info
     customerName: apiData?.name || "Customer",
