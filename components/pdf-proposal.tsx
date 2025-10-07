@@ -1730,7 +1730,7 @@ export default function PDFProposal({ apiData }: PDFProposalProps) {
               <img
                 src={branding.logo}
                 alt={branding.name}
-                className="h-10 brightness-0 invert"
+                className="h-10"
               />
               <div className="text-center">
                 <div className="font-bold text-base sm:text-lg">{branding.name}</div>
@@ -1739,18 +1739,18 @@ export default function PDFProposal({ apiData }: PDFProposalProps) {
             </div>
 
             <div className="flex flex-col md:flex-row justify-center space-y-2 md:space-y-0 md:space-x-8 text-sm sm:text-base">
-              <div className="flex items-center justify-center">
+              <a href={`tel:${branding.phone}`} className="flex items-center justify-center hover:underline pointer:cursor">
                 <Phone className="mr-3 h-5 w-5" />
                 <span>{branding.phone}</span>
-              </div>
-              <div className="flex items-center justify-center">
+              </a>
+              <a href={`mailto:${branding.email}`} className="flex items-center justify-center hover:underline pointer:cursor">
                 <Mail className="mr-3 h-5 w-5" />
                 <span>{branding.email}</span>
-              </div>
-              <div className="flex items-center justify-center">
+              </a>
+              <a href={`https://${branding.website}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center hover:underline pointer:cursor">
                 <Globe className="mr-3 h-5 w-5" />
                 <span>{branding.website}</span>
-              </div>
+              </a>
             </div>
 
             {/* Add Powered by Voltflo */}
