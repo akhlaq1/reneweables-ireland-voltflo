@@ -58,7 +58,7 @@ import api from "@/app/api/api"
 import { AppHeader } from "@/components/app-header"
 import { ProgressBars } from "@/components/progress-bars"
 import { setAppNavigation } from "@/lib/navigation-tracker"
-import { getEmailBranding, getBranding, calculateSystemBaseCost } from "@/lib/branding"
+import { getEmailBranding, getBranding, calculateSystemBaseCost, calculateSEAIGrant } from "@/lib/branding"
 
 // Helper function to extract filename from datasheet path
 const getDownloadFilename = (datasheetPath: string | undefined, fallbackName: string): string => {
@@ -433,7 +433,7 @@ export default function SolarEnergyPlanner() {
   const evChargerCost = includeEVChargerEquipment ? (selectedEVCharger.price || 0) : 0
 
   const totalSystemCost = systemBaseCost + batteryCost + evChargerCost
-  const seaiGrant = isEligibleForSEAIGrant ? branding.pricing.seaiGrant : 0
+  const seaiGrant = isEligibleForSEAIGrant ? calculateSEAIGrant(basePanelCount) : 0
   const evChargerGrant = includeEVChargerEquipment ? (selectedEVCharger.grant || 0) : 0
   const totalGrants = seaiGrant + evChargerGrant
   const finalPrice = totalSystemCost - totalGrants

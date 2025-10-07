@@ -217,6 +217,34 @@ export function estimateAnnualSolarSavings(annualPV: number, selfUseFraction: nu
   return annualPV * (selfUseFraction * energy.gridRateDay + exportFraction * energy.exportRate);
 }
 
+/**
+ * Calculate SEAI Solar PV Grant based on panel count
+ * Grant structure (as of 2025):
+ * - €700 per kWp up to 2kWp
+ * - €200 for every additional kWp up to 4kWp
+ * - Total grant capped at €1800
+ * 
+ * Assuming 440W (0.44kW) per panel:
+ * - Up to 5 panels (2.2kWp): €1400
+ * - 6-7 panels (2.64-3.08kWp): €1600
+ * - 8+ panels (3.52kWp+): €1800
+ * 
+ * @param panelCount - Number of solar panels
+ * @param wattsPerPanel - Wattage per panel (default 440W)
+ * @returns SEAI grant amount in euros
+ */
+export function calculateSEAIGrant(panelCount: number, wattsPerPanel: number = 440): number {
+ const systemSizeKWp = (panelCount * wattsPerPanel) / 1000; // Convert to kWp
+  
+  if (systemSizeKWp <= 2) {
+    return 1400;
+  } else if (systemSizeKWp <= 4) {
+    return 1600;
+  } else {
+    return 1800;
+  }
+}
+
 // Brand definitions
 const brands: Record<string, Branding> = {
   renewables: {
