@@ -39,6 +39,7 @@ import {
   Phone,
   Eye,
   Flame,
+  FileChartColumnIncreasing
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -2709,7 +2710,7 @@ export default function SolarEnergyPlanner() {
                           variant="outline" 
                           className="w-full h-10 bg-white hover:bg-gray-50 border-2 border-gray-200 hover:border-gray-300 text-gray-700 font-medium text-sm transition-all duration-200"
                         >
-                          <Download className="w-4 h-4 mr-2" />
+                          <FileChartColumnIncreasing className="w-4 h-4 mr-2" />
                           View My Proposal
                         </Button>
                       </DialogTrigger>
@@ -5195,7 +5196,7 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                     variant="outline" 
                     className="w-full h-10 bg-white hover:bg-gray-50 border-2 border-gray-200 hover:border-gray-300 text-gray-700 font-medium text-sm transition-all duration-200"
                   >
-                    <Download className="w-4 h-4 mr-2" />
+                    <FileChartColumnIncreasing className="w-4 h-4 mr-2" />
                     View My Proposal
                   </Button>
                 </DialogTrigger>
@@ -5516,7 +5517,7 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
               className="text-xs px-3 bg-white border border-gray-300 shadow-sm"
               onClick={() => setShowSavePlanDialog(true)}
             >
-              <Download className="w-3 h-3 mr-1" />
+              <FileChartColumnIncreasing className="w-3 h-3 mr-1" />
               Plan
             </Button>
           </div>
