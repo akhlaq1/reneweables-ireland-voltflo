@@ -849,6 +849,7 @@ export default function SolarEnergyPlanner() {
         personalise_answers: personaliseAnswers ? JSON.parse(personaliseAnswers) : null,
         selectedLocation: selectedLocation ? JSON.parse(selectedLocation) : null,
         branding: getEmailBranding(),
+        company_id: 3
       };
       
       console.log('Submitting plan data:', requestBody);
@@ -865,9 +866,12 @@ export default function SolarEnergyPlanner() {
       // Update state
       setEmailSubmissionSuccess(true)
       
-      // Close dialog and show success modal
+      // Close dialog
       setShowSavePlanDialog(false);
-      setShowSuccessModal(true);
+      
+      // Redirect to PDF preview page with email parameter and from=plan indicator
+      const encodedEmail = encodeURIComponent(email.trim());
+      router.push(`/pdf-preview?email=${encodedEmail}&from=plan`);
       
     } catch (error: any) {
       console.error('Error submitting plan:', error);
@@ -1277,6 +1281,7 @@ export default function SolarEnergyPlanner() {
           scenarios={scenarios}
           showMaths={showMaths}
           setShowMaths={setShowMaths}
+          branding={branding}
         />
       ) : (
         // ==================== DESKTOP VIEW START ====================
@@ -3818,6 +3823,7 @@ interface SolarDashboardMobileProps {
   scenarios: any;
   showMaths: string | null;
   setShowMaths: (show: string | null) => void;
+  branding: any;
 }
 
 function SolarDashboardMobile(props: SolarDashboardMobileProps) {
@@ -3848,6 +3854,7 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
     selectedEVCharger,
     setSelectedEVCharger,
     solarPanelOptions,
+    branding,
     inverterOptions,
     batteryOptions,
     evChargerOptions,
@@ -5281,10 +5288,10 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                         <p className="text-xs text-gray-600">
                           Questions?{" "}
                           <a
-                            href="mailto:info@renewables-ireland.ie"
+                            href={`mailto:${branding.email}`}
                             className="text-blue-600 hover:text-blue-700 font-medium hover:underline"
                           >
-                            info@renewables-ireland.ie
+                            {branding.email}
                           </a>
                         </p>
                       </div>
@@ -5595,10 +5602,10 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
               <p className="text-xs text-gray-600">
                 Questions?{" "}
                 <a
-                  href="mailto:info@renewables-ireland.ie"
+                  href={`mailto:${branding.email}`}
                   className="text-blue-600 hover:text-blue-700 font-medium hover:underline"
                 >
-                  info@renewables-ireland.ie
+                  {branding.email}
                 </a>
               </p>
             </div>

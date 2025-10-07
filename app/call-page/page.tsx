@@ -425,6 +425,7 @@ export default function CallPage() {
         personalise_answers: personaliseAnswers ? JSON.parse(personaliseAnswers) : null,
         selectedLocation: selectedLocation ? JSON.parse(selectedLocation) : null,
         branding: getEmailBranding(),
+        company_id: 3
       }
 
       // Make API call to the same endpoint as plan page

@@ -6,12 +6,13 @@ import { getBranding } from '@/lib/branding'
 import { getGTMScript } from '@/lib/gtm'
 import GTMNoscript from '@/components/gtm-noscript'
 import Script from 'next/script'
+import { Toaster } from '@/components/ui/toaster'
 
 const branding = getBranding()
 
 export const metadata: Metadata = {
   title: branding.name,
-  description: `Created by Akhlaq Ahmed`,
+  description: `Powered by Voltflo`,
   generator: "Voltflo",
 
 }
@@ -44,6 +45,7 @@ export default function RootLayout({
             {children}
           </PostHogProvider>
         </Suspense>
+        <Toaster />
       </body>
     </html>
   )

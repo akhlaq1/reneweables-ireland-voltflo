@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Download, ArrowLeft, Printer, Loader2, AlertCircle } from "lucide-react"
+import { Download, ArrowLeft, Printer, Loader2, AlertCircle, Mail } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import PDFProposal from "@/components/pdf-proposal"
 import api from "../api/api"
+import { useToast } from "@/hooks/use-toast"
 
 interface ApiResponse {
   id: number
@@ -135,6 +136,7 @@ interface ApiResponse {
 export default function PDFPreviewClient() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { toast } = useToast()
   const [apiData, setApiData] = useState<ApiResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -150,6 +152,23 @@ export default function PDFPreviewClient() {
 
     fetchUserData(email)
   }, [searchParams])
+
+  // Check if user came from /plan and show notification
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const referrer = document.referrer
+      const fromPlan = searchParams.get('from')
+      
+      // Check if user came from /plan route (either via referrer or explicit param)
+      if (referrer.includes('/plan') || fromPlan === 'plan') {
+        toast({
+          title: "Proposal Sent! 📧",
+          description: "The link to this proposal has also been sent to your email inbox. You can view it later too.",
+          duration: Infinity, // Stay until user closes it
+        })
+      }
+    }
+  }, [searchParams, toast])
 
   const loadFromLocalStorage = () => {
     // Create mock API data structure from localStorage as fallback
