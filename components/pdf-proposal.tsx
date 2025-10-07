@@ -82,6 +82,7 @@ interface ApiData {
         capacity: number
         warranty: string
         recommended: boolean
+        datasheet?: string
       } | null
       heatPump: any
       inverter: {
@@ -93,6 +94,7 @@ interface ApiData {
         efficiency: string
         recommended: boolean
         priceAdjustment: number
+        datasheet?: string
       }
       evCharger: any
       solarPanel: {
@@ -106,6 +108,7 @@ interface ApiData {
         recommended: boolean
         totalWattage: number
         priceAdjustment: number
+        datasheet?: string
       }
     }
     systemConfiguration: {
@@ -118,6 +121,11 @@ interface ApiData {
       totalPanelCount: number
       includeEVCharger: boolean
       selectedInverter: any
+      selectedEVCharger?: {
+        id: string
+        name: string
+        datasheet?: string
+      }
       powerOutageBackup: boolean
       selectedSolarPanel: any
       heatPumpPanelsNeeded: number
@@ -340,9 +348,14 @@ export default function PDFProposal({ apiData }: PDFProposalProps) {
     paybackPeriod: apiData?.solar_plan_data?.savings?.paybackPeriod || 7.2,
     // Equipment details
     solarPanelName: apiData?.solar_plan_data?.equipment?.solarPanel?.name || "LG NeON R",
+    solarPanelDatasheet: apiData?.solar_plan_data?.equipment?.solarPanel?.datasheet || "/pdf/jinko_panel.pdf",
     inverterName: apiData?.solar_plan_data?.equipment?.inverter?.name || "Tesla Inverter",
+    inverterDatasheet: apiData?.solar_plan_data?.equipment?.inverter?.datasheet || "/specs/inverter-spec.pdf",
     batteryName: apiData?.solar_plan_data?.equipment?.battery?.name || "16 kWh Tesla Powerwall 2",
     batteryCapacity: apiData?.solar_plan_data?.equipment?.battery?.capacity || 16,
+    batteryDatasheet: apiData?.solar_plan_data?.equipment?.battery?.datasheet || "/specs/battery-spec.pdf",
+    evChargerDatasheet: apiData?.solar_plan_data?.systemConfiguration?.selectedEVCharger?.datasheet || "/specs/ev-charger-spec.pdf",
+    evChargerName: apiData?.solar_plan_data?.systemConfiguration?.selectedEVCharger?.name || "EV Charger",
     // Customer info
     customerName: apiData?.name || "Customer",
     customerEmail: apiData?.email || "",
@@ -599,7 +612,7 @@ export default function PDFProposal({ apiData }: PDFProposalProps) {
                       <div className="font-semibold text-yellow-800 text-sm sm:text-base">Solar Panel Datasheet</div>
                       <div className="text-xs sm:text-sm text-yellow-600 truncate">{proposalData.solarPanelName}</div>
                     </div>
-                    <a href="/pdf/jinko_panel.pdf" download="JinkoSolar_440W_Spec_Sheet.pdf">
+                    <a href={proposalData.solarPanelDatasheet} download={`${proposalData.solarPanelName}_Spec_Sheet.pdf`}>
                       <Download className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-600 ml-2 flex-shrink-0" />
                     </a>
 
@@ -616,7 +629,7 @@ export default function PDFProposal({ apiData }: PDFProposalProps) {
                       <div className="font-semibold text-blue-800 text-sm sm:text-base">Inverter Datasheet</div>
                       <div className="text-xs sm:text-sm text-blue-600 truncate">{proposalData.inverterName}</div>
                     </div>
-                    <a href="/pdf/sig_inverter.pdf" download="Sigenergy_Inverter_Spec_Sheet.pdf">
+                    <a href={proposalData.inverterDatasheet} download={`${proposalData.inverterName}_Spec_Sheet.pdf`}>
                     <Download className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 ml-2 flex-shrink-0" />
                     </a>
                   </div>
@@ -630,9 +643,9 @@ export default function PDFProposal({ apiData }: PDFProposalProps) {
                     <div className="flex items-center justify-between">
                       <div className="min-w-0 flex-1">
                         <div className="font-semibold text-green-800 text-sm sm:text-base">Battery Datasheet</div>
-                        <div className="text-xs sm:text-sm text-green-600 truncate">Sigenergy Battery</div>
+                        <div className="text-xs sm:text-sm text-green-600 truncate">{proposalData.batteryName}</div>
                       </div>
-                      <a href="/pdf/sig_battery.pdf" download="SigEnergy_Battery_8kWh_Spec_Sheet.pdf">
+                      <a href={proposalData.batteryDatasheet} download={`${proposalData.batteryName}_Spec_Sheet.pdf`}>
                       <Download className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 ml-2 flex-shrink-0" />
                       </a>
                     </div>
@@ -647,9 +660,9 @@ export default function PDFProposal({ apiData }: PDFProposalProps) {
                     <div className="flex items-center justify-between">
                       <div className="min-w-0 flex-1">
                         <div className="font-semibold text-purple-800 text-sm sm:text-base">EV Charger Datasheet</div>
-                        <div className="text-xs sm:text-sm text-purple-600 truncate">myenergi Zappi 7kW Smart Charger</div>
+                        <div className="text-xs sm:text-sm text-purple-600 truncate">{proposalData.evChargerName}</div>
                       </div>
-                      <a href="/pdf/myenergi_zappi.pdf" download="myenergi_Zappi_7kW_Spec_Sheet.pdf">
+                      <a href={proposalData.evChargerDatasheet} download={`EV_Charger_Spec_Sheet.pdf`}>
                         <Download className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600 ml-2 flex-shrink-0" />
                       </a>
                     </div>
