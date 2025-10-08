@@ -2307,7 +2307,7 @@ export default function SolarEnergyPlanner() {
                       <div className="space-y-3">
                         <div className="flex justify-between items-center p-3 bg-green-50 rounded">
                           <span className="font-medium">Solar Panels</span>
-                          <span className="text-green-600 font-bold">25 Years Performance</span>
+                          <span className="text-green-600 font-bold">30 Years Performance</span>
                         </div>
                         <div className="flex justify-between items-center p-3 bg-blue-50 rounded">
                           <span className="font-medium">Inverter</span>
