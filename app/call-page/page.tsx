@@ -426,7 +426,7 @@ export default function CallPage() {
         selectedLocation: selectedLocation ? JSON.parse(selectedLocation) : null,
         branding: getEmailBranding(),
         company_id: 3,
-        panel_wattage: process.env.NEXT_PUBLIC_PANEL_WATTAGE,
+
       }
 
       // Make API call to the same endpoint as plan page

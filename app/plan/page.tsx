@@ -850,7 +850,6 @@ export default function SolarEnergyPlanner() {
         selectedLocation: selectedLocation ? JSON.parse(selectedLocation) : null,
         branding: getEmailBranding(),
         company_id: 3,
-        panel_wattage: process.env.NEXT_PUBLIC_PANEL_WATTAGE,
       };
       
       console.log('Submitting plan data:', requestBody);
