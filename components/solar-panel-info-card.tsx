@@ -223,7 +223,7 @@ export default function SolarPanelInfoCard() {
     // Try to get from system size first (most accurate)
     if (businessProposal?.system_size) {
       const systemSizeKW = parseFloat(businessProposal.system_size)
-      const panelWattage = 0.44 // Standard panel wattage in kWp
+      const panelWattage = parseFloat(process.env.NEXT_PUBLIC_PANEL_WATTAGE || '0.45') // Standard panel wattage in kWp
       return Math.round(systemSizeKW / panelWattage)
     }
     
@@ -250,7 +250,7 @@ export default function SolarPanelInfoCard() {
       value: `${parseFloat(businessProposal?.system_size || "4").toFixed(1)} kWp`,
       color: "from-blue-500 to-blue-600",
       bgColor: "from-blue-50 to-blue-100",
-      tooltip: `kWp = kilowatt peak - the maximum power your solar panels can generate under ideal conditions. Your ${parseFloat(businessProposal?.system_size || "4").toFixed(1)} kWp system has ~${Math.round((parseFloat(businessProposal?.system_size || "4") / parseFloat(process.env.PANEL_WATTAGE || "0.44")))} panels and generates ~${Math.round(energyData?.annualPVGeneration || (parseFloat(businessProposal?.system_size || "4") * 1000))} kWh/year`
+      tooltip: `kWp = kilowatt peak - the maximum power your solar panels can generate under ideal conditions. Your ${parseFloat(businessProposal?.system_size || "4").toFixed(1)} kWp system has ~${Math.round((parseFloat(businessProposal?.system_size || "4") / parseFloat(process.env.PANEL_WATTAGE || "0.45")))} panels and generates ~${Math.round(energyData?.annualPVGeneration || (parseFloat(businessProposal?.system_size || "4") * 1000))} kWh/year`
     },
     {
       icon: <Ruler className="h-5 w-5" />,

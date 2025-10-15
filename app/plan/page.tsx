@@ -352,7 +352,7 @@ export default function SolarEnergyPlanner() {
   
   const totalPanelCount = basePanelCount
 
-  const recommendedPanelCount = businessProposal?.system_size ? Math.round(businessProposal.system_size / parseFloat(process.env.NEXT_PUBLIC_PANEL_WATTAGE || '0.44')) : 12
+  const recommendedPanelCount = businessProposal?.system_size ? Math.round(businessProposal.system_size / parseFloat(process.env.NEXT_PUBLIC_PANEL_WATTAGE || '0.45')) : 12
 
   // Calculations - Make system cost dynamic based on BASE panel count only (EV/heat pump don't affect price)
   const basePanelThreshold = branding.pricing.basePanelThreshold
@@ -724,7 +724,7 @@ export default function SolarEnergyPlanner() {
       
       // System Specifications
       systemSpecs: {
-        systemSizeKwp: (totalPanelCount * parseFloat(process.env.NEXT_PUBLIC_PANEL_WATTAGE || '0.44')),
+        systemSizeKwp: (totalPanelCount * parseFloat(process.env.NEXT_PUBLIC_PANEL_WATTAGE || '0.45')),
         annualPVGenerated: annualPVGeneration, // Total annual PV generation from all panels
         perPanelGeneration: perPanelGeneration, // Per panel generation calculated from base panels
         originalBusinessProposalPanelCount: originalBusinessProposalPanelCount, // Store the original panel count for scaling
@@ -766,7 +766,7 @@ export default function SolarEnergyPlanner() {
         solarPanel: {
           ...selectedSolarPanel,
           quantity: totalPanelCount,
-          totalWattage: totalPanelCount * 440, // Assuming 440W panels
+          totalWattage: totalPanelCount * 450, // Assuming 450W panels
         },
         inverter: selectedInverter,
         battery: includeBattery ? {
@@ -801,7 +801,7 @@ export default function SolarEnergyPlanner() {
         planCreatedAt: new Date().toISOString(),
         planVersion: "1.0",
         businessProposal: businessProposal ? {
-          systemSize: (totalPanelCount * parseFloat(process.env.NEXT_PUBLIC_PANEL_WATTAGE || '0.44')).toFixed(1),
+          systemSize: (totalPanelCount * parseFloat(process.env.NEXT_PUBLIC_PANEL_WATTAGE || '0.45')).toFixed(1),
           electricityBillSavings: businessProposal.electricity_bill_savings,
           monthlyPerformance: businessProposal.monthly_performance,
         } : null,
@@ -903,7 +903,7 @@ export default function SolarEnergyPlanner() {
         // Calculate basePanelCount from system_size and panel wattage
         if (proposalData.system_size) {
           const systemSizeKw = parseFloat(proposalData.system_size)
-          const panelWattageKw = parseFloat(process.env.NEXT_PUBLIC_PANEL_WATTAGE || '0.44')
+          const panelWattageKw = parseFloat(process.env.NEXT_PUBLIC_PANEL_WATTAGE || '0.45')
           const calculatedPanelCount = Math.round(systemSizeKw / panelWattageKw)
           setBasePanelCount(calculatedPanelCount)
           setOriginalBusinessProposalPanelCount(calculatedPanelCount) // Store the original count for scaling
@@ -1315,7 +1315,7 @@ export default function SolarEnergyPlanner() {
                         <p className="text-sm md:text-base opacity-90">Solar + Battery + EV Charging Solution</p>
                       </div>
                       <div className="mt-2 md:mt-0 bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-medium">
-                      {totalPanelCount} Panels | {(totalPanelCount * parseFloat(process.env.NEXT_PUBLIC_PANEL_WATTAGE || '0.44')).toFixed(1)} kWp System
+                      {totalPanelCount} Panels | {(totalPanelCount * parseFloat(process.env.NEXT_PUBLIC_PANEL_WATTAGE || '0.45')).toFixed(1)} kWp System
                       </div>
                     </div>
                   </div>
@@ -1467,7 +1467,7 @@ export default function SolarEnergyPlanner() {
                             <p className="text-xs text-gray-600">
                               {selectedSolarPanel.reason}
                             </p>
-                            <a href={selectedSolarPanel.datasheet || "/pdf/jinko_panel.pdf"} download={getDownloadFilename(selectedSolarPanel.datasheet, "JinkoSolar_440W_Spec_Sheet.pdf")}>
+                            <a href={selectedSolarPanel.datasheet || "/pdf/jinko_panel.pdf"} download={getDownloadFilename(selectedSolarPanel.datasheet, "JinkoSolar_450W_Spec_Sheet.pdf")}>
                               <Button variant="outline" size="sm" className="h-6 text-xs bg-transparent">
                                 <Download className="w-3 h-3 mr-1" />
                                 Download Spec Sheet
@@ -4021,7 +4021,7 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
               <div className="flex-1">
                 <h3 className="font-semibold text-sm">Solar System <br></br> (€{totalAnnualSavings} savings/year)</h3>
                 <p className="text-xs text-gray-600">
-                  {totalPanelCount} panels • {(totalPanelCount * 0.44).toFixed(2)} kWp
+                  {totalPanelCount} panels • {(totalPanelCount * parseFloat(process.env.NEXT_PUBLIC_PANEL_WATTAGE || '0.45')).toFixed(2)} kWp
                 </p>
                 <p className="text-[11px] text-green-700">{getRecommendationText()}</p>
               </div>
@@ -4302,7 +4302,7 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                   extra={`${selectedSolarPanel.efficiency} • ${selectedSolarPanel.reason}`}
                   imagePath={selectedSolarPanel.image || `/images/solar-panels/${selectedSolarPanel.id}.png`}
                   downloadUrl={selectedSolarPanel.datasheet || "/pdf/jinko_panel.pdf"}
-                  downloadName="JinkoSolar_440W_Spec_Sheet.pdf"
+                  downloadName="JinkoSolar_450W_Spec_Sheet.pdf"
                 />
                 {/* Inverter Selection */}
                 <MobileEquipmentSelector

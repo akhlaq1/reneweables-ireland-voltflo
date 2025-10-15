@@ -43,7 +43,7 @@ export default function SnapshotPage() {
       setBusinessProposalData(parsedBusinessProposal)
       
       // Set panel wattage from environment variable
-      const panelWattageValue = parseFloat(process.env.NEXT_PUBLIC_PANEL_WATTAGE || '0.44')
+      const panelWattageValue = parseFloat(process.env.NEXT_PUBLIC_PANEL_WATTAGE || '0.45')
       setPanelWattage(panelWattageValue)
       
       // Calculate system size in panels using the panel wattage

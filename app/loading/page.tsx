@@ -206,7 +206,7 @@ export default function LoadingPage() {
               // Convert homeType to lowercase to match property-details format
               const normalizedHomeType = homeType.toLowerCase()
               const maxPanels = getMaxPanelsForPropertyType(normalizedHomeType)
-              const maxSystemSize = maxPanels * 440 // 440 watts per panel
+              const maxSystemSize = maxPanels * 450 // 450 watts per panel
               
               // Get existing business_proposal from localStorage
               const businessProposalStr = localStorage.getItem("business_proposal")

@@ -21,7 +21,7 @@ export default function SolarPricingCard({
   const containerRef = useRef<HTMLDivElement>(null)
 
   // Calculate panel count (assuming 0.4 kWp per panel)
-  const panelCount = Math.round(systemSize / parseFloat(process.env.PANEL_WATTAGE || "0.44"));
+  const panelCount = Math.round(systemSize / parseFloat(process.env.PANEL_WATTAGE || "0.45"));
 
   // Close popup when clicking outside
   useEffect(() => {

@@ -38,7 +38,7 @@ export default function PropertyDetailsPage() {
 
     // Verify and adjust system size based on property type limits
     const maxPanels = getMaxPanelsForPropertyType(selectedType)
-    const maxSystemSize = maxPanels * 440 // 440 watts per panel
+    const maxSystemSize = maxPanels * 450 // 450 watts per panel
     
     // Get existing business_proposal from localStorage
     const businessProposalStr = localStorage.getItem("business_proposal")
