@@ -61,6 +61,19 @@ export const AddressTemplate0 = ({
               </p>
             </div>
 
+            {/* Special Offer Banner */}
+            <div className="mb-4 relative overflow-hidden rounded-2xl bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 p-4 shadow-lg animate-pulse-slow">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
+              <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full -ml-12 -mb-12"></div>
+              <div className="relative z-10 flex items-center gap-2">
+                <span className="text-2xl animate-bounce">🎁</span>
+                <div>
+                  <div className="text-white font-bold text-sm sm:text-base">LIMITED TIME OFFER</div>
+                  <div className="text-white/90 text-xs sm:text-sm">Buy 3 Panels, Get 1 FREE!</div>
+                </div>
+              </div>
+            </div>
+
             <div className="bg-gradient-to-r from-blue-50 to-green-50 p-4 rounded-xl border-2 border-blue-200 mb-6">
               <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
                 <div>
@@ -217,6 +230,19 @@ export const AddressTemplate1 = ({
               </p>
             </div>
 
+            {/* Special Offer Banner */}
+            <div className="mb-6 relative overflow-hidden rounded-2xl bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 p-4 shadow-lg animate-pulse-slow">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
+              <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full -ml-12 -mb-12"></div>
+              <div className="relative z-10 flex items-center gap-2">
+                <span className="text-2xl animate-bounce">🎁</span>
+                <div>
+                  <div className="text-white font-bold text-sm sm:text-base">LIMITED TIME OFFER</div>
+                  <div className="text-white/90 text-xs sm:text-sm">Buy 3 Panels, Get 1 FREE!</div>
+                </div>
+              </div>
+            </div>
+
             <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
               <div>
                 <label htmlFor="address-template1" className="block text-sm font-semibold text-gray-800 mb-3">
@@ -350,6 +376,19 @@ export const AddressTemplate2 = ({
               </p>
             </div>
 
+            {/* Special Offer Banner */}
+            <div className="mb-6 relative overflow-hidden rounded-2xl bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 p-4 shadow-lg animate-pulse-slow">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
+              <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full -ml-12 -mb-12"></div>
+              <div className="relative z-10 flex items-center gap-2">
+                <span className="text-2xl animate-bounce">🎁</span>
+                <div>
+                  <div className="text-white font-bold text-sm sm:text-base">LIMITED TIME OFFER</div>
+                  <div className="text-white/90 text-xs sm:text-sm">Buy 3 Panels, Get 1 FREE!</div>
+                </div>
+              </div>
+            </div>
+
             <div className="bg-gradient-to-r from-emerald-50 to-blue-50 p-6 rounded-2xl border-2 border-emerald-200 mb-6">
               <form onSubmit={(e) => e.preventDefault()} className="space-y-5">
                 <div>
@@ -480,6 +519,19 @@ export const AddressTemplate3 = ({
             Get your personalised solar plan in{" "}
             <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded-md font-semibold">under 60 seconds</span>
           </p>
+        </div>
+
+        {/* Special Offer Banner */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 p-4 shadow-lg animate-pulse-slow">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
+          <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full -ml-12 -mb-12"></div>
+          <div className="relative z-10 flex items-center gap-2">
+            <span className="text-2xl animate-bounce">🎁</span>
+            <div>
+              <div className="text-white font-bold text-sm sm:text-base">LIMITED TIME OFFER</div>
+              <div className="text-white/90 text-xs sm:text-sm">Buy 3 Panels, Get 1 FREE!</div>
+            </div>
+          </div>
         </div>
 
         <div className="bg-white rounded-2xl shadow-lg border border-purple-100 p-6">
@@ -615,6 +667,19 @@ export const AddressTemplate4 = ({
           </p>
         </div>
 
+        {/* Special Offer Banner */}
+        <div className="mb-6 relative overflow-hidden rounded-2xl bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 p-4 shadow-lg animate-pulse-slow">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
+          <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full -ml-12 -mb-12"></div>
+          <div className="relative z-10 flex items-center gap-2">
+            <span className="text-2xl animate-bounce">🎁</span>
+            <div>
+              <div className="text-white font-bold text-sm sm:text-base">LIMITED TIME OFFER</div>
+              <div className="text-white/90 text-xs sm:text-sm">Buy 3 Panels, Get 1 FREE!</div>
+            </div>
+          </div>
+        </div>
+
         <div className="space-y-6">
           <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
             <AddressInput
@@ -737,6 +802,19 @@ export const AddressTemplate5 = ({
               </p>
             </div>
 
+            {/* Special Offer Banner */}
+            <div className="mb-6 relative overflow-hidden rounded-2xl bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 p-4 shadow-lg animate-pulse-slow">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
+              <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full -ml-12 -mb-12"></div>
+              <div className="relative z-10 flex items-center gap-2">
+                <span className="text-2xl animate-bounce">🎁</span>
+                <div>
+                  <div className="text-white font-bold text-sm sm:text-base">LIMITED TIME OFFER</div>
+                  <div className="text-white/90 text-xs sm:text-sm">Buy 3 Panels, Get 1 FREE!</div>
+                </div>
+              </div>
+            </div>
+
             <form onSubmit={(e) => e.preventDefault()} className="space-y-5">
               <div>
                 <label htmlFor="address-template5" className="block text-sm font-semibold text-gray-700 mb-2">
@@ -817,5 +895,237 @@ export const AddressTemplate5 = ({
         </div>
       </div>
     </div>
+  )
+}
+
+export const AddressTemplate6 = ({
+  branding,
+  address,
+  handleAddressChange,
+  handleSubmit,
+  mainInputRef,
+  isLoading,
+  isGeocoding,
+  addressJustUpdated,
+  selectedLocation,
+  error
+}: AddressTemplateProps) => {
+  return (
+    <main className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex items-start sm:items-center justify-center p-4 sm:p-4">
+      <div className="max-w-5xl w-full max-h-[95vh] overflow-y-auto mt-4 sm:mt-0">
+        {/* Main content card */}
+        <div className="bg-white rounded-3xl overflow-hidden shadow-2xl shadow-gray-600/5 border border-gray-300/50 backdrop-blur-sm">
+          <div className="grid lg:grid-cols-2 gap-0">
+            {/* Left side - Form and main CTA */}
+            <div className="p-4 sm:p-6 lg:p-8 flex flex-col justify-center">
+              {/* Special Offer Banner */}
+              <div className="mb-4 relative overflow-hidden rounded-2xl bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 p-4 shadow-lg animate-pulse-slow">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
+                <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full -ml-12 -mb-12"></div>
+                <div className="relative z-10 flex items-center gap-2">
+                  <span className="text-2xl animate-bounce">🎁</span>
+                  <div>
+                    <div className="text-white font-bold text-sm sm:text-base">LIMITED TIME OFFER</div>
+                    <div className="text-white/90 text-xs sm:text-sm">Buy 3 Panels, Get 1 FREE!</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mb-4 sm:mb-6">
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-2 sm:mb-3">
+                  Your Home Could Save <span className="text-green-600">€1,200 a Year</span> With Solar
+                </h1>
+                <p className="text-sm sm:text-base text-gray-600 mb-2">Get your personalised solar plan in under 60 seconds</p>
+              </div>
+
+              {/* Address form */}
+              <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
+                <div>
+                  <label htmlFor="address-template0" className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                    Address
+                  </label>
+                  <AddressInput
+                    id="address-template0"
+                    ref={mainInputRef}
+                    value={address}
+                    onChange={handleAddressChange}
+                    isGeocoding={isGeocoding}
+                    addressJustUpdated={addressJustUpdated}
+                    disabled={isLoading}
+                    placeholder="Enter your Eircode or full address..."
+                    className="h-10 sm:h-12 text-sm rounded-2xl border-2 border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 shadow-sm hover:shadow-md transition-all duration-200"
+                  />
+                  <div className="flex items-center text-xs text-gray-500 mt-1">
+                    <span>Eircode preferred for best results</span>
+                  </div>
+                </div>
+
+                <Button
+                  type="submit"
+                  onClick={handleSubmit}
+                  className="w-full h-10 sm:h-12 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm sm:text-base rounded-2xl transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/25 hover:-translate-y-0.5 shadow-lg"
+                  disabled={isLoading}
+                >
+                  Get My Free Assessment →
+                </Button>
+              </form>
+
+              {/* Include PDF info */}
+              <div className="text-center mt-2">
+                <p className="text-xs sm:text-sm text-gray-600">
+                  Includes a personalised solar plan + savings report (PDF)
+                </p>
+              </div>
+
+              {/* Loading and error states */}
+              {error && (
+                <div className="rounded-2xl bg-red-50 border border-red-200/50 p-3 text-red-600 mt-3 shadow-sm text-sm">
+                  {error}
+                </div>
+              )}
+
+              {isLoading && (
+                <div className="text-center text-gray-500 mt-2 text-sm">
+                  Loading maps...
+                </div>
+              )}
+
+              {isGeocoding && (
+                <div className="text-center text-blue-600 mt-2 text-sm">
+                  🔍 Validating coordinates for accuracy...
+                </div>
+              )}
+
+              {/* Privacy note */}
+              <div className="flex items-center justify-center text-xs text-gray-600 mt-2">
+                <svg className="w-3 h-3 text-green-600 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                <span>100% Private & Secure</span>
+              </div>
+
+              {/* Google Reviews */}
+              <div className="mt-4 mb-3">
+                {/* Google Reviews - Only show if reviews data exists */}
+                {branding.reviews && (
+                  <div 
+                    onClick={() => branding.reviews?.url && window.open(branding.reviews.url, "_blank")}
+                    className={`flex items-center justify-start space-x-3 bg-white border border-gray-100/50 rounded-2xl p-4 shadow-lg shadow-blue-500/5 hover:shadow-xl hover:shadow-blue-500/10 hover:-translate-y-0.5 transition-all duration-300 backdrop-blur-sm ${branding.reviews.url ? 'cursor-pointer' : ''}`}
+                  >
+                    <Image
+                      src={branding.logo}
+                      alt={branding.name}
+                      width={60}
+                      height={30}
+                      className="h-8 object-contain"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1 mb-1 flex-wrap">
+                        <span className="text-sm font-bold text-gray-900 whitespace-nowrap">{branding.reviews.rating}</span>
+                        <div className="flex text-yellow-400 text-xs">
+                          {"★★★★★".split("").map((star, i) => (
+                            <span key={i}>{star}</span>
+                          ))}
+                        </div>
+                        <span className="text-xs text-gray-600 whitespace-nowrap">({branding.reviews.count} reviews)</span>
+                      </div>
+                      {branding.reviews.warranty && (
+                        <div className="text-xs text-gray-600">{branding.reviews.warranty}</div>
+                      )}
+                    </div>
+                    <Image
+                      src="/google-logo.png"
+                      alt="Google"
+                      width={80}
+                      height={26}
+                      className="h-8 object-contain"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* SEAI Trust Badge */}
+              <div className="mb-4">
+                <div className="flex items-center justify-start space-x-3 bg-white border border-gray-100/50 rounded-2xl p-4 shadow-lg shadow-green-500/5 hover:shadow-xl hover:shadow-green-500/10 hover:-translate-y-0.5 transition-all duration-300 backdrop-blur-sm">
+                  <Image
+                    src="/images/seai-logo.png"
+                    alt="SEAI Registered - Sustainable Energy Authority of Ireland"
+                    width={60}
+                    height={40}
+                    className="h-10 object-contain"
+                  />
+                  <div className="flex-1">
+                    <div className="font-semibold text-sm text-gray-900">SEAI-Registered Installer</div>
+                    <div className="text-xs text-gray-600 mt-0.5">Handles the entire grant process</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right side - House image and benefits */}
+            <div className="hidden lg:flex bg-gradient-to-br from-blue-100 to-green-100 p-4 lg:p-6 flex-col justify-center">
+              {/* House illustration */}
+              <div className="mb-6 relative">
+                <div className="relative overflow-hidden rounded-3xl shadow-2xl shadow-green-500/20 border border-white/30 hover:shadow-green-500/30 transition-all duration-500 hover:-translate-y-1">
+                  <Image
+                    src="/images/modern-solar-house.png"
+                    alt="Modern house with solar panels showing energy savings"
+                    width={300}
+                    height={200}
+                    className="w-full h-auto"
+                  />
+                  <div className="absolute top-3 right-3 bg-green-500 text-white px-3 py-2 rounded-full text-xs font-semibold shadow-lg backdrop-blur-sm border border-green-400/30">
+                    €1,200/year saved
+                  </div>
+                </div>
+              </div>
+
+              {/* Benefits */}
+              <div className="space-y-3">
+                <div className="flex items-center bg-white/90 backdrop-blur-md rounded-2xl p-4 shadow-lg shadow-green-500/10 border border-white/20 hover:shadow-xl hover:shadow-green-500/15 transition-all duration-300 hover:-translate-y-0.5">
+                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                    <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-sm text-gray-900">Lower Your Bills</h3>
+                    <p className="text-xs text-gray-600">Save up to 70% on electricity</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center bg-white/90 backdrop-blur-md rounded-2xl p-4 shadow-lg shadow-blue-500/10 border border-white/20 hover:shadow-xl hover:shadow-blue-500/15 transition-all duration-300 hover:-translate-y-0.5">
+                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                    <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-sm text-gray-900">Carbon Footprint Drop</h3>
+                    <p className="text-xs text-gray-600">Cut emissions with clean energy</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center bg-white/90 backdrop-blur-md rounded-2xl p-4 shadow-lg shadow-purple-500/10 border border-white/20 hover:shadow-xl hover:shadow-purple-500/15 transition-all duration-300 hover:-translate-y-0.5">
+                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                    <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-sm text-gray-900">Higher Home Value</h3>
+                    <p className="text-xs text-gray-600">Solar boosts resale potential</p>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-xs text-gray-600 text-center mt-3 font-medium">
+                No upfront costs. No hidden fees. Just smart energy.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
   )
 }

@@ -27,7 +27,8 @@ import {
   AddressTemplate2, 
   AddressTemplate3, 
   AddressTemplate4, 
-  AddressTemplate5 
+  AddressTemplate5,
+  AddressTemplate6  
 } from "@/components/address-templates"
 
 const ProgressStep = ({ icon: Icon, label, isActive = false }: { icon: any; label: string; isActive?: boolean }) => (
@@ -2041,6 +2042,8 @@ export default function AddressPage() {
                 return <AddressTemplate4 {...templateProps} />
               case 5:
                 return <AddressTemplate5 {...templateProps} />
+              case 6:
+                return <AddressTemplate6 {...templateProps} />
               case 0:
               default:
                 return <AddressTemplate0 {...templateProps} />
