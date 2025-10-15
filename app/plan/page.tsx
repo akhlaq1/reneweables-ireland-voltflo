@@ -2679,6 +2679,11 @@ export default function SolarEnergyPlanner() {
                           return Math.round(payment);
                         })()}/month with financing
                         </p> */}
+                      <div className="mt-3 pt-3 border-t border-gray-200">
+                        <p className="text-xs text-gray-600 italic text-center">
+                          Price excludes any current promotional offers. Please contact us for details about available promotions.
+                        </p>
+                      </div>
                     </div>
                   </div>
 
@@ -5153,6 +5158,11 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                           return Math.round(payment);
                         })()}/month with financing
                         </p> */}
+                <div className="mt-3 pt-3 border-t border-gray-200">
+                  <p className="text-xs text-gray-600 italic text-center">
+                    Price excludes any current promotional offers. Please contact us for details about available promotions.
+                  </p>
+                </div>
               </div>
             </div>
 

@@ -760,6 +760,11 @@ export default function PDFProposal({ apiData }: PDFProposalProps) {
                     €{proposalData.netCost.toLocaleString()}
                   </span>
                 </div>
+                <div className="mt-3 pt-3 border-t border-blue-200">
+                  <p className="text-xs text-gray-600 italic text-center">
+                    Price excludes any current promotional offers. Please contact us for details about available promotions.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -1147,6 +1152,11 @@ export default function PDFProposal({ apiData }: PDFProposalProps) {
                 <span className="text-blue-700 font-bold text-base">
                   <strong>Your Investment:</strong> €{proposalData.netCost.toLocaleString()}
                 </span>
+              </div>
+              <div className="mt-3 pt-3 border-t border-gray-200">
+                <p className="text-xs text-gray-600 italic">
+                  Price excludes any current promotional offers. Please contact us for details about available promotions.
+                </p>
               </div>
             </div>
           </CardContent>
