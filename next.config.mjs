@@ -11,11 +11,9 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  experimental: {
-    serverComponentsExternalPackages: ['posthog-js'],
-  },
+  serverExternalPackages: ['posthog-js'],
   webpack: (config, { isServer, webpack }) => {
-    // Handle Node.js core modules for both client and server
+    // Handle Node.js core modules fallback
     config.resolve.fallback = {
       ...config.resolve.fallback,
       fs: false,
@@ -24,13 +22,15 @@ const nextConfig = {
     }
     
     if (!isServer) {
-      // Add alias to prevent Node.js modules from being bundled in client
-      config.resolve.alias = {
-        ...config.resolve.alias,
-        'node:fs': false,
-        'node:path': false,
-        'node:child_process': false,
-      }
+      // Replace node: prefixed imports with empty modules
+      config.plugins.push(
+        new webpack.NormalModuleReplacementPlugin(
+          /^node:/,
+          (resource) => {
+            resource.request = resource.request.replace(/^node:/, '')
+          }
+        )
+      )
     }
     
     return config
