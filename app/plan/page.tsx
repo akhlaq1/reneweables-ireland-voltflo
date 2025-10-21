@@ -438,14 +438,18 @@ export default function SolarEnergyPlanner() {
   const totalGrants = seaiGrant + evChargerGrant
   const finalPrice = totalSystemCost - totalGrants
 
+  // Calculate payback cost (excluding EV charger cost and grant)
+  const paybackSystemCost = systemBaseCost + batteryCost
+  const paybackGrants = seaiGrant
+  const paybackPrice = paybackSystemCost - paybackGrants
 
   console.log("Per Panel Generation:", perPanelGeneration);
 
   // totalAnnualSavings now computed above using scenario fractions (0 batteries: 30/70, 1 battery: 70/30, 2 batteries: 90/10)
 
   const paybackPeriod = useMemo(() => 
-    totalAnnualSavings > 0 ? (finalPrice / totalAnnualSavings).toFixed(1) : '0.0'
-  , [finalPrice, totalAnnualSavings])
+    totalAnnualSavings > 0 ? (paybackPrice / totalAnnualSavings).toFixed(1) : '0.0'
+  , [paybackPrice, totalAnnualSavings])
   const billOffset = includeBattery ? 94 : 65
   const gridIndependence = batteryCount >= 2 ? 95 : (includeBattery ? 90 : 30)
   const gridRelianceWithoutBattery = 70 // Changed from 65 to 70
