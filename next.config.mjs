@@ -11,16 +11,28 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  webpack: (config, { isServer }) => {
+  experimental: {
+    serverComponentsExternalPackages: ['posthog-js'],
+  },
+  webpack: (config, { isServer, webpack }) => {
+    // Handle Node.js core modules for both client and server
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      fs: false,
+      path: false,
+      child_process: false,
+    }
+    
     if (!isServer) {
-      // Handle Node.js core modules in client-side bundles
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        fs: false,
-        path: false,
-        child_process: false,
+      // Add alias to prevent Node.js modules from being bundled in client
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        'node:fs': false,
+        'node:path': false,
+        'node:child_process': false,
       }
     }
+    
     return config
   },
 }
