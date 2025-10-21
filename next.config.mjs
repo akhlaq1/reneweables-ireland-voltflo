@@ -11,6 +11,18 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      // Handle Node.js core modules in client-side bundles
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        path: false,
+        child_process: false,
+      }
+    }
+    return config
+  },
 }
 
 const withPWAConfig = withPWA({
