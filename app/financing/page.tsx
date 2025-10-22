@@ -1690,7 +1690,7 @@ export default function FinancingPage() {
                         <span className="flex items-center justify-center gap-2 md:gap-3">
                           <Download className="h-5 w-5 md:h-6 md:w-6" />
                           <div>
-                          <span className="hidden sm:inline">Download </span>Plan
+                          <span className="hidden sm:inline">View My </span>Proposal
                           </div>
                           
                         </span>

@@ -213,7 +213,7 @@ export default function LocationDataCard({ trueSolarEnergyGenerated = 0 }: Locat
       label: "Solar System Size",
       value: `${parseFloat(businessProposal.system_size || "4").toFixed(1)} kWp`,
       color: "from-blue-500 to-indigo-600",
-      tooltip: `kWp = kilowatt peak - the maximum power your solar panels can generate under ideal conditions. Your ${parseFloat(businessProposal.system_size || "4").toFixed(1)} kWp system has ~${Math.round((parseFloat(businessProposal.system_size || "4") / parseFloat(process.env.PANEL_WATTAGE || "0.44")))} panels and generates ~${Math.round(trueSolarEnergyGenerated || (parseFloat(businessProposal.system_size || "4") * 1000))} kWh/year`
+      tooltip: `kWp = kilowatt peak - the maximum power your solar panels can generate under ideal conditions. Your ${parseFloat(businessProposal.system_size || "4").toFixed(1)} kWp system has ~${Math.round((parseFloat(businessProposal.system_size || "4") / parseFloat(process.env.PANEL_WATTAGE || "0.45")))} panels and generates ~${Math.round(trueSolarEnergyGenerated || (parseFloat(businessProposal.system_size || "4") * 1000))} kWh/year`
     },
     {
       icon: <Ruler className="w-5 h-5" />,

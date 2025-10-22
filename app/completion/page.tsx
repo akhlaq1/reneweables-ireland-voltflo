@@ -175,7 +175,7 @@ export default function CompletionPage() {
                 <div className="flex flex-col gap-4">
                   <Button onClick={handleDownload} className="bg-green-600 hover:bg-green-700">
                     <Download className="mr-2 h-4 w-4" />
-                    Download Plan Again
+                    View My Proposal
                   </Button>
                   <Button onClick={handleFAQs} variant="outline">
                     <HelpCircle className="mr-2 h-4 w-4" />

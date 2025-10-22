@@ -132,6 +132,7 @@ export interface Branding {
   email: string;
   phone: string;
   logo: string; // Path to logo asset
+  logo_with_name: string;
   description?: string; // Company description
   address_template?: number; // Template ID for address page (0-5, defaults to 0)
   colors: {
@@ -218,6 +219,34 @@ export function estimateAnnualSolarSavings(annualPV: number, selfUseFraction: nu
   return annualPV * (selfUseFraction * energy.gridRateDay + exportFraction * energy.exportRate);
 }
 
+/**
+ * Calculate SEAI Solar PV Grant based on panel count
+ * Grant structure (as of 2025):
+ * - €700 per kWp up to 2kWp
+ * - €200 for every additional kWp up to 4kWp
+ * - Total grant capped at €1800
+ * 
+ * Assuming 450W (0.45kW) per panel:
+ * - Up to 5 panels (2.2kWp): €1400
+ * - 6-7 panels (2.64-3.08kWp): €1600
+ * - 8+ panels (3.52kWp+): €1800
+ * 
+ * @param panelCount - Number of solar panels
+ * @param wattsPerPanel - Wattage per panel (default 450W)
+ * @returns SEAI grant amount in euros
+ */
+export function calculateSEAIGrant(panelCount: number, wattsPerPanel: number = 450): number {
+ const systemSizeKWp = (panelCount * wattsPerPanel) / 1000; // Convert to kWp
+  
+  if (systemSizeKWp <= 2) {
+    return 1400;
+  } else if (systemSizeKWp <= 4) {
+    return 1600;
+  } else {
+    return 1800;
+  }
+}
+
 // Brand definitions
 const brands: Record<string, Branding> = {
   renewables: {
@@ -227,6 +256,7 @@ const brands: Record<string, Branding> = {
     email: 'info@renewables-ireland.ie',
     phone: '+353 (0)1 298 6140',
     logo: '/renewables.png',
+    logo_with_name: 'logo_with_name.png',
     description: "Big enough to get the job done & small enough to care",
     address_template: 0, // Default template
     colors: { primary: '#1d4ed8', secondary: '#059669', accent: '#f59e0b' },
@@ -291,7 +321,7 @@ const brands: Record<string, Branding> = {
           name: 'Huawei SUN2000 Inverter',
           tier: 'Premium',
           warranty: '10-Year Product',
-          efficiency: '98.4%',
+          efficiency: '98%',
           priceAdjustment: 0,
           recommended: true,
           reason: 'Industry-leading reliability',
@@ -310,7 +340,7 @@ const brands: Record<string, Branding> = {
           recommended: false,
           reason: 'Compact solution, lower capacity',
           datasheet: '/pdf/huawei_battery.pdf',
-          image: '/images/batteries/huwaei.png'
+          image: '/images/batteries/huwaei5kw.jpg'
         },
         {
           id: 'huawei10',
@@ -322,7 +352,7 @@ const brands: Record<string, Branding> = {
           recommended: false,
           reason: 'Compact solution, lower capacity',
           datasheet: '/pdf/huawei_battery.pdf',
-          image: '/images/batteries/huwaei.png'
+          image: '/images/batteries/huawei10kw.jpg'
         },
       ],
       evChargers: [
@@ -330,34 +360,23 @@ const brands: Record<string, Branding> = {
           id: 'myenergi_zappi',
           name: 'Myenergi Zappi 7KW',
           power: '7kW',
-          price: 1600,
+          price: 1580,
           grant: 300,
           tier: 'Premium',
           warranty: '3-Year Product',
           recommended: true,
           reason: 'Smart charging with solar integration',
           features: ['Solar integration', 'Smart scheduling', 'Load balancing', 'Mobile app control'],
+          datasheet: '/pdf/myenergi_zappi.pdf',
           image: '/images/ev-chargers/myenergi_zappi.png'
         }
       ]
     },
     pricing: {
-      pricingType: 'slab_pricing',
+      pricingType: 'base_plus_incremental',
       basePanelThreshold: 8,
       baseSystemPrice: 7360,
       additionalPanelCost: 200,
-      slabPricing: [
-        { panelCount: 8, price: 7360 },
-        { panelCount: 10, price: 7660 },
-        { panelCount: 12, price: 7960 },
-        { panelCount: 14, price: 8165 },
-        { panelCount: 16, price: 8350 },
-        { panelCount: 18, price: 8535 },
-        { panelCount: 20, price: 8720 },
-        { panelCount: 22, price: 8905 },
-        { panelCount: 24, price: 9090 },
-        { panelCount: 26, price: 9275 },
-      ],
       seaiGrant: 1800,
       defaultEVGrant: 300
     },
@@ -468,6 +487,7 @@ const brands: Record<string, Branding> = {
           recommended: true,
           reason: 'Smart charging with solar integration',
           features: ['Solar integration', 'Smart scheduling', 'Load balancing', 'Mobile app control'],
+          datasheet: '/pdf/myenergi_zappi.pdf',
         }
       ]
     },

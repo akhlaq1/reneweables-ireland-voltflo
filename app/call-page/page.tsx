@@ -320,8 +320,25 @@ export default function CallPage() {
         }
       }
     }
-    addWindow(9, 11)
-    addWindow(16, 18)
+    
+    // Check if this is the next day (tomorrow)
+    const selectedDate = new Date(year, month, day)
+    const tomorrow = new Date(today)
+    tomorrow.setDate(today.getDate() + 1)
+    tomorrow.setHours(0, 0, 0, 0)
+    selectedDate.setHours(0, 0, 0, 0)
+    
+    const isNextDay = selectedDate.getTime() === tomorrow.getTime()
+    
+    if (isNextDay) {
+      // For next day bookings, only show slots after 12 PM (4-6 PM window)
+      addWindow(16, 18)
+    } else {
+      // For other days, show both morning and afternoon slots
+      addWindow(9, 11)
+      addWindow(16, 18)
+    }
+    
     return slots
   }
 

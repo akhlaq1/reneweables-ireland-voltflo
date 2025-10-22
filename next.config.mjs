@@ -11,6 +11,30 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  serverExternalPackages: ['posthog-js'],
+  webpack: (config, { isServer, webpack }) => {
+    // Handle Node.js core modules fallback
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      fs: false,
+      path: false,
+      child_process: false,
+    }
+    
+    if (!isServer) {
+      // Replace node: prefixed imports with empty modules
+      config.plugins.push(
+        new webpack.NormalModuleReplacementPlugin(
+          /^node:/,
+          (resource) => {
+            resource.request = resource.request.replace(/^node:/, '')
+          }
+        )
+      )
+    }
+    
+    return config
+  },
 }
 
 const withPWAConfig = withPWA({

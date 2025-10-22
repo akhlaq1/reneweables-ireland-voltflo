@@ -7,13 +7,14 @@ import { getGTMScript } from '@/lib/gtm'
 import GTMNoscript from '@/components/gtm-noscript'
 import Script from 'next/script'
 import { BrandingProvider } from '@/contexts/branding-context'
+import { Toaster } from '@/components/ui/toaster'
 
 // Get branding for metadata (server-side)
 const branding = await getBranding()
 
 export const metadata: Metadata = {
   title: branding.name,
-  description: `Created by Akhlaq Ahmed`,
+  description: `Powered by Voltflo`,
   generator: "Voltflo",
 }
 
@@ -47,6 +48,7 @@ export default async function RootLayout({
             </PostHogProvider>
           </BrandingProvider>
         </Suspense>
+        <Toaster />
       </body>
     </html>
   )
