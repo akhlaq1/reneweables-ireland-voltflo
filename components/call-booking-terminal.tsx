@@ -3,25 +3,56 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { CheckCircle, Instagram, Linkedin, Facebook, Clock, Phone } from "lucide-react"
-import { getBranding } from "@/lib/branding"
+import { Branding, getBranding, resolveBrandSlugFromHostname } from "@/lib/branding"
+import {useEffect, useState} from 'react';
+import companyService from "@/app/api/company"
 
 export function CallBookingTerminal() {
-  const branding = getBranding()
+  // const branding = getBranding()
+  const [branding, setBranding] = useState<Branding | null>(null)
+  
+  useEffect(() => {
+
+    getCompanyData()
+  }, [])
+
+  const getCompanyData = async () => {
+    const slug = resolveBrandSlugFromHostname((typeof window !== 'undefined' ? window.location.hostname : undefined));
+    const payload={
+      "sub_domain": slug || "renewables-ireland",
+      "required_fields": ["logo","name","social","email"]
+    }
+    await companyService.getCompanyDatabySubDomain(payload).then((res) => {
+      setBranding({
+        ...branding as Branding,
+        name: res?.data?.data?.name,
+        email: res?.data?.data?.email,
+        logo: res?.data?.data?.logo,
+        social: {
+          instagram: res?.data?.data?.social?.instagram,
+          linkedin: res?.data?.data?.social?.linkedin,
+          facebook: res?.data?.data?.social?.facebook
+        }
+      })
+    })
+    
+  }
+
   
   const handleInstagramClick = () => {
-    if (branding.social?.instagram) {
+    if (branding?.social?.instagram) {
       window.open(branding.social.instagram, '_blank')
     }
   }
 
   const handleFacebookClick = () => {
-    if (branding.social?.facebook) {
+    if (branding?.social?.facebook) {
       window.open(branding.social.facebook, '_blank')
     }
   }
 
   const handleLinkedInClick = () => {
-    if (branding.social?.linkedin) {
+    if (branding?.social?.linkedin) {
       window.open(branding.social.linkedin, '_blank')
     }
   }
@@ -127,9 +158,9 @@ export function CallBookingTerminal() {
             <CardContent className="p-2 sm:p-3">
               <div className="text-center mb-2">
                 <div className="mx-auto w-8 h-8 sm:w-10 sm:h-10 mb-1">
-                  <img src={branding.logo} alt={branding.name} className="w-full h-full object-contain" />
+                  <img src={branding?.logo} alt={branding?.name} className="w-full h-full object-contain" />
                 </div>
-                <h2 className="text-base sm:text-lg font-bold text-gray-900">Follow {branding.name}</h2>
+                <h2 className="text-base sm:text-lg font-bold text-gray-900">Follow {branding?.name}</h2>
               </div>
               <p className="text-gray-600 text-center mb-2 text-sm">
                 See real solar installations from Irish homeowners and stay updated with our latest projects! 🏠⚡
@@ -168,7 +199,7 @@ export function CallBookingTerminal() {
         <div className="text-center space-y-2 py-3 sm:py-4 border-t border-green-100">
           <p className="text-xs sm:text-sm text-gray-600">
          Questions or need help?{" "}
-            {branding.email && (
+            {branding?.email && (
               <a href={`mailto:${branding.email}`} className="text-blue-600 hover:text-blue-700 font-medium hover:underline">
               {branding.email}
               </a>

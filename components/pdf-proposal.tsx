@@ -31,7 +31,8 @@ import { Badge } from "@/components/ui/badge"
 import { PdfMonthlyProductionChart } from "@/components/pdf-monthly-production-chart"
 import { useState, useEffect } from "react"
 import { useIsMobile } from "@/hooks/use-mobile"
-import { getBranding } from "@/lib/branding"
+import { Branding, getBranding, resolveBrandSlugFromHostname } from "@/lib/branding"
+import companyService from "@/app/api/company"
 
 interface ApiData {
   id: number
@@ -270,7 +271,39 @@ function GrantsTooltip({ apiData }: { apiData: ApiData }) {
 export default function PDFProposal({ apiData }: PDFProposalProps) {
   const [openFAQ, setOpenFAQ] = useState<number | null>(null)
   const isMobile = useIsMobile()
-  const branding = getBranding()
+  // const branding = getBranding()
+  const [branding, setBranding] = useState<Branding | null>(null)
+
+
+  // Set navigation marker for this app session
+  useEffect(() => {
+    getCompanyData()
+  }, [])
+
+  const getCompanyData = async () => {
+    const slug = resolveBrandSlugFromHostname((typeof window !== 'undefined' ? window.location.hostname : undefined));
+    const payload={
+      "sub_domain": slug || "renewables-ireland",
+      "required_fields": ["email","logo","name","reviews","description","certifications","founder","testimonials",]
+    }
+    await companyService.getCompanyDatabySubDomain(payload).then((res) => {
+      setBranding({
+        ...branding as Branding,
+        name: res?.data?.data?.name,
+        logo: res?.data?.data?.logo,
+        email: res?.data?.data?.email,
+        description: res?.data?.data?.description,
+        address_template: res?.data?.data?.address_template,
+        reviews: res?.data?.data?.reviews,
+        certifications: res?.data?.data?.certifications,
+        founder: res?.data?.data?.founder,
+        testimonials: res?.data?.data?.testimonials,
+        logo_with_name : "/logo_with_name.png"
+      })
+    })
+    
+  }
+
 
   // Helper function to build consultation URL with user parameters
   const buildConsultationUrl = () => {
@@ -447,8 +480,8 @@ export default function PDFProposal({ apiData }: PDFProposalProps) {
       <div className="p-4 sm:p-5 bg-gradient-to-br from-blue-50 to-green-50">
         <div className="flex flex-row justify-between items-center mb-4 sm:mb-5">
           <img
-            src={branding.logo_with_name}
-            alt={`${branding.name} Logo`}
+            src={branding?.logo_with_name}
+            alt={`${branding?.name} Logo`}
             className="h-8 sm:h-12"
           />
           <Badge variant="outline" className="bg-white text-gray-700 border-gray-300 px-3 sm:px-4 py-2 text-sm">
@@ -1365,12 +1398,12 @@ export default function PDFProposal({ apiData }: PDFProposalProps) {
               {/* Left: Brand & Reviews */}
               <div className="text-center md:text-left bg-gray-50 p-5 rounded-lg">
                 <img
-                  src={branding.logo}
-                  alt={`${branding.name} Logo`}
+                  src={branding?.logo}
+                  alt={`${branding?.name} Logo`}
                   className="h-12 sm:h-16 mx-auto md:mx-0 mb-4"
                 />
 
-                {branding.reviews && (
+                {branding?.reviews && (
                   <div className="flex items-center justify-center md:justify-start mb-4">
                     <Star className="w-5 h-5 text-yellow-500 mr-2" fill="currentColor" />
                     <span className="text-base sm:text-xl font-bold text-gray-900">
@@ -1380,7 +1413,7 @@ export default function PDFProposal({ apiData }: PDFProposalProps) {
                 )}
 
                 <p className="text-gray-700 leading-relaxed text-sm sm:text-base">
-                  {branding.description || "Ireland's trusted SEAI-registered solar installer, delivering reliable energy solutions for your home and future."}
+                  {branding?.description || "Ireland's trusted SEAI-registered solar installer, delivering reliable energy solutions for your home and future."}
                 </p>
               </div>
 
@@ -1389,7 +1422,7 @@ export default function PDFProposal({ apiData }: PDFProposalProps) {
                 <h4 className="text-lg sm:text-xl font-bold text-gray-900 mb-5 text-center">Accreditations & Guarantees</h4>
 
                 <div className="space-y-4">
-                  {branding.certifications?.map((cert, index) => (
+                  {branding?.certifications?.map((cert, index) => (
                     <div key={index} className="flex items-center p-4 bg-green-50 rounded-lg border border-green-200 shadow-sm">
                       <Check className="w-6 h-6 text-green-600 mr-3 flex-shrink-0" />
                       <span className="font-bold text-green-800">{cert.name}</span>
@@ -1399,27 +1432,27 @@ export default function PDFProposal({ apiData }: PDFProposalProps) {
               </div>
 
               {/* Right: Founder Trust Block */}
-              {branding.founder ? (
+              {branding?.founder ? (
                 <div className="text-center bg-blue-50 p-5 rounded-lg">
                   {branding.founder.photo && (
                     <img
-                      src={branding.founder.photo}
-                      alt={`${branding.founder.name}, ${branding.founder.title}`}
+                      src={branding?.founder.photo}
+                      alt={`${branding?.founder.name}, ${branding?.founder.title}`}
                       className="w-20 h-20 sm:w-24 sm:h-24 rounded-full mx-auto mb-4 object-cover border-4 border-white shadow-md"
                     />
                   )}
 
-                  <h4 className="text-base sm:text-xl font-bold text-gray-900 mb-2">{branding.founder.name}</h4>
-                  <p className="text-sm text-gray-600 mb-4 font-medium">{branding.founder.title}</p>
+                  <h4 className="text-base sm:text-xl font-bold text-gray-900 mb-2">{branding?.founder.name}</h4>
+                  <p className="text-sm text-gray-600 mb-4 font-medium">{branding?.founder.title}</p>
 
                   <p className="text-sm text-gray-700 mb-5 leading-relaxed">
-                    {branding.founder.description}
+                    {branding?.founder.description}
                   </p>
 
-                  {branding.founder.quote && (
+                  {branding?.founder.quote && (
                     <div className="bg-white p-4 rounded-lg border border-blue-200 shadow-sm">
                       <p className="text-sm text-blue-800 italic font-semibold">
-                        "{branding.founder.quote}"
+                        "{branding?.founder.quote}"
                       </p>
                     </div>
                   )}
@@ -1438,7 +1471,7 @@ export default function PDFProposal({ apiData }: PDFProposalProps) {
         </Card>
 
         {/* Customer Testimonials - Streamlined */}
-        {branding.testimonials && branding.testimonials.length > 0 && (
+        {branding?.testimonials && branding?.testimonials.length > 0 && (
           <Card className="border border-gray-200 shadow-sm mt-4 sm:mt-5">
             <CardContent className="p-4 sm:p-5">
               <h4 className="text-lg sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-5 flex items-center">
@@ -1446,7 +1479,7 @@ export default function PDFProposal({ apiData }: PDFProposalProps) {
                 What Our Customers Say
               </h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                {branding.testimonials.map((testimonial, index) => (
+                {branding?.testimonials?.map((testimonial, index) => (
                   <div key={index} className="bg-gray-50 p-5 sm:p-6 rounded-xl border border-gray-200 shadow-md">
                     <div className="flex items-center mb-4">
                       {[...Array(testimonial.rating)].map((_, i) => (
@@ -1471,7 +1504,7 @@ export default function PDFProposal({ apiData }: PDFProposalProps) {
         <div className="text-center">
           <div className="bg-white/15 backdrop-blur rounded-xl p-6 sm:p-6 mb-4 shadow-lg">
             <h2 className="text-xl sm:text-2xl font-bold mb-4">Ready to Get Started?</h2>
-            <p className="text-base sm:text-lg mb-6">Book your free consultation with {branding.name}.</p>
+            <p className="text-base sm:text-lg mb-6">Book your free consultation with {branding?.name}.</p>
 
             <Button
               size="lg"
@@ -1738,28 +1771,28 @@ export default function PDFProposal({ apiData }: PDFProposalProps) {
           <div className="border-t border-white/20 pt-5 mt-4">
             <div className="flex flex-col md:flex-row items-center justify-center space-y-3 md:space-y-0 md:space-x-6 mb-5">
               <img
-                src={branding.logo}
-                alt={branding.name}
+                src={branding?.logo}
+                alt={branding?.name}
                 className="h-10"
               />
               <div className="text-center">
-                <div className="font-bold text-base sm:text-lg">{branding.name}</div>
+                <div className="font-bold text-base sm:text-lg">{branding?.name}</div>
                 <div className="text-blue-200 text-sm sm:text-base">SEAI Registered Solar Installer</div>
               </div>
             </div>
 
             <div className="flex flex-col md:flex-row justify-center space-y-2 md:space-y-0 md:space-x-8 text-sm sm:text-base">
-              <a href={`tel:${branding.phone}`} className="flex items-center justify-center hover:underline pointer:cursor">
+              <a href={`tel:${branding?.phone}`} className="flex items-center justify-center hover:underline pointer:cursor">
                 <Phone className="mr-3 h-5 w-5" />
-                <span>{branding.phone}</span>
+                <span>{branding?.phone}</span>
               </a>
-              <a href={`mailto:${branding.email}`} className="flex items-center justify-center hover:underline pointer:cursor">
+              <a href={`mailto:${branding?.email}`} className="flex items-center justify-center hover:underline pointer:cursor">
                 <Mail className="mr-3 h-5 w-5" />
-                <span>{branding.email}</span>
+                <span>{branding?.email}</span>
               </a>
-              <a href={`https://${branding.website}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center hover:underline pointer:cursor">
+              <a href={`https://${branding?.website}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center hover:underline pointer:cursor">
                 <Globe className="mr-3 h-5 w-5" />
-                <span>{branding.website}</span>
+                <span>{branding?.website}</span>
               </a>
             </div>
 

@@ -16,21 +16,23 @@ import { Progress } from "@/components/ui/progress"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
-import { Branding, getBranding, resolveBrandSlugFromHostname } from "@/lib/branding"
+// import { getBranding } from "@/lib/branding"
 import { AvatarAssistant } from "@/components/avatar-assistant"
 import { AppHeader } from "@/components/app-header"
 import { setAppNavigation } from "@/lib/navigation-tracker"
 import { ProgressBars } from "@/components/progress-bars"
-import {
-  AddressTemplate0,
-  AddressTemplate1,
-  AddressTemplate2,
-  AddressTemplate3,
-  AddressTemplate4,
+import { 
+  AddressTemplate0, 
+  AddressTemplate1, 
+  AddressTemplate2, 
+  AddressTemplate3, 
+  AddressTemplate4, 
   AddressTemplate5,
-  AddressTemplate6
+  AddressTemplate6  
 } from "@/components/address-templates"
 import companyService from "./api/company"
+import { Branding, getBranding, resolveBrandSlugFromHostname } from "@/lib/branding"
+
 
 declare global {
   interface Window {
@@ -38,6 +40,7 @@ declare global {
     initMap: () => void
   }
 }
+
 
 // Manual Entry Modal Component for Mobile
 interface ManualEntryModalProps {
@@ -172,10 +175,38 @@ function ManualEntryModal({ isOpen, onClose, onSubmit }: ManualEntryModalProps) 
 
 export default function AddressPage() {
   // const branding = getBranding()
+  const [branding, setBranding] = useState<Branding | null>(null)
   const router = useRouter()
   const [address, setAddress] = useState("")
 
+  // Set navigation marker for this app session
+  useEffect(() => {
+    setAppNavigation()
+    getCompanyData()
+  }, [])
 
+  const getCompanyData = async () => {
+    const slug = resolveBrandSlugFromHostname((typeof window !== 'undefined' ? window.location.hostname : undefined));
+    const payload={
+      "sub_domain": slug || "renewables-ireland",
+      "required_fields": ["address_template","logo","colors","name"]
+    }
+    await companyService.getCompanyDatabySubDomain(payload).then((res) => {
+      setBranding({
+        ...branding as Branding,
+        name: res?.data?.data?.name,
+        address_template: res?.data?.data?.address_template,
+        logo: res?.data?.data?.logo,
+        colors: {
+          primary: res?.data?.data?.colors?.primary,
+          secondary: res?.data?.data?.colors?.secondary,
+          accent: res?.data?.data?.colors?.accent
+        }
+      })
+    })
+    
+  }
+  
   const [isMapVisible, setIsMapVisible] = useState(false)
   const [selectedLocation, setSelectedLocation] = useState<google.maps.LatLng | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -220,37 +251,6 @@ export default function AddressPage() {
     { label: "€500 – €600", value: 550 },
     { label: "Over €600", value: 700 }
   ]
-
-  const [branding, setBranding] = useState<Branding | null>(null)
-
-
-  // Set navigation marker for this app session
-  useEffect(() => {
-    setAppNavigation()
-    getCompanyData()
-  }, [])
-
-  const getCompanyData = async () => {
-    const slug = resolveBrandSlugFromHostname((typeof window !== 'undefined' ? window.location.hostname : undefined));
-    const payload={
-      "sub_domain": slug || "renewables-ireland",
-      "required_fields": ["address_template","logo","colors","name",""]
-    }
-    await companyService.getCompanyDatabySubDomain(payload).then((res) => {
-      setBranding({
-        ...branding as Branding,
-        name: res?.data?.data?.name,
-        address_template: res?.data?.data?.address_template,
-        logo: res?.data?.data?.logo,
-        colors: {
-          primary: res?.data?.data?.colors?.primary,
-          secondary: res?.data?.data?.colors?.secondary,
-          accent: res?.data?.data?.colors?.accent
-        }
-      })
-    })
-    
-  }
 
   useEffect(() => {
     // Check if Google Maps API is already loaded
@@ -316,7 +316,7 @@ export default function AddressPage() {
       const timeoutId = setTimeout(() => {
         initializeGoogleMaps()
       }, 100)
-
+      
       return () => clearTimeout(timeoutId)
     }
   }, [isLoading, isMapVisible, showBillSelection])
@@ -494,6 +494,7 @@ export default function AddressPage() {
     try {
       if (!window.google) return
 
+      console.log("WG: ", window.google)
       // Initialize autocomplete for map view input (if it exists)
       if (inputRef.current && !autocompleteRef.current) {
         autocompleteRef.current = new window.google.maps.places.Autocomplete(inputRef.current, {
@@ -508,6 +509,7 @@ export default function AddressPage() {
           if (!place?.geometry?.location) {
             return
           }
+          console.log("Place: ", place)
 
           // Use the enhanced Eircode validation for better accuracy
           const validatedLocation = await findEircodeAndValidateCoordinates(place)
@@ -529,7 +531,8 @@ export default function AddressPage() {
           setAddressJustUpdated(true)
           setPendingPlace({ ...place, geometry: { ...place.geometry, location: finalLocation } })
           setIsMapVisible(true)
-
+          console.log("Map Visible: ", true)
+          
           // Clear the "just updated" state after a brief moment
           setTimeout(() => setAddressJustUpdated(false), 2000)
         })
@@ -570,7 +573,7 @@ export default function AddressPage() {
           setAddressJustUpdated(true)
           setPendingPlace({ ...place, geometry: { ...place.geometry, location: finalLocation } })
           setIsMapVisible(true)
-
+          
           // Clear the "just updated" state after a brief moment
           setTimeout(() => setAddressJustUpdated(false), 2000)
         })
@@ -579,6 +582,7 @@ export default function AddressPage() {
       setError("Failed to initialize Google Maps. Please try refreshing the page.")
     }
   }
+
 
   const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setAddress(e.target.value)
@@ -617,7 +621,7 @@ export default function AddressPage() {
         const existingData = localStorage.getItem("personalise_answers")
         const personaliseAnswers = existingData ? JSON.parse(existingData) : {}
         personaliseAnswers.billAmount = billValue
-
+        
         // Store all estimator data if available
         if (estimatorData.homeType) {
           personaliseAnswers.homeType = estimatorData.homeType
@@ -634,7 +638,7 @@ export default function AddressPage() {
         if (estimatorData.hasElectricShower !== undefined) {
           personaliseAnswers.hasElectricShower = estimatorData.hasElectricShower
         }
-
+        
         localStorage.setItem("personalise_answers", JSON.stringify(personaliseAnswers))
 
         // Navigate to loading page
@@ -819,7 +823,7 @@ export default function AddressPage() {
             componentRestrictions: { country: "ie" }
           },
           (results: any[], status: string) => {
-
+            
 
             if (status === "OK" && results?.length > 0) {
 
@@ -852,7 +856,7 @@ export default function AddressPage() {
                 return !isCountryOnly && !isIrelandOnly && !isTooGeneric
               })
 
-
+              
 
               if (filteredResults.length === 0) {
                 // Return coordinates as fallback
@@ -886,7 +890,7 @@ export default function AddressPage() {
                 bestResult = filteredResults[0]
               }
 
-
+              
 
               const foundEircode = bestResult.address_components?.find(
                 (component: any) => component.types.includes("postal_code")
@@ -937,7 +941,7 @@ export default function AddressPage() {
             // No component restrictions to get broader results
           },
           (results: any[], status: string) => {
-
+            
 
             if (status === "OK" && results?.length > 0) {
               // Look for any result that contains Ireland or Irish addresses
@@ -950,7 +954,7 @@ export default function AddressPage() {
                   )
               })
 
-
+              
 
               if (irishResults.length > 0) {
                 // Find the most specific Irish result
@@ -971,7 +975,7 @@ export default function AddressPage() {
                   bestResult = irishResults[0]
                 }
 
-
+                
 
                 if (bestResult && bestResult.formatted_address) {
                   resolve(bestResult.formatted_address)
@@ -990,6 +994,7 @@ export default function AddressPage() {
     }
   }
 
+
   // Get general location (city/county) as final fallback
   const getGeneralLocation = async (location: google.maps.LatLng) => {
     if (!window.google || !location) {
@@ -1006,7 +1011,7 @@ export default function AddressPage() {
             componentRestrictions: { country: "ie" }
           },
           (results: any[], status: string) => {
-
+            
 
             if (status === "OK" && results?.length > 0) {
               // Look for locality, administrative areas, or any descriptive location
@@ -1249,8 +1254,8 @@ export default function AddressPage() {
                             }, 100)
                           }}
                           className={`flex items-center gap-2 px-4 py-3 rounded-lg border-2 transition-all text-sm font-medium ${estimatorData.homeType === 'Terraced'
-                            ? 'bg-green-600 text-white border-green-600 shadow-lg'
-                            : 'bg-white text-gray-900 border-gray-300 hover:border-green-300 hover:shadow-md'
+                              ? 'bg-green-600 text-white border-green-600 shadow-lg'
+                              : 'bg-white text-gray-900 border-gray-300 hover:border-green-300 hover:shadow-md'
                             }`}
                         >
                           <div className={`w-3 h-3 rounded-full border-2 ${estimatorData.homeType === 'Terraced' ? 'border-white bg-white' : 'border-gray-400'}`}>
@@ -1266,8 +1271,8 @@ export default function AddressPage() {
                             }, 100)
                           }}
                           className={`flex items-center gap-2 px-4 py-3 rounded-lg border-2 transition-all text-sm font-medium ${estimatorData.homeType === 'Semi-detached'
-                            ? 'bg-green-600 text-white border-green-600 shadow-lg'
-                            : 'bg-white text-gray-900 border-gray-300 hover:border-green-300 hover:shadow-md'
+                              ? 'bg-green-600 text-white border-green-600 shadow-lg'
+                              : 'bg-white text-gray-900 border-gray-300 hover:border-green-300 hover:shadow-md'
                             }`}
                         >
                           <div className={`w-3 h-3 rounded-full border-2 ${estimatorData.homeType === 'Semi-detached' ? 'border-white bg-white' : 'border-gray-400'}`}>
@@ -1283,8 +1288,8 @@ export default function AddressPage() {
                             }, 100)
                           }}
                           className={`flex items-center gap-2 px-4 py-3 rounded-lg border-2 transition-all text-sm font-medium col-span-2 ${estimatorData.homeType === 'Detached'
-                            ? 'bg-green-600 text-white border-green-600 shadow-lg'
-                            : 'bg-white text-gray-900 border-gray-300 hover:border-green-300 hover:shadow-md'
+                              ? 'bg-green-600 text-white border-green-600 shadow-lg'
+                              : 'bg-white text-gray-900 border-gray-300 hover:border-green-300 hover:shadow-md'
                             }`}
                         >
                           <div className={`w-3 h-3 rounded-full border-2 ${estimatorData.homeType === 'Detached' ? 'border-white bg-white' : 'border-gray-400'}`}>
@@ -1312,8 +1317,8 @@ export default function AddressPage() {
                                 }, 100)
                               }}
                               className={`flex items-center gap-2 px-2 py-2 rounded-lg border-2 transition-all text-sm font-medium ${estimatorData.bedrooms === bedroom
-                                ? 'bg-green-600 text-white border-green-600 shadow-lg'
-                                : 'bg-white text-gray-900 border-gray-300 hover:border-green-300 hover:shadow-md'
+                                  ? 'bg-green-600 text-white border-green-600 shadow-lg'
+                                  : 'bg-white text-gray-900 border-gray-300 hover:border-green-300 hover:shadow-md'
                                 }`}
                             >
                               <div className={`w-3 h-3 rounded-full border-2 ${estimatorData.bedrooms === bedroom ? 'border-white bg-white' : 'border-gray-400'}`}>
@@ -1332,8 +1337,8 @@ export default function AddressPage() {
                                 }, 100)
                               }}
                               className={`flex items-center gap-2 px-2 py-2 rounded-lg border-2 transition-all text-sm font-medium ${estimatorData.bedrooms === bedroom
-                                ? 'bg-green-600 text-white border-green-600 shadow-lg'
-                                : 'bg-white text-gray-900 border-gray-300 hover:border-green-300 hover:shadow-md'
+                                  ? 'bg-green-600 text-white border-green-600 shadow-lg'
+                                  : 'bg-white text-gray-900 border-gray-300 hover:border-green-300 hover:shadow-md'
                                 }`}
                             >
                               <div className={`w-3 h-3 rounded-full border-2 ${estimatorData.bedrooms === bedroom ? 'border-white bg-white' : 'border-gray-400'}`}>
@@ -1356,8 +1361,8 @@ export default function AddressPage() {
                           <button
                             onClick={() => setEstimatorData({ ...estimatorData, hasEV: !estimatorData.hasEV })}
                             className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 transition-all text-sm font-medium ${estimatorData.hasEV
-                              ? 'bg-green-600 text-white border-green-600 shadow-lg'
-                              : 'bg-white text-gray-900 border-gray-300 hover:border-green-300 hover:shadow-md'
+                                ? 'bg-green-600 text-white border-green-600 shadow-lg'
+                                : 'bg-white text-gray-900 border-gray-300 hover:border-green-300 hover:shadow-md'
                               }`}
                           >
                             <div className={`w-3 h-3 rounded-sm border-2 ${estimatorData.hasEV ? 'border-white bg-white' : 'border-gray-400'} flex items-center justify-center`}>
@@ -1368,8 +1373,8 @@ export default function AddressPage() {
                           <button
                             onClick={() => setEstimatorData({ ...estimatorData, hasHeatPump: !estimatorData.hasHeatPump })}
                             className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 transition-all text-sm font-medium ${estimatorData.hasHeatPump
-                              ? 'bg-green-600 text-white border-green-600 shadow-lg'
-                              : 'bg-white text-gray-900 border-gray-300 hover:border-green-300 hover:shadow-md'
+                                ? 'bg-green-600 text-white border-green-600 shadow-lg'
+                                : 'bg-white text-gray-900 border-gray-300 hover:border-green-300 hover:shadow-md'
                               }`}
                           >
                             <div className={`w-3 h-3 rounded-sm border-2 ${estimatorData.hasHeatPump ? 'border-white bg-white' : 'border-gray-400'} flex items-center justify-center`}>
@@ -1380,8 +1385,8 @@ export default function AddressPage() {
                           <button
                             onClick={() => setEstimatorData({ ...estimatorData, hasElectricShower: !estimatorData.hasElectricShower })}
                             className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 transition-all text-sm font-medium col-span-2 ${estimatorData.hasElectricShower
-                              ? 'bg-green-600 text-white border-green-600 shadow-lg'
-                              : 'bg-white text-gray-900 border-gray-300 hover:border-green-300 hover:shadow-md'
+                                ? 'bg-green-600 text-white border-green-600 shadow-lg'
+                                : 'bg-white text-gray-900 border-gray-300 hover:border-green-300 hover:shadow-md'
                               }`}
                           >
                             <div className={`w-3 h-3 rounded-sm border-2 ${estimatorData.hasElectricShower ? 'border-white bg-white' : 'border-gray-400'} flex items-center justify-center`}>
@@ -1473,7 +1478,7 @@ export default function AddressPage() {
                     <h1 className="text-xl font-bold tracking-tight text-gray-900 sm:text-4xl">
                       Your Home's Electricity Usage
                     </h1>
-
+                   
                   </div>
 
                   {/* Why we ask this */}
@@ -1503,8 +1508,8 @@ export default function AddressPage() {
                             }, 100)
                           }}
                           className={`flex items-center gap-3 px-4 py-3 rounded-lg border-2 transition-all text-base font-medium ${estimatorData.homeType === 'Terraced'
-                            ? 'bg-green-600 text-white border-green-600 shadow-lg'
-                            : 'bg-white text-gray-900 border-gray-300 hover:border-green-300 hover:shadow-md'
+                              ? 'bg-green-600 text-white border-green-600 shadow-lg'
+                              : 'bg-white text-gray-900 border-gray-300 hover:border-green-300 hover:shadow-md'
                             }`}
                         >
                           <div className={`w-4 h-4 rounded-full border-2 ${estimatorData.homeType === 'Terraced' ? 'border-white bg-white' : 'border-gray-400'}`}>
@@ -1520,8 +1525,8 @@ export default function AddressPage() {
                             }, 100)
                           }}
                           className={`flex items-center gap-3 px-4 py-3 rounded-lg border-2 transition-all text-base font-medium ${estimatorData.homeType === 'Semi-detached'
-                            ? 'bg-green-600 text-white border-green-600 shadow-lg'
-                            : 'bg-white text-gray-900 border-gray-300 hover:border-green-300 hover:shadow-md'
+                              ? 'bg-green-600 text-white border-green-600 shadow-lg'
+                              : 'bg-white text-gray-900 border-gray-300 hover:border-green-300 hover:shadow-md'
                             }`}
                         >
                           <div className={`w-4 h-4 rounded-full border-2 ${estimatorData.homeType === 'Semi-detached' ? 'border-white bg-white' : 'border-gray-400'}`}>
@@ -1537,8 +1542,8 @@ export default function AddressPage() {
                             }, 100)
                           }}
                           className={`flex items-center gap-3 px-4 py-3 rounded-lg border-2 transition-all text-base font-medium ${estimatorData.homeType === 'Detached'
-                            ? 'bg-green-600 text-white border-green-600 shadow-lg'
-                            : 'bg-white text-gray-900 border-gray-300 hover:border-green-300 hover:shadow-md'
+                              ? 'bg-green-600 text-white border-green-600 shadow-lg'
+                              : 'bg-white text-gray-900 border-gray-300 hover:border-green-300 hover:shadow-md'
                             }`}
                         >
                           <div className={`w-4 h-4 rounded-full border-2 ${estimatorData.homeType === 'Detached' ? 'border-white bg-white' : 'border-gray-400'}`}>
@@ -1566,8 +1571,8 @@ export default function AddressPage() {
                                 }, 100)
                               }}
                               className={`flex items-center gap-2 px-3 py-3 rounded-lg border-2 transition-all text-base font-medium ${estimatorData.bedrooms === bedroom
-                                ? 'bg-green-600 text-white border-green-600 shadow-lg'
-                                : 'bg-white text-gray-900 border-gray-300 hover:border-green-300 hover:shadow-md'
+                                  ? 'bg-green-600 text-white border-green-600 shadow-lg'
+                                  : 'bg-white text-gray-900 border-gray-300 hover:border-green-300 hover:shadow-md'
                                 }`}
                             >
                               <div className={`w-4 h-4 rounded-full border-2 ${estimatorData.bedrooms === bedroom ? 'border-white bg-white' : 'border-gray-400'}`}>
@@ -1586,8 +1591,8 @@ export default function AddressPage() {
                                 }, 100)
                               }}
                               className={`flex items-center gap-2 px-3 py-3 rounded-lg border-2 transition-all text-base font-medium ${estimatorData.bedrooms === bedroom
-                                ? 'bg-green-600 text-white border-green-600 shadow-lg'
-                                : 'bg-white text-gray-900 border-gray-300 hover:border-green-300 hover:shadow-md'
+                                  ? 'bg-green-600 text-white border-green-600 shadow-lg'
+                                  : 'bg-white text-gray-900 border-gray-300 hover:border-green-300 hover:shadow-md'
                                 }`}
                             >
                               <div className={`w-4 h-4 rounded-full border-2 ${estimatorData.bedrooms === bedroom ? 'border-white bg-white' : 'border-gray-400'}`}>
@@ -1610,8 +1615,8 @@ export default function AddressPage() {
                           <button
                             onClick={() => setEstimatorData({ ...estimatorData, hasEV: !estimatorData.hasEV })}
                             className={`flex items-center gap-3 px-4 py-3 rounded-lg border-2 transition-all text-base font-medium ${estimatorData.hasEV
-                              ? 'bg-green-600 text-white border-green-600 shadow-lg'
-                              : 'bg-white text-gray-900 border-gray-300 hover:border-green-300 hover:shadow-md'
+                                ? 'bg-green-600 text-white border-green-600 shadow-lg'
+                                : 'bg-white text-gray-900 border-gray-300 hover:border-green-300 hover:shadow-md'
                               }`}
                           >
                             <div className={`w-4 h-4 rounded-sm border-2 ${estimatorData.hasEV ? 'border-white bg-white' : 'border-gray-400'} flex items-center justify-center`}>
@@ -1622,8 +1627,8 @@ export default function AddressPage() {
                           <button
                             onClick={() => setEstimatorData({ ...estimatorData, hasHeatPump: !estimatorData.hasHeatPump })}
                             className={`flex items-center gap-3 px-4 py-3 rounded-lg border-2 transition-all text-base font-medium ${estimatorData.hasHeatPump
-                              ? 'bg-green-600 text-white border-green-600 shadow-lg'
-                              : 'bg-white text-gray-900 border-gray-300 hover:border-green-300 hover:shadow-md'
+                                ? 'bg-green-600 text-white border-green-600 shadow-lg'
+                                : 'bg-white text-gray-900 border-gray-300 hover:border-green-300 hover:shadow-md'
                               }`}
                           >
                             <div className={`w-4 h-4 rounded-sm border-2 ${estimatorData.hasHeatPump ? 'border-white bg-white' : 'border-gray-400'} flex items-center justify-center`}>
@@ -1634,8 +1639,8 @@ export default function AddressPage() {
                           <button
                             onClick={() => setEstimatorData({ ...estimatorData, hasElectricShower: !estimatorData.hasElectricShower })}
                             className={`flex items-center gap-3 px-4 py-3 rounded-lg border-2 transition-all text-base font-medium ${estimatorData.hasElectricShower
-                              ? 'bg-green-600 text-white border-green-600 shadow-lg'
-                              : 'bg-white text-gray-900 border-gray-300 hover:border-green-300 hover:shadow-md'
+                                ? 'bg-green-600 text-white border-green-600 shadow-lg'
+                                : 'bg-white text-gray-900 border-gray-300 hover:border-green-300 hover:shadow-md'
                               }`}
                           >
                             <div className={`w-4 h-4 rounded-sm border-2 ${estimatorData.hasElectricShower ? 'border-white bg-white' : 'border-gray-400'} flex items-center justify-center`}>
@@ -1743,10 +1748,10 @@ export default function AddressPage() {
                         value={address}
                         onChange={handleAddressChange}
                         className={`h-12 md:h-14 text-base md:text-lg pl-4 md:pl-6 pr-12 md:pr-16 border-2 rounded-2xl focus:border-green-500 focus:ring-4 focus:ring-green-500/10 bg-white shadow-sm hover:shadow-md transition-all duration-200 ${isGeocoding
-                          ? 'border-blue-300 bg-blue-50'
-                          : addressJustUpdated
-                            ? 'border-green-300 bg-green-50 ring-2 ring-green-200'
-                            : 'border-gray-200'
+                            ? 'border-blue-300 bg-blue-50'
+                            : addressJustUpdated
+                              ? 'border-green-300 bg-green-50 ring-2 ring-green-200'
+                              : 'border-gray-200'
                           }`}
                         disabled={isLoading}
                       />
@@ -1956,7 +1961,9 @@ export default function AddressPage() {
         <>
           {/* Template Switching Logic */}
           {(() => {
-            const templateId = branding?.address_template || 0
+            console.log("Branding: ", branding)
+            if (!branding) return null
+            const templateId = branding?.address_template || 1
             const templateProps = {
               branding: branding as Branding,
               address,
@@ -1977,7 +1984,7 @@ export default function AddressPage() {
 
             switch (templateId) {
               case 1:
-                return <AddressTemplate0 {...templateProps} />
+                return <AddressTemplate1 {...templateProps} />
               case 2:
                 return <AddressTemplate2 {...templateProps} />
               case 3:

@@ -37,8 +37,8 @@ export const AddressTemplate0 = ({
       <div className="max-w-xl w-full">
         <div className="text-center mb-6">
           <Image
-            src={branding.logo}
-            alt={branding.name}
+            src={branding?.logo}
+            alt={branding?.name}
             width={80}
             height={40}
             className="h-16 sm:h-20 mx-auto mb-4 object-contain"
@@ -135,15 +135,15 @@ export const AddressTemplate0 = ({
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
               <div className="flex-1 flex items-center space-x-2 p-3 bg-gray-50 rounded-lg border border-gray-100">
                 <Image
-                  src={branding.logo}
-                  alt={branding.name}
+                  src={branding?.logo}
+                  alt={branding?.name}
                   width={24}
                   height={24}
                   className="h-6 w-auto flex-shrink-0 object-contain"
                 />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center space-x-1">
-                    <span className="font-semibold text-gray-900 text-xs">{branding.reviews?.rating || "5.0"}</span>
+                    <span className="font-semibold text-gray-900 text-xs">{branding?.reviews?.rating || "5.0"}</span>
                     <div className="flex text-yellow-400">
                       {[...Array(5)].map((_, i) => (
                         <svg key={i} className="w-3 h-3 fill-current" viewBox="0 0 20 20">
@@ -152,7 +152,7 @@ export const AddressTemplate0 = ({
                       ))}
                     </div>
                   </div>
-                  <p className="text-xs text-gray-600">({branding.reviews?.count || "86"} reviews)</p>
+                  <p className="text-xs text-gray-600">({branding?.reviews?.count || "86"} reviews)</p>
                 </div>
                 <Image
                   src="/google-logo.png"
@@ -207,8 +207,8 @@ export const AddressTemplate1 = ({
       <div className="max-w-lg w-full">
         <div className="text-center mb-8">
           <Image
-            src={branding.logo}
-            alt={`${branding.name} Logo`}
+            src={branding?.logo}
+            alt={`${branding?.name} Logo`}
             width={120}
             height={60}
             className="h-14 sm:h-18 mx-auto mb-6 object-contain"
@@ -303,9 +303,9 @@ export const AddressTemplate1 = ({
             <div className="mt-8 pt-6 border-t border-gray-200">
               <div className="flex items-center justify-between text-sm">
                 <div className="flex items-center space-x-2">
-                  <Image src={branding.logo} alt={branding.name} width={20} height={20} className="h-5 w-auto object-contain" />
-                  <span className="font-semibold">{branding.reviews?.rating || "5.0"} ⭐⭐⭐⭐⭐</span>
-                  <span className="text-gray-500">({branding.reviews?.count || "86"} reviews)</span>
+                  <Image src={branding?.logo} alt={branding?.name} width={20} height={20} className="h-5 w-auto object-contain" />
+                  <span className="font-semibold">{branding?.reviews?.rating || "5.0"} ⭐⭐⭐⭐⭐</span>
+                  <span className="text-gray-500">({branding?.reviews?.count || "86"} reviews)</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Image
@@ -349,7 +349,7 @@ export const AddressTemplate2 = ({
       <div className="max-w-xl w-full">
         <div className="text-center mb-6">
           <Image
-            src={branding.logo}
+            src={branding?.logo}
             alt={`${branding.name} Logo`}
             width={80}
             height={40}
@@ -447,8 +447,8 @@ export const AddressTemplate2 = ({
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
                 <div className="flex items-center space-x-2 mb-2">
-                  <Image src={branding.logo} alt={branding.name} width={24} height={24} className="h-6 w-auto object-contain" />
-                  <span className="font-bold text-gray-900">{branding.reviews?.rating || "5.0"}</span>
+                  <Image src={branding?.logo} alt={branding?.name} width={24} height={24} className="h-6 w-auto object-contain" />
+                  <span className="font-bold text-gray-900">{branding?.reviews?.rating || "5.0"}</span>
                 </div>
                 <div className="flex text-yellow-400 mb-1">
                   {[...Array(5)].map((_, i) => (
@@ -457,7 +457,7 @@ export const AddressTemplate2 = ({
                     </svg>
                   ))}
                 </div>
-                <p className="text-xs text-gray-600 font-medium">{branding.reviews?.count || "86"} REVIEWS</p>
+                <p className="text-xs text-gray-600 font-medium">{branding?.reviews?.count || "86"} REVIEWS</p>
               </div>
 
               <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
@@ -505,8 +505,8 @@ export const AddressTemplate3 = ({
       <div className="max-w-lg w-full space-y-4">
         <div className="bg-white rounded-2xl shadow-lg border border-purple-100 p-6 text-center">
           <Image
-            src={branding.logo}
-            alt={`${branding.name} Logo`}
+            src={branding?.logo}
+            alt={`${branding?.name} Logo`}
             width={80}
             height={40}
             className="h-14 mx-auto mb-4 object-contain"
@@ -596,8 +596,8 @@ export const AddressTemplate3 = ({
         <div className="grid grid-cols-2 gap-4">
           <div className="bg-white rounded-xl shadow-md border border-purple-100 p-4">
             <div className="flex items-center space-x-2 mb-2">
-              <Image src={branding.logo} alt={branding.name} width={20} height={20} className="h-5 w-auto object-contain" />
-              <span className="font-bold text-gray-900 text-sm">{branding.reviews?.rating || "5.0"}</span>
+              <Image src={branding?.logo} alt={branding?.name} width={20} height={20} className="h-5 w-auto object-contain" />
+              <span className="font-bold text-gray-900 text-sm">{branding?.reviews?.rating || "5.0"}</span>
             </div>
             <div className="flex text-yellow-400 mb-1">
               {[...Array(5)].map((_, i) => (
@@ -606,7 +606,7 @@ export const AddressTemplate3 = ({
                 </svg>
               ))}
             </div>
-            <p className="text-xs text-gray-600">{branding.reviews?.count || "86"} Reviews</p>
+            <p className="text-xs text-gray-600">{branding?.reviews?.count || "86"} Reviews</p>
           </div>
 
           <div className="bg-white rounded-xl shadow-md border border-purple-100 p-4">
@@ -652,8 +652,8 @@ export const AddressTemplate4 = ({
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
           <Image
-            src={branding.logo}
-            alt={branding.name}
+            src={branding?.logo}
+            alt={branding?.name}
             width={100}
             height={50}
             className="h-12 mx-auto mb-6 object-contain"
@@ -732,9 +732,9 @@ export const AddressTemplate4 = ({
 
             <div className="flex items-center justify-center space-x-6 text-sm">
               <div className="flex items-center space-x-1">
-                <Image src={branding.logo} alt={branding.name} width={16} height={16} className="h-4 w-auto object-contain" />
-                <span className="font-semibold">{branding.reviews?.rating || "5.0"} ⭐</span>
-                <span className="text-gray-500">({branding.reviews?.count || "86"})</span>
+                <Image src={branding?.logo} alt={branding?.name} width={16} height={16} className="h-4 w-auto object-contain" />
+                <span className="font-semibold">{branding?.reviews?.rating || "5.0"} ⭐</span>
+                <span className="text-gray-500">({branding?.reviews?.count || "86"})</span>
               </div>
               <div className="flex items-center space-x-1">
                 <Image
@@ -779,13 +779,13 @@ export const AddressTemplate5 = ({
           <div className="bg-gradient-to-r from-blue-600 to-green-600 p-6 text-white text-center">
             <div className="flex items-center justify-center gap-3 mb-4">
               <Image
-                src={branding.logo}
-                alt={branding.name}
+                src={branding?.logo}
+                alt={branding?.name}
                 width={50}
                 height={50}
                 className="h-12 object-contain bg-white rounded-lg p-2"
               />
-              <h1 className="text-2xl font-bold">{branding.name}</h1>
+              <h1 className="text-2xl font-bold">{branding?.name}</h1>
             </div>
             <p className="text-blue-100 text-lg">
               Professional Solar Solutions for Your Home
@@ -880,8 +880,8 @@ export const AddressTemplate5 = ({
                   <div className="text-gray-600 text-xs">We Handle Process</div>
                 </div>
                 <div>
-                  <div className="font-semibold text-gray-900">{branding.reviews?.rating || "5.0"}★</div>
-                  <div className="text-gray-600 text-xs">({branding.reviews?.count || "86"} Reviews)</div>
+                  <div className="font-semibold text-gray-900">{branding?.reviews?.rating || "5.0"}★</div>
+                  <div className="text-gray-600 text-xs">({branding?.reviews?.count || "86"} Reviews)</div>
                 </div>
               </div>
             </div>
@@ -1007,30 +1007,30 @@ export const AddressTemplate6 = ({
               {/* Google Reviews */}
               <div className="mt-4 mb-3">
                 {/* Google Reviews - Only show if reviews data exists */}
-                {branding.reviews && (
+                {branding?.reviews && (
                   <div 
-                    onClick={() => branding.reviews?.url && window.open(branding.reviews.url, "_blank")}
+                    onClick={() => branding?.reviews?.url && window.open(branding?.reviews?.url, "_blank")}
                     className={`flex items-center justify-start space-x-3 bg-white border border-gray-100/50 rounded-2xl p-4 shadow-lg shadow-blue-500/5 hover:shadow-xl hover:shadow-blue-500/10 hover:-translate-y-0.5 transition-all duration-300 backdrop-blur-sm ${branding.reviews.url ? 'cursor-pointer' : ''}`}
                   >
                     <Image
-                      src={branding.logo}
-                      alt={branding.name}
+                      src={branding?.logo}
+                      alt={branding?.name}
                       width={60}
                       height={30}
                       className="h-8 object-contain"
                     />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1 mb-1 flex-wrap">
-                        <span className="text-sm font-bold text-gray-900 whitespace-nowrap">{branding.reviews.rating}</span>
+                        <span className="text-sm font-bold text-gray-900 whitespace-nowrap">{branding?.reviews?.rating}</span>
                         <div className="flex text-yellow-400 text-xs">
                           {"★★★★★".split("").map((star, i) => (
                             <span key={i}>{star}</span>
                           ))}
                         </div>
-                        <span className="text-xs text-gray-600 whitespace-nowrap">({branding.reviews.count} reviews)</span>
+                        <span className="text-xs text-gray-600 whitespace-nowrap">({branding?.reviews?.count} reviews)</span>
                       </div>
-                      {branding.reviews.warranty && (
-                        <div className="text-xs text-gray-600">{branding.reviews.warranty}</div>
+                      {branding?.reviews?.warranty && (
+                        <div className="text-xs text-gray-600">{branding?.reviews?.warranty}</div>
                       )}
                     </div>
                     <Image
