@@ -954,7 +954,7 @@ export default function SolarEnergyPlanner() {
         "sub_domain": resolveBrandSlugFromHostname(typeof window !== "undefined" ? window.location.hostname : ""),
         "required_fields": ["emailBranding"]
       }).then(async (res) => {
-
+        const company_res=res?.data?.data;
         // Prepare API request body with the fetched email branding
         const requestBody = {
           email: email.trim(),
@@ -962,7 +962,17 @@ export default function SolarEnergyPlanner() {
           solar_plan_data: solarPlanData ? JSON.parse(solarPlanData) : null,
           personalise_answers: personaliseAnswers ? JSON.parse(personaliseAnswers) : null,
           selectedLocation: selectedLocation ? JSON.parse(selectedLocation) : null,
-          branding: res?.data?.data?.emailBranding,
+          branding: {
+            ...company_res.emailBranding,
+            company_name: company_res.name,
+            company_tagline: company_res.description,
+            support_email: company_res.email,
+            phone_number: company_res.phone,
+            phone_number_clean: company_res.phone,
+            platform_name: 'Voltflo',
+            website_url: 'https://renewables-ireland.voltflo.ie',
+            backend_url: process.env.NEXT_PUBLIC_API_BASE_URL_PRODUCTION
+          },
           company_id: 3,
         };
 
