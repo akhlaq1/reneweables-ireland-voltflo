@@ -250,7 +250,7 @@ export function calculateSEAIGrant(panelCount: number, wattsPerPanel: number = 4
 // Brand definitions
 const brands: Record<string, Branding> = {
   renewables: {
-    slug: 'renewables',
+    slug: 'renewables-ireland',
     name: 'Renewables Ireland Limited',
     website: 'https://renewables-ireland.ie',
     email: 'info@renewables-ireland.ie',
@@ -415,6 +415,7 @@ const brands: Record<string, Branding> = {
     email: 'info@renewables-ireland.ie',
     phone: '+353 (0)1 298 6140',
     logo: '/renewables.png',
+    logo_with_name: '/logo_with_name.png',
     description: "Example configuration using base + incremental pricing",
     address_template: 1, // Use template 1
     colors: { primary: '#1d4ed8', secondary: '#059669', accent: '#f59e0b' },
@@ -529,7 +530,7 @@ const brands: Record<string, Branding> = {
 };
 
 export function resolveBrandSlugFromHostname(host?: string): string {
-  return 'jr';
+  return 'renewables-ireland';
 }
 
 // create a async api function

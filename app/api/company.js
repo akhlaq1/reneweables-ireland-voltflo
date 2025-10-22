@@ -2,7 +2,7 @@ import api from "./api";
 
 const companyService = {
   getCompanyDatabySubDomain(payload) {
-    return api.post(`http://localhost:5000/companies/get_company_data`, payload);
+    return api.post(`${process.env.NEXT_PUBLIC_API_BASE_URL_CRM_PRODUCTION}/companies/get_company_data`, payload);
   },
 
    // Generic function to get any company data

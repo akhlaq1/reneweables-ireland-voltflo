@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { useState, useEffect, useCallback, useMemo, useRef } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import {
   Sun,
@@ -39,7 +39,6 @@ import {
   Phone,
   Eye,
   Flame,
-  FileChartColumnIncreasing
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -58,92 +57,7 @@ import api from "@/app/api/api"
 import { AppHeader } from "@/components/app-header"
 import { ProgressBars } from "@/components/progress-bars"
 import { setAppNavigation } from "@/lib/navigation-tracker"
-import { calculateSystemBaseCost, calculateSEAIGrant, resolveBrandSlugFromHostname, Branding, EquipmentOption, getBranding } from "@/lib/branding"
-
-// Helper function to extract filename from datasheet path
-const getDownloadFilename = (datasheetPath: string | undefined, fallbackName: string): string => {
-  if (!datasheetPath) return fallbackName
-  const parts = datasheetPath.split('/')
-  return parts[parts.length - 1] || fallbackName
-}
-
-// Custom Dropdown Component for Desktop
-interface CustomDropdownProps {
-  value: string
-  options: any[]
-  onChange: (value: string) => void
-  isOpen: boolean
-  onOpen: () => void
-  onClose: () => void
-  placeholder?: string
-  renderOption: (option: any) => React.ReactNode
-  renderValue: (option: any) => React.ReactNode
-}
-
-const CustomDropdown = ({ value, options, onChange, isOpen, onOpen, onClose, placeholder, renderOption, renderValue }: CustomDropdownProps) => {
-  const selectedOption = options.find(option => option.id === value)
-  const dropdownRef = useRef<HTMLDivElement>(null)
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        if (isOpen) {
-          onClose()
-        }
-      }
-    }
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside)
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [isOpen, onClose])
-
-  const handleToggle = () => {
-    if (isOpen) {
-      onClose()
-    } else {
-      onOpen()
-    }
-  }
-
-  return (
-    <div className="relative" ref={dropdownRef}>
-      <button
-        type="button"
-        className="w-full h-8 px-3 py-1 text-left text-xs bg-white border border-gray-300 rounded-md shadow-sm hover:border-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none flex items-center justify-between"
-        onClick={handleToggle}
-      >
-        <span className="truncate">
-          {selectedOption ? renderValue(selectedOption) : placeholder}
-        </span>
-        <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-      </button>
-      
-      {isOpen && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-auto">
-          {options.map((option) => (
-            <button
-              key={option.id}
-              type="button"
-              className="w-full px-3 py-2 text-left text-xs hover:bg-gray-100 focus:bg-gray-100 focus:outline-none first:rounded-t-md last:rounded-b-md"
-              onClick={() => {
-                onChange(option.id)
-                onClose()
-              }}
-            >
-              {renderOption(option)}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
+import { calculateSystemBaseCost, resolveBrandSlugFromHostname, Branding, EquipmentOption } from "@/lib/branding"
 import companyService from "../api/company"
 
 // ProgressStep component for navigation
@@ -183,7 +97,7 @@ const energyUsagePatterns = [
 export default function SolarEnergyPlanner() {
   const router = useRouter()
   const isMobile = useIsMobile()
-  const default_branding = getBranding("renewables-ireland")
+  // const branding = getBranding()
   const [branding, setBranding] = useState<Branding | null>(null)
 
   // Equipment options from branding
@@ -230,42 +144,7 @@ export default function SolarEnergyPlanner() {
   const [customAnnualBill, setCustomAnnualBill] = useState(2640)
   const [billInputMode, setBillInputMode] = useState<"annual" | "monthly">("annual")
   const [perPanelGeneration, setPerPanelGeneration] = useState(410) // Default fallback value
-  
-  // Custom dropdown states for desktop
-  const [showSolarPanelDropdown, setShowSolarPanelDropdown] = useState(false)
-  const [showInverterDropdown, setShowInverterDropdown] = useState(false)
-  const [showBatteryDropdown, setShowBatteryDropdown] = useState(false)
-  const [showEVChargerDropdown, setShowEVChargerDropdown] = useState(false)
 
-  // Helper function to close all dropdowns
-  const closeAllDropdowns = () => {
-    setShowSolarPanelDropdown(false)
-    setShowInverterDropdown(false)
-    setShowBatteryDropdown(false)
-    setShowEVChargerDropdown(false)
-  }
-
-  // Helper functions to toggle dropdowns while closing others
-  const toggleSolarPanelDropdown = () => {
-    closeAllDropdowns()
-    setShowSolarPanelDropdown(true)
-  }
-
-  const toggleInverterDropdown = () => {
-    closeAllDropdowns()
-    setShowInverterDropdown(true)
-  }
-
-  const toggleBatteryDropdown = () => {
-    closeAllDropdowns()
-    setShowBatteryDropdown(true)
-  }
-
-  const toggleEVChargerDropdown = () => {
-    closeAllDropdowns()
-    setShowEVChargerDropdown(true)
-  }
-  
   // Enhanced Savings Modal states
   const [showSavingsModal, setShowSavingsModal] = useState(false)
   const [savingsModalTab, setSavingsModalTab] = useState("solarOnly")
@@ -283,10 +162,10 @@ export default function SolarEnergyPlanner() {
 
   const getCompanyData = async () => {
     const payload={
-      "sub_domain": resolveBrandSlugFromHostname(typeof window !== "undefined" ? window.location.hostname : "") || "renewables-ireland",
+      "sub_domain": "jr",
       "required_fields": ["equipment", "pricing", "energy", "email"]
     }
-   await companyService.getCompanyDatabySubDomain(payload).then((res) => {
+    await companyService.getCompanyDatabySubDomain(payload).then((res) => {
       const response= res?.data?.data
       setBranding({
         ...branding as Branding, 
@@ -313,8 +192,6 @@ export default function SolarEnergyPlanner() {
       setBatteryOptions(response.equipment.batteries)
       setEVChargerOptions(response.equipment.evChargers)
 
-      console.log("Equipments: ",response.equipment )
-
       if (response.equipment.solarPanels.length > 0) {
         setSelectedSolarPanel(response.equipment.solarPanels[0])
         
@@ -329,37 +206,8 @@ export default function SolarEnergyPlanner() {
         setSelectedEVCharger(response.equipment.evChargers[0])
       }
 
-    }).catch(async (e) => { 
-      console.error('Error fetching company data from API:', e);
-      
-      // Fallback: Get equipment data by hostname using getBranding
-     
-        const fallbackBranding = await getBranding();
-        console.log('Using fallback branding data:', fallbackBranding);
-        
-        // Set the branding data
-        setBranding(fallbackBranding);
-        
-        // Set equipment options
-        setSolarPanelOptions(fallbackBranding.equipment.solarPanels);
-        setInverterOptions(fallbackBranding.equipment.inverters);
-        setBatteryOptions(fallbackBranding.equipment.batteries);
-        setEVChargerOptions(fallbackBranding.equipment.evChargers);
-        
-        // Set selected equipment from the first available options
-        if (fallbackBranding.equipment.solarPanels.length > 0) {
-          setSelectedSolarPanel(fallbackBranding.equipment.solarPanels[0]);
-        }
-        if (fallbackBranding.equipment.inverters.length > 0) {
-          setSelectedInverter(fallbackBranding.equipment.inverters[0]);
-        }
-        if (fallbackBranding.equipment.batteries.length > 0) {
-          setSelectedBattery(fallbackBranding.equipment.batteries[0]);
-        }
-        if (fallbackBranding.equipment.evChargers.length > 0) {
-          setSelectedEVCharger(fallbackBranding.equipment.evChargers[0]);
-        }
     })
+    
   }
  
 
@@ -452,7 +300,7 @@ export default function SolarEnergyPlanner() {
 
   const totalPanelCount = basePanelCount
 
-  const recommendedPanelCount = businessProposal?.system_size ? Math.round(businessProposal.system_size / parseFloat(process.env.NEXT_PUBLIC_PANEL_WATTAGE || '0.45')) : 12
+  const recommendedPanelCount = businessProposal?.system_size ? Math.round(businessProposal.system_size / parseFloat(process.env.NEXT_PUBLIC_PANEL_WATTAGE || '0.44')) : 12
 
   // Calculations - Make system cost dynamic based on BASE panel count only (EV/heat pump don't affect price)
   // const basePanelThreshold = branding?.pricing.basePanelThreshold
@@ -535,23 +383,17 @@ export default function SolarEnergyPlanner() {
   const evChargerCost = includeEVChargerEquipment ? (selectedEVCharger?.price || 0) : 0
 
   const totalSystemCost = systemBaseCost + batteryCost + evChargerCost
-  const seaiGrant = isEligibleForSEAIGrant ? calculateSEAIGrant(basePanelCount) : 0
+  const seaiGrant = isEligibleForSEAIGrant ? branding?.pricing?.seaiGrant || 0 : 0
   const evChargerGrant = includeEVChargerEquipment ? (selectedEVCharger?.grant || 0) : 0
   const totalGrants = seaiGrant + evChargerGrant
   const finalPrice = totalSystemCost - totalGrants
 
-  // Calculate payback cost (excluding EV charger cost and grant)
-  const paybackSystemCost = systemBaseCost + batteryCost
-  const paybackGrants = seaiGrant
-  const paybackPrice = paybackSystemCost - paybackGrants
 
   console.log("Per Panel Generation:", perPanelGeneration);
 
   // totalAnnualSavings now computed above using scenario fractions (0 batteries: 30/70, 1 battery: 70/30, 2 batteries: 90/10)
 
-  const paybackPeriod = useMemo(() => 
-    totalAnnualSavings > 0 ? (paybackPrice / totalAnnualSavings).toFixed(1) : '0.0'
-  , [paybackPrice, totalAnnualSavings])
+  const paybackPeriod = (finalPrice / totalAnnualSavings).toFixed(1)
   const billOffset = includeBattery ? 94 : 65
   const gridIndependence = batteryCount >= 2 ? 95 : (includeBattery ? 90 : 30)
   const gridRelianceWithoutBattery = 70 // Changed from 65 to 70
@@ -831,7 +673,7 @@ export default function SolarEnergyPlanner() {
 
       // System Specifications
       systemSpecs: {
-        systemSizeKwp: (totalPanelCount * parseFloat(process.env.NEXT_PUBLIC_PANEL_WATTAGE || '0.45')),
+        systemSizeKwp: (totalPanelCount * parseFloat(process.env.NEXT_PUBLIC_PANEL_WATTAGE || '0.44')),
         annualPVGenerated: annualPVGeneration, // Total annual PV generation from all panels
         perPanelGeneration: perPanelGeneration, // Per panel generation calculated from base panels
         originalBusinessProposalPanelCount: originalBusinessProposalPanelCount, // Store the original panel count for scaling
@@ -873,7 +715,7 @@ export default function SolarEnergyPlanner() {
         solarPanel: {
           ...selectedSolarPanel,
           quantity: totalPanelCount,
-          totalWattage: totalPanelCount * 450, // Assuming 450W panels
+          totalWattage: totalPanelCount * 440, // Assuming 440W panels
         },
         inverter: selectedInverter,
         battery: includeBattery ? {
@@ -908,7 +750,7 @@ export default function SolarEnergyPlanner() {
         planCreatedAt: new Date().toISOString(),
         planVersion: "1.0",
         businessProposal: businessProposal ? {
-          systemSize: (totalPanelCount * parseFloat(process.env.NEXT_PUBLIC_PANEL_WATTAGE || '0.45')).toFixed(1),
+          systemSize: (totalPanelCount * parseFloat(process.env.NEXT_PUBLIC_PANEL_WATTAGE || '0.44')).toFixed(1),
           electricityBillSavings: businessProposal.electricity_bill_savings,
           monthlyPerformance: businessProposal.monthly_performance,
         } : null,
@@ -963,7 +805,6 @@ export default function SolarEnergyPlanner() {
           personalise_answers: personaliseAnswers ? JSON.parse(personaliseAnswers) : null,
           selectedLocation: selectedLocation ? JSON.parse(selectedLocation) : null,
           branding: res?.data?.data?.emailBranding,
-          company_id: 3,
         };
 
         // console.log('Submitting plan data:', requestBody);
@@ -1018,7 +859,7 @@ export default function SolarEnergyPlanner() {
         // Calculate basePanelCount from system_size and panel wattage
         if (proposalData.system_size) {
           const systemSizeKw = parseFloat(proposalData.system_size)
-          const panelWattageKw = parseFloat(process.env.NEXT_PUBLIC_PANEL_WATTAGE || '0.45')
+          const panelWattageKw = parseFloat(process.env.NEXT_PUBLIC_PANEL_WATTAGE || '0.44')
           const calculatedPanelCount = Math.round(systemSizeKw / panelWattageKw)
           setBasePanelCount(calculatedPanelCount)
           setOriginalBusinessProposalPanelCount(calculatedPanelCount) // Store the original count for scaling
@@ -1396,7 +1237,6 @@ export default function SolarEnergyPlanner() {
           scenarios={scenarios}
           showMaths={showMaths}
           setShowMaths={setShowMaths}
-          branding={branding}
         />
       ) : (
         // ==================== DESKTOP VIEW START ====================
@@ -1411,31 +1251,31 @@ export default function SolarEnergyPlanner() {
                 </p>
               </div>
 
-          <div className="grid lg:grid-cols-3 gap-6 md:gap-8" style={{alignItems: 'start'}}>
-            {/* Main Content */}
-            <div className="lg:col-span-2 space-y-6 md:space-y-8" style={{contain: 'layout'}}>
-              {/* Enhanced Hero Image */}
-              <div className="relative overflow-hidden rounded-xl">
-                <div className="relative h-48 md:h-80">
-                  <img
-                    src="/images/plan-hero-image.png"
-                    alt="Modern home with comprehensive solar system and EV charging"
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
-                  <div className="absolute bottom-4 left-4 right-4 text-white">
-                    <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-                      <div>
-                        <h2 className="text-xl md:text-2xl font-bold mb-1">Complete Energy Independence</h2>
-                        <p className="text-sm md:text-base opacity-90">Solar + Battery + EV Charging Solution</p>
-                      </div>
-                      <div className="mt-2 md:mt-0 bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-medium">
-                      {totalPanelCount} Panels | {(totalPanelCount * parseFloat(process.env.NEXT_PUBLIC_PANEL_WATTAGE || '0.45')).toFixed(1)} kWp System
+              <div className="grid lg:grid-cols-3 gap-6 md:gap-8">
+                {/* Main Content */}
+                <div className="lg:col-span-2 space-y-6 md:space-y-8">
+                  {/* Enhanced Hero Image */}
+                  <div className="relative overflow-hidden rounded-xl">
+                    <div className="relative h-48 md:h-80">
+                      <img
+                        src="/images/plan-hero-image.png"
+                        alt="Modern home with comprehensive solar system and EV charging"
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+                      <div className="absolute bottom-4 left-4 right-4 text-white">
+                        <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+                          <div>
+                            <h2 className="text-xl md:text-2xl font-bold mb-1">Complete Energy Independence</h2>
+                            <p className="text-sm md:text-base opacity-90">Solar + Battery + EV Charging Solution</p>
+                          </div>
+                          <div className="mt-2 md:mt-0 bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-medium">
+                            {totalPanelCount} Panels | {(totalPanelCount * parseFloat(process.env.NEXT_PUBLIC_PANEL_WATTAGE || '0.44')).toFixed(1)} kWp System
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              </div>
 
                   {/* Section 1: Your System Builder */}
                   <Card>
@@ -1524,132 +1364,126 @@ export default function SolarEnergyPlanner() {
                           </div>
                         )}
 
-                    {/* Visual Equipment Display */}
-                    {/* Compact Equipment Selection for Solar */}
-                    <Collapsible open={showSolarEquipment} onOpenChange={setShowSolarEquipment}>
-                      <CollapsibleTrigger asChild>
-                        <Button variant="outline" className="w-full justify-between text-sm bg-transparent">
-                          <span>Recommended Equipment</span>
-                          <ChevronDown
-                            className={`w-4 h-4 transition-transform ${showSolarEquipment ? "rotate-180" : ""}`}
-                          />
-                        </Button>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent className="space-y-4 mt-4">
-                        {/* Solar Panel Selection */}
-                        <div className="grid md:grid-cols-4 gap-3 p-3 bg-white rounded-lg border">
-                          <div className="md:col-span-1">
-                            <img
-                              src={selectedSolarPanel?.image || `/images/solar-panels/${selectedSolarPanel?.id}.png`}
-                              alt={selectedSolarPanel?.name}
-                              className="w-full h-32 object-contain rounded bg-gray-100 p-1"
-                            />
-                          </div>
-                          <div className="md:col-span-3 space-y-2">
-                            <div className="flex items-center justify-between">
-                              <h4 className="font-medium text-sm">Solar Panel</h4>
-                            </div>
-                            <CustomDropdown
-                              value={selectedSolarPanel?.id || ""}
-                              options={solarPanelOptions}
-                              onChange={(value) => {
-                                const panel = solarPanelOptions.find((p) => p.id === value)
-                                if (panel) setSelectedSolarPanel(panel)
-                              }}
-                              isOpen={showSolarPanelDropdown}
-                              onOpen={toggleSolarPanelDropdown}
-                              onClose={closeAllDropdowns}
-                              renderValue={(panel) => (
-                                <span className="text-xs">
-                                  {panel.name}{" "}
-                                  {(panel.priceAdjustment || 0) !== 0 &&
-                                    `(${(panel.priceAdjustment || 0) > 0 ? "+" : ""}€${panel.priceAdjustment || 0})`}
-                                </span>
-                              )}
-                              renderOption={(panel) => (
-                                <div className="flex items-center justify-between w-full">
-                                  <span className="text-xs">
-                                    {panel.name}{" "}
-                                    {(panel.priceAdjustment || 0) !== 0 &&
-                                      `(${(panel.priceAdjustment || 0) > 0 ? "+" : ""}€${panel.priceAdjustment || 0})`}
-                                  </span>
-                                  {panel.recommended && (
-                                    <Badge className="ml-1 bg-green-600 text-xs px-1">Recommended</Badge>
-                                  )}
+                        {/* Visual Equipment Display */}
+                        {/* Compact Equipment Selection for Solar */}
+                        <Collapsible open={showSolarEquipment} onOpenChange={setShowSolarEquipment}>
+                          <CollapsibleTrigger asChild>
+                            <Button variant="outline" className="w-full justify-between text-sm bg-transparent">
+                              <span>Recommended Equipment</span>
+                              <ChevronDown
+                                className={`w-4 h-4 transition-transform ${showSolarEquipment ? "rotate-180" : ""}`}
+                              />
+                            </Button>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent className="space-y-4 mt-4">
+                            {/* Solar Panel Selection */}
+                            <div className="grid md:grid-cols-4 gap-3 p-3 bg-white rounded-lg border">
+                              <div className="md:col-span-1">
+                                <img
+                                  src={selectedSolarPanel?.image || `/images/solar-panels/${selectedSolarPanel?.id}.png`}
+                                  alt={selectedSolarPanel?.name}
+                                  className="w-full h-32 object-contain rounded bg-gray-100 p-1"
+                                />
+                              </div>
+                              <div className="md:col-span-3 space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <h4 className="font-medium text-sm">Solar Panel</h4>
                                 </div>
-                              )}
-                            />
-                            <p className="text-xs text-gray-600">
-                              {selectedSolarPanel?.reason}
-                            </p>
-                            <a href={selectedSolarPanel?.datasheet || "/pdf/jinko_panel.pdf"} download={getDownloadFilename(selectedSolarPanel?.datasheet, "JinkoSolar_450W_Spec_Sheet.pdf")}>
-                              <Button variant="outline" size="sm" className="h-6 text-xs bg-transparent">
-                                <Download className="w-3 h-3 mr-1" />
-                                Download Spec Sheet
-                              </Button>
-                            </a>
-                          </div>
-                        </div>
-
-                        {/* Inverter Selection */}
-                        <div className="grid md:grid-cols-4 gap-3 p-3 bg-white rounded-lg border">
-                          <div className="md:col-span-1">
-                            <img
-                              src={selectedInverter?.image || `/images/inverters/${selectedInverter?.id}.png`}
-                              alt={selectedInverter?.name}
-                              className="w-full h-32 object-contain rounded bg-gray-100 p-1"
-                            />
-                          </div>
-                          <div className="md:col-span-3 space-y-2">
-                            <div className="flex items-center justify-between">
-                              <h4 className="font-medium text-sm">Inverter</h4>
-                              <div className="flex items-center gap-2">
-                                {powerOutageBackup && <Badge className="bg-orange-600 text-xs">Hybrid</Badge>}
+                                <Select
+                                  value={selectedSolarPanel?.id}
+                                  onValueChange={(value) => {
+                                    const panel = solarPanelOptions.find((p) => p.id === value)
+                                    if (panel) setSelectedSolarPanel(panel)
+                                  }}
+                                >
+                                  <SelectTrigger className="h-8 text-xs">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {solarPanelOptions.map((panel) => (
+                                      <SelectItem key={panel.id} value={panel.id}>
+                                        <div className="flex items-center justify-between w-full">
+                                          <span className="text-xs">
+                                            {panel.name}{" "}
+                                            {(panel.priceAdjustment || 0) !== 0 &&
+                                              `(${(panel.priceAdjustment || 0) > 0 ? "+" : ""}€${panel.priceAdjustment || 0})`}
+                                          </span>
+                                          {panel.recommended && (
+                                            <Badge className="ml-1 bg-green-600 text-xs px-1">Recommended</Badge>
+                                          )}
+                                        </div>
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <p className="text-xs text-gray-600">
+                                  {selectedSolarPanel?.reason}
+                                </p>
+                                <a href={selectedSolarPanel?.datasheet || "/pdf/jinko_panel.pdf"} download="JinkoSolar_440W_Spec_Sheet.pdf">
+                                  <Button variant="outline" size="sm" className="h-6 text-xs bg-transparent">
+                                    <Download className="w-3 h-3 mr-1" />
+                                    Download Spec Sheet
+                                  </Button>
+                                </a>
                               </div>
                             </div>
-                            <CustomDropdown
-                              value={selectedInverter?.id || ""}
-                              options={inverterOptions}
-                              onChange={(value) => {
-                                const inverter = inverterOptions.find((i) => i.id === value)
-                                if (inverter) setSelectedInverter(inverter)
-                              }}
-                              isOpen={showInverterDropdown}
-                              onOpen={toggleInverterDropdown}
-                              onClose={closeAllDropdowns}
-                              renderValue={(inverter) => (
-                                <span className="text-xs">
-                                  {inverter.name}{" "}
-                                  {(inverter.priceAdjustment || 0) !== 0 &&
-                                    `(${(inverter.priceAdjustment || 0) > 0 ? "+" : ""}€${inverter.priceAdjustment || 0})`}
-                                </span>
-                              )}
-                              renderOption={(inverter) => (
-                                <div className="flex items-center justify-between w-full">
-                                  <span className="text-xs">
-                                    {inverter.name}{" "}
-                                    {(inverter.priceAdjustment || 0) !== 0 &&
-                                      `(${(inverter.priceAdjustment || 0) > 0 ? "+" : ""}€${inverter.priceAdjustment || 0})`}
-                                  </span>
-                                  {inverter.recommended && !powerOutageBackup && (
-                                    <Badge className="ml-1 bg-green-600 text-xs px-1">Recommended</Badge>
-                                  )}
+
+                            {/* Inverter Selection */}
+                            <div className="grid md:grid-cols-4 gap-3 p-3 bg-white rounded-lg border">
+                              <div className="md:col-span-1">
+                                <img
+                                  src={selectedInverter?.image || `/images/inverters/${selectedInverter?.id}.png`}
+                                  alt={selectedInverter?.name}
+                                  className="w-full h-32 object-contain rounded bg-gray-100 p-1"
+                                />
+                              </div>
+                              <div className="md:col-span-3 space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <h4 className="font-medium text-sm">Inverter</h4>
+                                  <div className="flex items-center gap-2">
+                                    {powerOutageBackup && <Badge className="bg-orange-600 text-xs">Hybrid</Badge>}
+                                  </div>
                                 </div>
-                              )}
-                            />
-                            <p className="text-xs text-gray-600">
-                              {selectedInverter?.reason}
-                            </p>
-                            <a href={selectedInverter?.datasheet || "/pdf/sig_inverter.pdf"} download={getDownloadFilename(selectedInverter?.datasheet, "Sigenergy_Inverter_Spec_Sheet.pdf")}>
-                              <Button variant="outline" size="sm" className="h-6 text-xs bg-transparent">
-                                <Download className="w-3 h-3 mr-1" />
-                                Download Spec Sheet
-                              </Button>
-                            </a>
-                          </div>
-                        </div>
-                      </CollapsibleContent>
-                    </Collapsible>
+                                <Select
+                                  value={selectedInverter?.id}
+                                  onValueChange={(value) => {
+                                    const inverter = inverterOptions.find((i) => i.id === value)
+                                    if (inverter) setSelectedInverter(inverter)
+                                  }}
+                                >
+                                  <SelectTrigger className="h-8 text-xs">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {inverterOptions.map((inverter) => (
+                                      <SelectItem key={inverter.id} value={inverter.id}>
+                                        <div className="flex items-center justify-between w-full">
+                                          <span className="text-xs">
+                                            {inverter.name}{" "}
+                                            {(inverter.priceAdjustment || 0) !== 0 &&
+                                              `(${(inverter.priceAdjustment || 0) > 0 ? "+" : ""}€${inverter.priceAdjustment || 0})`}
+                                          </span>
+                                          {inverter.recommended && !powerOutageBackup && (
+                                            <Badge className="ml-1 bg-green-600 text-xs px-1">Recommended</Badge>
+                                          )}
+                                        </div>
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <p className="text-xs text-gray-600">
+                                  {selectedInverter?.reason}
+                                </p>
+                                <a href={selectedInverter?.datasheet || "/pdf/sig_inverter.pdf"} download="Sigenergy_Inverter_Spec_Sheet.pdf">
+                                  <Button variant="outline" size="sm" className="h-6 text-xs bg-transparent">
+                                    <Download className="w-3 h-3 mr-1" />
+                                    Download Spec Sheet
+                                  </Button>
+                                </a>
+                              </div>
+                            </div>
+                          </CollapsibleContent>
+                        </Collapsible>
 
                         {/* Improved Power Outage Question */}
                         <div className="flex items-start gap-3 py-2">
@@ -1880,74 +1714,73 @@ export default function SolarEnergyPlanner() {
                             </div>
                           </div>
 
-                      {/* Compact Battery Equipment Selection */}
-                      {includeBattery && (
-                        <Collapsible open={showBatteryEquipment} onOpenChange={setShowBatteryEquipment}>
-                          <CollapsibleTrigger asChild>
-                            <Button variant="outline" className="w-full justify-between text-sm bg-transparent mt-4">
-                              <span>Recommended Equipment</span>
-                              <ChevronDown
-                                className={`w-4 h-4 transition-transform ${showBatteryEquipment ? "rotate-180" : ""}`}
-                              />
-                            </Button>
-                          </CollapsibleTrigger>
-                          <CollapsibleContent className="space-y-4 mt-4">
-                            <div className="grid md:grid-cols-4 gap-3 p-3 bg-white rounded-lg border">
-                              <div className="md:col-span-1">
-                                <img
-                                  src={selectedBattery?.image || `/images/batteries/${selectedBattery?.id}.png`}
-                                  alt={selectedBattery?.name}
-                                  className="w-full h-32 object-contain rounded bg-gray-100 p-1"
-                                />
-                              </div>
-                              <div className="md:col-span-3 space-y-2">
-                                <div className="flex items-center justify-between">
-                                  <h4 className="font-medium text-sm">Battery Storage</h4>
-                                </div>
-                                <CustomDropdown
-                                  value={selectedBattery?.id || ""}
-                                  options={batteryOptions}
-                                  onChange={(value) => {
-                                    const battery = batteryOptions.find((b) => b.id === value)
-                                    if (battery) setSelectedBattery(battery)
-                                  }}
-                                  isOpen={showBatteryDropdown}
-                                  onOpen={toggleBatteryDropdown}
-                                  onClose={closeAllDropdowns}
-                                  renderValue={(battery) => (
-                                    <span className="text-xs">
-                                      {battery.name} ({battery.capacity}kWh) - €{battery.price}
-                                    </span>
-                                  )}
-                                  renderOption={(battery) => (
-                                    <div className="flex items-center justify-between w-full">
-                                      <span className="text-xs">
-                                        {battery.name} ({battery.capacity}kWh) - €{battery.price}
-                                      </span>
-                                      {battery.recommended && (
-                                        <Badge className="ml-1 bg-green-600 text-xs px-1">Recommended</Badge>
-                                      )}
+                          {/* Compact Battery Equipment Selection */}
+                          {includeBattery && (
+                            <Collapsible open={showBatteryEquipment} onOpenChange={setShowBatteryEquipment}>
+                              <CollapsibleTrigger asChild>
+                                <Button variant="outline" className="w-full justify-between text-sm bg-transparent mt-4">
+                                  <span>Recommended Equipment</span>
+                                  <ChevronDown
+                                    className={`w-4 h-4 transition-transform ${showBatteryEquipment ? "rotate-180" : ""}`}
+                                  />
+                                </Button>
+                              </CollapsibleTrigger>
+                              <CollapsibleContent className="space-y-4 mt-4">
+                                <div className="grid md:grid-cols-4 gap-3 p-3 bg-white rounded-lg border">
+                                  <div className="md:col-span-1">
+                                    <img
+                                      src={selectedBattery?.image || `/images/batteries/${selectedBattery?.id}.png`}
+                                      alt={selectedBattery?.name}
+                                      className="w-full h-32 object-contain rounded bg-gray-100 p-1"
+                                    />
+                                  </div>
+                                  <div className="md:col-span-3 space-y-2">
+                                    <div className="flex items-center justify-between">
+                                      <h4 className="font-medium text-sm">Battery Storage</h4>
                                     </div>
-                                  )}
-                                />
-                                <p className="text-xs text-gray-600">
-                                  {batteryCount}x {selectedBattery?.capacity || 0}kWh = {batteryCount * (selectedBattery?.capacity || 0)}kWh total • {selectedBattery?.reason}
-                                </p>
-                                <a href={selectedBattery?.datasheet || "/pdf/sig_battery.pdf"} download={getDownloadFilename(selectedBattery?.datasheet, `SigEnergy_Battery_${selectedBattery?.capacity || 0}kWh_Spec_Sheet.pdf`)}>
-                                  <Button variant="outline" size="sm" className="h-6 text-xs bg-transparent">
-                                    <Download className="w-3 h-3 mr-1" />
-                                    Download Spec Sheet
-                                  </Button>
-                                </a>
-                              </div>
-                            </div>
-                          </CollapsibleContent>
-                        </Collapsible>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                                    <Select
+                                      value={selectedBattery?.id}
+                                      onValueChange={(value) => {
+                                        const battery = batteryOptions.find((b) => b.id === value)
+                                        if (battery) setSelectedBattery(battery)
+                                      }}
+                                    >
+                                      <SelectTrigger className="h-8 text-xs">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {batteryOptions.map((battery) => (
+                                          <SelectItem key={battery.id} value={battery.id}>
+                                            <div className="flex items-center justify-between w-full">
+                                              <span className="text-xs">
+                                                {battery.name} ({battery.capacity}kWh) - €{battery.price}
+                                              </span>
+                                              {battery.recommended && (
+                                                <Badge className="ml-1 bg-green-600 text-xs px-1">Recommended</Badge>
+                                              )}
+                                            </div>
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                    <p className="text-xs text-gray-600">
+                                      {batteryCount}x {selectedBattery?.capacity || 0}kWh = {batteryCount * (selectedBattery?.capacity || 0)}kWh total • {selectedBattery?.reason}
+                                    </p>
+                                    <a href={selectedBattery?.datasheet || "/pdf/sig_battery.pdf"} download={`SigEnergy_Battery_${selectedBattery?.capacity || 0}kWh_Spec_Sheet.pdf`}>
+                                      <Button variant="outline" size="sm" className="h-6 text-xs bg-transparent">
+                                        <Download className="w-3 h-3 mr-1" />
+                                        Download Spec Sheet
+                                      </Button>
+                                    </a>
+                                  </div>
+                                </div>
+                              </CollapsibleContent>
+                            </Collapsible>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
 
                   {/* Section 2: Future-Proof Your Home */}
                   <Card>
@@ -2035,79 +1868,72 @@ export default function SolarEnergyPlanner() {
                             </div>
                           </div>
 
-                                              {/* EV Charger Equipment Selection */}
-                      {includeEVChargerEquipment && (
-                        <Collapsible open={showEVChargerEquipment} onOpenChange={setShowEVChargerEquipment}>
-                          <CollapsibleTrigger asChild>
-                            <Button variant="outline" className="w-full justify-between text-sm bg-transparent">
-                              <span>Recommended Equipment</span>
-                              <ChevronDown
-                                className={`w-4 h-4 transition-transform ${showEVChargerEquipment ? "rotate-180" : ""}`}
-                              />
-                            </Button>
-                          </CollapsibleTrigger>
-                          <CollapsibleContent className="space-y-4 mt-4">
-                            <div className="grid md:grid-cols-4 gap-3 p-3 bg-white rounded-lg border">
-                              <div className="md:col-span-1">
-                                <img
-                                  src={selectedEVCharger?.image || `/images/ev-chargers/${selectedEVCharger?.id}.png`}
-                                  alt={selectedEVCharger?.name}
-                                  className="w-full h-32 object-contain rounded bg-gray-100 p-1"
-                                />
-                              </div>
-                              <div className="md:col-span-3 space-y-2">
-                                <div className="flex items-center justify-between">
-                                  <h4 className="font-medium text-sm">EV Charger</h4>
-                                </div>
-                                <CustomDropdown
-                                  value={selectedEVCharger?.id || ""}
-                                  options={evChargerOptions}
-                                  onChange={(value) => {
-                                    const charger = evChargerOptions.find((c) => c.id === value)
-                                    if (charger) setSelectedEVCharger(charger)
-                                  }}
-                                  isOpen={showEVChargerDropdown}
-                                  onOpen={toggleEVChargerDropdown}
-                                  onClose={closeAllDropdowns}
-                                  renderValue={(charger) => (
-                                    <span className="text-xs">
-                                      {charger.name} (€{(charger.price || 0) - (charger.grant || 0)} after grant)
-                                    </span>
-                                  )}
-                                  renderOption={(charger) => (
-                                    <div className="flex items-center justify-between w-full">
-                                      <span className="text-xs">
-                                        {charger.name} (€{(charger.price || 0) - (charger.grant || 0)} after grant)
-                                      </span>
-                                      {charger.recommended && (
-                                        <Badge className="ml-1 bg-green-600 text-xs px-1">Recommended</Badge>
-                                      )}
+                          {/* EV Charger Equipment Selection */}
+                          {includeEVChargerEquipment && (
+                            <Collapsible open={showEVChargerEquipment} onOpenChange={setShowEVChargerEquipment}>
+                              <CollapsibleTrigger asChild>
+                                <Button variant="outline" className="w-full justify-between text-sm bg-transparent">
+                                  <span>Recommended Equipment</span>
+                                  <ChevronDown
+                                    className={`w-4 h-4 transition-transform ${showEVChargerEquipment ? "rotate-180" : ""}`}
+                                  />
+                                </Button>
+                              </CollapsibleTrigger>
+                              <CollapsibleContent className="space-y-4 mt-4">
+                                <div className="grid md:grid-cols-4 gap-3 p-3 bg-white rounded-lg border">
+                                  <div className="md:col-span-1">
+                                    <img
+                                      src={selectedEVCharger?.image || `/images/ev-chargers/${selectedEVCharger?.id}.png`}
+                                      alt={selectedEVCharger?.name}
+                                      className="w-full h-32 object-contain rounded bg-gray-100 p-1"
+                                    />
+                                  </div>
+                                  <div className="md:col-span-3 space-y-2">
+                                    <div className="flex items-center justify-between">
+                                      <h4 className="font-medium text-sm">EV Charger</h4>
                                     </div>
-                                  )}
-                                />
-                                <p className="text-xs text-gray-600">
-                                  {selectedEVCharger?.power} • {selectedEVCharger?.reason}
-                                </p>
-                                <div className="flex flex-wrap gap-1">
-                                  {(selectedEVCharger?.features || []).map((feature, index) => (
-                                    <Badge key={index} variant="secondary" className="text-xs px-1">
-                                      {feature}
-                                    </Badge>
-                                  ))}
+                                    <Select
+                                      value={selectedEVCharger?.id}
+                                      onValueChange={(value) => {
+                                        const charger = evChargerOptions.find((c) => c.id === value)
+                                        if (charger) setSelectedEVCharger(charger)
+                                      }}
+                                    >
+                                      <SelectTrigger className="h-8 text-xs">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {evChargerOptions.map((charger) => (
+                                          <SelectItem key={charger.id} value={charger.id}>
+                                            <div className="flex items-center justify-between w-full">
+                                              <span className="text-xs">
+                                                {charger.name} (€{(charger.price || 0) - (charger.grant || 0)} after grant)
+                                              </span>
+                                              {charger.recommended && (
+                                                <Badge className="ml-1 bg-green-600 text-xs px-1">Recommended</Badge>
+                                              )}
+                                            </div>
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                    <p className="text-xs text-gray-600">
+                                      {selectedEVCharger?.power} • {selectedEVCharger?.reason}
+                                    </p>
+                                    <div className="flex flex-wrap gap-1">
+                                      {(selectedEVCharger?.features || []).map((feature, index) => (
+                                        <Badge key={index} variant="secondary" className="text-xs px-1">
+                                          {feature}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  </div>
                                 </div>
-                                <a href={selectedEVCharger?.datasheet || "/pdf/myenergi_zappi.pdf"} download={getDownloadFilename(selectedEVCharger?.datasheet, `${selectedEVCharger?.name.replace(/\s+/g, '_')}_Spec_Sheet.pdf`)}>
-                                  <Button variant="outline" size="sm" className="h-6 text-xs bg-transparent">
-                                    <Download className="w-3 h-3 mr-1" />
-                                    Download Spec Sheet
-                                  </Button>
-                                </a>
-                              </div>
-                            </div>
-                        </CollapsibleContent>
-                      </Collapsible>
-                    )}
-                    </div>
-                  )}
+                              </CollapsibleContent>
+                            </Collapsible>
+                          )}
+                        </div>
+                      )}
 
                       {/* Heat Pump Planning with Panel Addition */}
                       <div className="space-y-3">
@@ -2348,90 +2174,90 @@ export default function SolarEnergyPlanner() {
                     </CardContent>
                   </Card>
 
-              {/* Section 5: Installation, Warranties, FAQ */}
-              <Card>
-                <CardHeader className="pb-4">
-                  <CardTitle className="flex items-center gap-3 text-lg md:text-xl">
-                    <div className="w-6 h-6 md:w-8 md:h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-semibold text-sm md:text-base">
-                      4
-                    </div>
-                    Installation, Warranties, FAQ
-                  </CardTitle>
-                  <p className="text-sm md:text-base text-gray-600">Everything you need to know about the process</p>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Installation Timeline */}
-                  <Collapsible>
-                    <CollapsibleTrigger className="flex items-center justify-between w-full p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <Calendar className="w-5 h-5 text-gray-600" />
-                        <span className="font-medium">Installation Timeline</span>
-                      </div>
-                      <ChevronDown className="w-4 h-4 text-gray-600" />
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="mt-2 p-4 bg-white border rounded-lg">
-                      <div className="space-y-3">
-                        <div className="flex items-start gap-3">
-                          <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                            <span className="text-xs font-bold text-blue-600">1</span>
-                          </div>
-                          <div>
-                            <h4 className="font-medium">Site Survey & Design (1 day to 1 week)</h4>
-                            <p className="text-sm text-gray-600">Technical assessment and system design</p>
-                          </div>
+                  {/* Section 5: Installation, Warranties, FAQ */}
+                  <Card>
+                    <CardHeader className="pb-4">
+                      <CardTitle className="flex items-center gap-3 text-lg md:text-xl">
+                        <div className="w-6 h-6 md:w-8 md:h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-semibold text-sm md:text-base">
+                          4
                         </div>
-                        <div className="flex items-start gap-3">
-                          <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                            <span className="text-xs font-bold text-blue-600">2</span>
+                        Installation, Warranties, FAQ
+                      </CardTitle>
+                      <p className="text-sm md:text-base text-gray-600">Everything you need to know about the process</p>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {/* Installation Timeline */}
+                      <Collapsible>
+                        <CollapsibleTrigger className="flex items-center justify-between w-full p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                          <div className="flex items-center gap-3">
+                            <Calendar className="w-5 h-5 text-gray-600" />
+                            <span className="font-medium">Installation Timeline</span>
                           </div>
-                          <div>
-                            <h4 className="font-medium">Planning & Permits (2-4 weeks)</h4>
-                            <p className="text-sm text-gray-600">Grid connection application and permits</p>
+                          <ChevronDown className="w-4 h-4 text-gray-600" />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="mt-2 p-4 bg-white border rounded-lg">
+                          <div className="space-y-3">
+                            <div className="flex items-start gap-3">
+                              <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <span className="text-xs font-bold text-blue-600">1</span>
+                              </div>
+                              <div>
+                                <h4 className="font-medium">Site Survey & Design (1-2 weeks)</h4>
+                                <p className="text-sm text-gray-600">Technical assessment and system design</p>
+                              </div>
+                            </div>
+                            <div className="flex items-start gap-3">
+                              <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <span className="text-xs font-bold text-blue-600">2</span>
+                              </div>
+                              <div>
+                                <h4 className="font-medium">Planning & Permits (2-4 weeks)</h4>
+                                <p className="text-sm text-gray-600">Grid connection application and permits</p>
+                              </div>
+                            </div>
+                            <div className="flex items-start gap-3">
+                              <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <span className="text-xs font-bold text-blue-600">3</span>
+                              </div>
+                              <div>
+                                <h4 className="font-medium">Installation Day (1-2 days)</h4>
+                                <p className="text-sm text-gray-600">Professional installation and commissioning</p>
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                        <div className="flex items-start gap-3">
-                          <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                            <span className="text-xs font-bold text-blue-600">3</span>
-                          </div>
-                          <div>
-                            <h4 className="font-medium">Installation Day (1-2 days)</h4>
-                            <p className="text-sm text-gray-600">Professional installation and commissioning</p>
-                          </div>
-                        </div>
-                      </div>
-                    </CollapsibleContent>
-                  </Collapsible>
+                        </CollapsibleContent>
+                      </Collapsible>
 
-                  {/* Warranty Coverage */}
-                  <Collapsible>
-                    <CollapsibleTrigger className="flex items-center justify-between w-full p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <Shield className="w-5 h-5 text-gray-600" />
-                        <span className="font-medium">Warranty Coverage</span>
-                      </div>
-                      <ChevronDown className="w-4 h-4 text-gray-600" />
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="mt-2 p-4 bg-white border rounded-lg">
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-center p-3 bg-green-50 rounded">
-                          <span className="font-medium">Solar Panels</span>
-                          <span className="text-green-600 font-bold">30 Years Performance</span>
-                        </div>
-                        <div className="flex justify-between items-center p-3 bg-blue-50 rounded">
-                          <span className="font-medium">Inverter</span>
-                          <span className="text-blue-600 font-bold">10 Years Product</span>
-                        </div>
-                        <div className="flex justify-between items-center p-3 bg-purple-50 rounded">
-                          <span className="font-medium">Battery Storage</span>
-                          <span className="text-purple-600 font-bold">10 Years Product</span>
-                        </div>
-                        <div className="flex justify-between items-center p-3 bg-orange-50 rounded">
-                          <span className="font-medium">Installation Work</span>
-                          <span className="text-orange-600 font-bold">5 Years Workmanship</span>
-                        </div>
-                      </div>
-                    </CollapsibleContent>
-                  </Collapsible>
+                      {/* Warranty Coverage */}
+                      <Collapsible>
+                        <CollapsibleTrigger className="flex items-center justify-between w-full p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                          <div className="flex items-center gap-3">
+                            <Shield className="w-5 h-5 text-gray-600" />
+                            <span className="font-medium">Warranty Coverage</span>
+                          </div>
+                          <ChevronDown className="w-4 h-4 text-gray-600" />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="mt-2 p-4 bg-white border rounded-lg">
+                          <div className="space-y-3">
+                            <div className="flex justify-between items-center p-3 bg-green-50 rounded">
+                              <span className="font-medium">Solar Panels</span>
+                              <span className="text-green-600 font-bold">25 Years Performance</span>
+                            </div>
+                            <div className="flex justify-between items-center p-3 bg-blue-50 rounded">
+                              <span className="font-medium">Inverter</span>
+                              <span className="text-blue-600 font-bold">10 Years Product</span>
+                            </div>
+                            <div className="flex justify-between items-center p-3 bg-purple-50 rounded">
+                              <span className="font-medium">Battery Storage</span>
+                              <span className="text-purple-600 font-bold">10 Years Product</span>
+                            </div>
+                            <div className="flex justify-between items-center p-3 bg-orange-50 rounded">
+                              <span className="font-medium">Installation Work</span>
+                              <span className="text-orange-600 font-bold">5 Years Workmanship</span>
+                            </div>
+                          </div>
+                        </CollapsibleContent>
+                      </Collapsible>
 
                       {/* What if something breaks */}
                       <Collapsible>
@@ -2581,126 +2407,126 @@ export default function SolarEnergyPlanner() {
                 </div>
 
 
-            {/* Updated Sidebar with Circular Progress Design */}
-            <div className="sticky top-4 max-h-screen overflow-y-auto">
-              <Card className="sticky top-4 bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200" style={{willChange: 'transform'}}>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-blue-900 text-base md:text-lg">Your Solar Benefits</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Key Metrics */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <Card
-                      className="bg-gradient-to-br from-green-50 to-green-100 cursor-pointer hover:shadow-lg hover:scale-105 transition-all duration-300 group relative border-2 border-green-200 hover:border-green-400 h-24"
-                      onClick={() => {
-                        setShowSavingsModal(true)
-                        // Tab will be set by useEffect based on includeBattery state
-                      }}
-                    >
-                      <CardContent className="p-3 text-center h-full flex flex-col justify-center">
-                        <p className="text-xs text-gray-600 mb-1">ANNUAL SAVINGS</p>
-                        <p className="text-xl font-bold text-green-600" style={{minWidth: '80px', fontVariantNumeric: 'tabular-nums'}}>
-                          €{totalAnnualSavings}
-                        </p>
-                        <div className="absolute top-2 right-2 bg-blue-600 text-white rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
-                          <Eye className="w-3 h-3" />
-                        </div>
-                        <div className="absolute bottom-1 right-1 text-xs text-gray-500 opacity-70">
-                          Click for details
-                        </div>
-                      </CardContent>
-                    </Card>
-                    <Card
-                      className="bg-gradient-to-br from-blue-50 to-blue-100 cursor-pointer hover:shadow-lg hover:scale-105 transition-all duration-300 group relative border-2 border-blue-200 hover:border-blue-400 h-24"
-                      onClick={() => {
-                        setShowSavingsModal(true)
-                        // Tab will be set by useEffect based on includeBattery state
-                      }}
-                    >
-                      <CardContent className="p-3 text-center h-full flex flex-col justify-center">
-                        <p className="text-xs text-gray-600 mb-1">PAYBACK PERIOD</p>
-                        <p className="text-xl font-bold text-blue-600" style={{minWidth: '70px', fontVariantNumeric: 'tabular-nums'}}>{paybackPeriod} yrs</p>
-                        <div className="absolute top-2 right-2 bg-blue-600 text-white rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
-                          <Eye className="w-3 h-3" />
-                        </div>
-                        <div className="absolute bottom-1 right-1 text-xs text-gray-500 opacity-70">
-                          Click for details
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
+                {/* Updated Sidebar with Circular Progress Design */}
+                <div className="lg:col-span-1">
+                  <Card className="sticky top-4 bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-blue-900 text-base md:text-lg">Your Solar Benefits</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {/* Key Metrics */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <Card
+                          className="bg-gradient-to-br from-green-50 to-green-100 cursor-pointer hover:shadow-lg hover:scale-105 transition-all duration-300 group relative border-2 border-green-200 hover:border-green-400 h-24"
+                          onClick={() => {
+                            setShowSavingsModal(true)
+                            // Tab will be set by useEffect based on includeBattery state
+                          }}
+                        >
+                          <CardContent className="p-3 text-center h-full flex flex-col justify-center">
+                            <p className="text-xs text-gray-600 mb-1">ANNUAL SAVINGS</p>
+                            <p className="text-xl font-bold text-green-600">
+                              €{totalAnnualSavings}
+                            </p>
+                            <div className="absolute top-2 right-2 bg-blue-600 text-white rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
+                              <Eye className="w-3 h-3" />
+                            </div>
+                            <div className="absolute bottom-1 right-1 text-xs text-gray-500 opacity-70">
+                              Click for details
+                            </div>
+                          </CardContent>
+                        </Card>
+                        <Card
+                          className="bg-gradient-to-br from-blue-50 to-blue-100 cursor-pointer hover:shadow-lg hover:scale-105 transition-all duration-300 group relative border-2 border-blue-200 hover:border-blue-400 h-24"
+                          onClick={() => {
+                            setShowSavingsModal(true)
+                            // Tab will be set by useEffect based on includeBattery state
+                          }}
+                        >
+                          <CardContent className="p-3 text-center h-full flex flex-col justify-center">
+                            <p className="text-xs text-gray-600 mb-1">PAYBACK PERIOD</p>
+                            <p className="text-xl font-bold text-blue-600">{paybackPeriod} yrs</p>
+                            <div className="absolute top-2 right-2 bg-blue-600 text-white rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
+                              <Eye className="w-3 h-3" />
+                            </div>
+                            <div className="absolute bottom-1 right-1 text-xs text-gray-500 opacity-70">
+                              Click for details
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </div>
 
                       {/* Investment Breakdown */}
                       <div className="space-y-3">
                         <h3 className="text-lg font-bold text-gray-800">Your Investment</h3>
 
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-700">System price</span>
-                        <span className="font-semibold" style={{fontVariantNumeric: 'tabular-nums', minWidth: '80px', textAlign: 'right'}}>€{systemBaseCost.toLocaleString()}</span>
-                      </div>
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center">
+                            <span className="text-gray-700">System price</span>
+                            <span className="font-semibold">€{systemBaseCost.toLocaleString()}</span>
+                          </div>
 
-                      {includeBattery && (
-                        <div className="flex justify-between items-center">
-                          <span className="text-gray-700">Battery cost ({batteryCount * (selectedBattery?.capacity || 0)}kWh)</span>
-                          <span className="font-semibold" style={{fontVariantNumeric: 'tabular-nums', minWidth: '80px', textAlign: 'right'}}>€{batteryCost.toLocaleString()}</span>
-                        </div>
-                      )}
+                          {includeBattery && (
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-700">Battery cost ({batteryCount * (selectedBattery?.capacity || 0)}kWh)</span>
+                              <span className="font-semibold">€{batteryCost.toLocaleString()}</span>
+                            </div>
+                          )}
 
-                      {includeEVChargerEquipment && (
-                        <div className="flex justify-between items-center">
-                          <span className="text-gray-700">EV charger <span className="text-xs text-gray-500">incl. 13.5% VAT</span></span>
-                          <span className="font-semibold" style={{fontVariantNumeric: 'tabular-nums', minWidth: '80px', textAlign: 'right'}}>€{(selectedEVCharger?.price || 0).toLocaleString()}</span>
-                        </div>
-                      )}
+                          {includeEVChargerEquipment && (
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-700">EV charger</span>
+                              <span className="font-semibold">€{(selectedEVCharger?.price || 0).toLocaleString()}</span>
+                            </div>
+                          )}
 
-                      <div className="flex justify-between items-center border-t pt-2">
-                        <span className="text-gray-700 font-medium">Price you pay</span>
-                        <div className="flex items-center gap-1">
-                          <span className="font-semibold" style={{fontVariantNumeric: 'tabular-nums', minWidth: '90px', textAlign: 'right'}}>€{totalSystemCost.toLocaleString()}</span>
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              {/* <Button variant="ghost" size="icon" className="w-5 h-5 text-blue-600">
+                          <div className="flex justify-between items-center border-t pt-2">
+                            <span className="text-gray-700 font-medium">Price you pay</span>
+                            <div className="flex items-center gap-1">
+                              <span className="font-semibold">€{totalSystemCost.toLocaleString()}</span>
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  {/* <Button variant="ghost" size="icon" className="w-5 h-5 text-blue-600">
                                 <Info className="w-3 h-3" />
                               </Button> */}
-                            </DialogTrigger>
-                            <DialogContent className="max-w-sm">
-                              <DialogHeader className="relative">
-                                <DialogClose asChild>
-                                  <button
-                                    className="absolute top-0 right-0 w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 hover:text-gray-700 transition-colors"
-                                  >
-                                    ×
-                                  </button>
-                                </DialogClose>
-                                <DialogTitle className="pr-8">System Cost Breakdown</DialogTitle>
-                              </DialogHeader>
-                              <div className="space-y-2 text-sm">
-                                <div className="flex justify-between py-2 border-b">
-                                  <span>Solar Hardware</span>
-                                  <span>€{systemBaseCost.toLocaleString()}</span>
-                                </div>
-                                {includeBattery && (
-                                  <div className="flex justify-between py-2 border-b">
-                                    <span>Battery Hardware ({batteryCount * (selectedBattery?.capacity || 0)}kWh)</span>
-                                    <span>€{batteryCost.toLocaleString()}</span>
+                                </DialogTrigger>
+                                <DialogContent className="max-w-sm">
+                                  <DialogHeader className="relative">
+                                    <DialogClose asChild>
+                                      <button
+                                        className="absolute top-0 right-0 w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 hover:text-gray-700 transition-colors"
+                                      >
+                                        ×
+                                      </button>
+                                    </DialogClose>
+                                    <DialogTitle className="pr-8">System Cost Breakdown</DialogTitle>
+                                  </DialogHeader>
+                                  <div className="space-y-2 text-sm">
+                                    <div className="flex justify-between py-2 border-b">
+                                      <span>Solar Hardware</span>
+                                      <span>€{systemBaseCost.toLocaleString()}</span>
+                                    </div>
+                                    {includeBattery && (
+                                      <div className="flex justify-between py-2 border-b">
+                                        <span>Battery Hardware ({batteryCount * (selectedBattery?.capacity || 0)}kWh)</span>
+                                        <span>€{batteryCost.toLocaleString()}</span>
+                                      </div>
+                                    )}
+                                    {includeEVChargerEquipment && (
+                                      <div className="flex justify-between py-2 border-b">
+                                        <span>EV Charger</span>
+                                        <span>€{(selectedEVCharger?.price || 0).toLocaleString()}</span>
+                                      </div>
+                                    )}
+                                    <div className="flex justify-between py-2 font-bold">
+                                      <span>Total</span>
+                                      <span>€{totalSystemCost.toLocaleString()}</span>
+                                    </div>
                                   </div>
-                                )}
-                                {includeEVChargerEquipment && (
-                                  <div className="flex justify-between py-2 border-b">
-                                    <span>EV Charger <span className="text-xs text-gray-500">incl. 13.5% VAT</span></span>
-                                    <span>€{(selectedEVCharger?.price || 0).toLocaleString()}</span>
-                                  </div>
-                                )}
-                                <div className="flex justify-between py-2 font-bold">
-                                  <span>Total</span>
-                                  <span>€{totalSystemCost.toLocaleString()}</span>
-                                </div>
-                              </div>
-                            </DialogContent>
-                          </Dialog>
-                        </div>
-                      </div>
+                                </DialogContent>
+                              </Dialog>
+                            </div>
+                          </div>
 
                           {isEligibleForSEAIGrant && (
                             <div className="flex justify-between items-center text-green-600">
@@ -2787,13 +2613,8 @@ export default function SolarEnergyPlanner() {
                           return Math.round(payment);
                         })()}/month with financing
                         </p> */}
-                      <div className="mt-3 pt-3 border-t border-gray-200">
-                        <p className="text-xs text-gray-600 italic text-center">
-                          Price excludes any current promotional offers. Please contact us for details about available promotions.
-                        </p>
+                        </div>
                       </div>
-                    </div>
-                  </div>
 
                       {/* CTA Buttons */}
                       <div className="space-y-3 pt-2">
@@ -2811,50 +2632,50 @@ export default function SolarEnergyPlanner() {
 
 
 
-                    {/* Secondary CTA - Download Plan */}
-                    <Dialog 
-                      open={showSavePlanDialog} 
-                      onOpenChange={(open) => {
-                        setShowSavePlanDialog(open);
-                        if (!open) {
-                          // Reset form state when dialog closes
-                          setSubmitError("");
-                          setIsSubmitting(false);
-                        }
-                      }}
-                    >
-                      <DialogTrigger asChild>
-                        <Button 
-                          variant="outline" 
-                          className="w-full h-10 bg-white hover:bg-gray-50 border-2 border-gray-200 hover:border-gray-300 text-gray-700 font-medium text-sm transition-all duration-200"
+                        {/* Secondary CTA - Download Plan */}
+                        <Dialog
+                          open={showSavePlanDialog}
+                          onOpenChange={(open) => {
+                            setShowSavePlanDialog(open);
+                            if (!open) {
+                              // Reset form state when dialog closes
+                              setSubmitError("");
+                              setIsSubmitting(false);
+                            }
+                          }}
                         >
-                          <FileChartColumnIncreasing className="w-4 h-4 mr-2" />
-                          View My Proposal
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="sm:max-w-md">
-                        {emailSubmissionSuccess ? (
-                          // Success State
-                          <div className="space-y-2 sm:space-y-3 p-3 sm:p-4 lg:p-5 relative">
-                            {/* Close Button */}
-                            <DialogClose asChild>
-                              <button
-                                className="absolute top-3 right-3 w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 hover:text-gray-700 transition-colors z-10"
-                              >
-                                ×
-                              </button>
-                            </DialogClose>
-                            
-                            {/* Header Section - More friendly */}
-                            <div className="text-center space-y-1 sm:space-y-2">
-                              <div className="mx-auto w-10 h-10 sm:w-12 sm:h-12 bg-blue-50 rounded-full flex items-center justify-center border-2 border-blue-200">
-                                <ThumbsUp className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
-                              </div>
-                              <div>
-                                <h1 className="text-base sm:text-lg font-bold text-foreground">Your Report is On Its Way! 🚀</h1>
-                                <p className="text-xs sm:text-sm text-muted-foreground">We've got your solar plan ready</p>
-                              </div>
-                            </div>
+                          <DialogTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className="w-full h-10 bg-white hover:bg-gray-50 border-2 border-gray-200 hover:border-gray-300 text-gray-700 font-medium text-sm transition-all duration-200"
+                            >
+                              <Download className="w-4 h-4 mr-2" />
+                              Download Detailed Plan
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="sm:max-w-md">
+                            {emailSubmissionSuccess ? (
+                              // Success State
+                              <div className="space-y-2 sm:space-y-3 p-3 sm:p-4 lg:p-5 relative">
+                                {/* Close Button */}
+                                <DialogClose asChild>
+                                  <button
+                                    className="absolute top-3 right-3 w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 hover:text-gray-700 transition-colors z-10"
+                                  >
+                                    ×
+                                  </button>
+                                </DialogClose>
+
+                                {/* Header Section - More friendly */}
+                                <div className="text-center space-y-1 sm:space-y-2">
+                                  <div className="mx-auto w-10 h-10 sm:w-12 sm:h-12 bg-blue-50 rounded-full flex items-center justify-center border-2 border-blue-200">
+                                    <ThumbsUp className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
+                                  </div>
+                                  <div>
+                                    <h1 className="text-base sm:text-lg font-bold text-foreground">Your Report is On Its Way! 🚀</h1>
+                                    <p className="text-xs sm:text-sm text-muted-foreground">We've got your solar plan ready</p>
+                                  </div>
+                                </div>
 
                                 {/* Email Confirmation - More friendly */}
                                 <div className="bg-blue-50 rounded-lg p-2 sm:p-3 lg:p-4 space-y-1 sm:space-y-2 border border-blue-200">
@@ -2917,47 +2738,47 @@ export default function SolarEnergyPlanner() {
                                         {branding.email}
                                       </a>
                                     )}
-                              </p>
-                            </div>
-                          </div>
-                        
-                        ) : (
-                          // Form State
-                          <>
-                            <DialogHeader className="text-center pb-4 relative">
-                              <DialogClose asChild>
-                                <button
-                                  className="absolute top-0 right-0 w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 hover:text-gray-700 transition-colors"
-                                >
-                                  ×
-                                </button>
-                              </DialogClose>
-                              <DialogTitle className="text-2xl font-bold text-gray-900 pr-8">
-                                View My Proposal
-                              </DialogTitle>
-                              <p className="text-gray-600 mt-2">
-                                Get your detailed plan emailed to you with financing options and next steps.
-                              </p>
-                            </DialogHeader>
-                            
-                            <div className="space-y-4">
-                              {/* Full Name Field */}
-                              <div className="space-y-2">
-                                <label className="text-sm font-medium text-gray-700">
-                                  Full Name <span className="text-red-500">*</span>
-                                </label>
-                                <div className="relative">
-                                  <User className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                                  <Input
-                                    type="text"
-                                    placeholder="Your Full Name"
-                                    value={fullName}
-                                    onChange={handleFullNameChange}
-                                    className="pl-10 h-12 text-gray-600"
-                                    required
-                                  />
+                                  </p>
                                 </div>
                               </div>
+
+                            ) : (
+                              // Form State
+                              <>
+                                <DialogHeader className="text-center pb-4 relative">
+                                  <DialogClose asChild>
+                                    <button
+                                      className="absolute top-0 right-0 w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 hover:text-gray-700 transition-colors"
+                                    >
+                                      ×
+                                    </button>
+                                  </DialogClose>
+                                  <DialogTitle className="text-2xl font-bold text-gray-900 pr-8">
+                                    Download Your Solar Plan
+                                  </DialogTitle>
+                                  <p className="text-gray-600 mt-2">
+                                    Get your detailed plan emailed to you with financing options and next steps.
+                                  </p>
+                                </DialogHeader>
+
+                                <div className="space-y-4">
+                                  {/* Full Name Field */}
+                                  <div className="space-y-2">
+                                    <label className="text-sm font-medium text-gray-700">
+                                      Full Name <span className="text-red-500">*</span>
+                                    </label>
+                                    <div className="relative">
+                                      <User className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                                      <Input
+                                        type="text"
+                                        placeholder="Your Full Name"
+                                        value={fullName}
+                                        onChange={handleFullNameChange}
+                                        className="pl-10 h-12 text-gray-600"
+                                        required
+                                      />
+                                    </div>
+                                  </div>
 
                                   {/* Email Field */}
                                   <div className="space-y-2">
@@ -3930,7 +3751,6 @@ interface SolarDashboardMobileProps {
   scenarios: any;
   showMaths: string | null;
   setShowMaths: (show: string | null) => void;
-  branding: any;
 }
 
 function SolarDashboardMobile(props: SolarDashboardMobileProps) {
@@ -3961,7 +3781,6 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
     selectedEVCharger,
     setSelectedEVCharger,
     solarPanelOptions,
-    branding,
     inverterOptions,
     batteryOptions,
     evChargerOptions,
@@ -4128,7 +3947,7 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
               <div className="flex-1">
                 <h3 className="font-semibold text-sm">Solar System <br></br> (€{totalAnnualSavings} savings/year)</h3>
                 <p className="text-xs text-gray-600">
-                  {totalPanelCount} panels • {(totalPanelCount * parseFloat(process.env.NEXT_PUBLIC_PANEL_WATTAGE || '0.45')).toFixed(2)} kWp
+                  {totalPanelCount} panels • {(totalPanelCount * 0.44).toFixed(2)} kWp
                 </p>
                 <p className="text-[11px] text-green-700">{getRecommendationText()}</p>
               </div>
@@ -4401,10 +4220,10 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                     const found = solarPanelOptions.find((p: any) => p.id === value)
                     if (found) setSelectedSolarPanel(found)
                   }}
-                  extra={`${selectedSolarPanel.efficiency} • ${selectedSolarPanel.reason}`}
-                  imagePath={selectedSolarPanel.image || `/images/solar-panels/${selectedSolarPanel.id}.png`}
-                  downloadUrl={selectedSolarPanel.datasheet || "/pdf/jinko_panel.pdf"}
-                  downloadName="JinkoSolar_450W_Spec_Sheet.pdf"
+                  extra={`${selectedSolarPanel?.efficiency} • ${selectedSolarPanel?.reason}`}
+                  imagePath={selectedSolarPanel?.image || `/images/solar-panels/${selectedSolarPanel?.id}.png`}
+                  downloadUrl={selectedSolarPanel?.datasheet || "/pdf/jinko_panel.pdf"}
+                  downloadName="JinkoSolar_440W_Spec_Sheet.pdf"
                 />
                 {/* Inverter Selection */}
                 <MobileEquipmentSelector
@@ -4524,10 +4343,10 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                       const found = evChargerOptions.find((c: any) => c.id === value)
                       if (found) setSelectedEVCharger(found)
                     }}
-                    extra={`${selectedEVCharger.power} • ${selectedEVCharger.reason}`}
-                    imagePath={selectedEVCharger.image || `/images/ev-chargers/${selectedEVCharger.id}.png`}
-                    downloadUrl={selectedEVCharger.datasheet || "/pdf/myenergi_zappi.pdf"}
-                    downloadName={getDownloadFilename(selectedEVCharger.datasheet, `${selectedEVCharger.name.replace(/\s+/g, '_')}_Spec_Sheet.pdf`)}
+                    extra={`${selectedEVCharger?.power} • ${selectedEVCharger?.reason}`}
+                    imagePath={selectedEVCharger?.image || `/images/ev-chargers/${selectedEVCharger?.id}.png`}
+                    downloadUrl={selectedEVCharger?.datasheet || "/pdf/ev_charger.pdf"}
+                    downloadName="EV_Charger_Spec_Sheet.pdf"
                   />
                 </div>
               )}
@@ -5065,7 +4884,7 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
               >
                 <CardContent className="p-3 text-center h-full flex flex-col justify-center">
                   <p className="text-xs text-gray-600 mb-1">ANNUAL SAVINGS</p>
-                  <p className="text-xl font-bold text-green-600" style={{minWidth: '80px', fontVariantNumeric: 'tabular-nums'}}>
+                  <p className="text-xl font-bold text-green-600">
                     €{totalAnnualSavings}
                   </p>
                   <div className="absolute top-2 right-2 bg-blue-600 text-white rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
@@ -5085,7 +4904,7 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
               >
                 <CardContent className="p-3 text-center h-full flex flex-col justify-center">
                   <p className="text-xs text-gray-600 mb-1">PAYBACK PERIOD</p>
-                  <p className="text-xl font-bold text-blue-600" style={{minWidth: '70px', fontVariantNumeric: 'tabular-nums'}}>{paybackPeriod} yrs</p>
+                  <p className="text-xl font-bold text-blue-600">{paybackPeriod} yrs</p>
                   <div className="absolute top-2 right-2 bg-blue-600 text-white rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
                     <Eye className="w-3 h-3" />
                   </div>
@@ -5115,7 +4934,7 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
 
                 {includeEVChargerEquipment && (
                   <div className="flex justify-between items-center">
-                    <span className="text-gray-700">EV charger <span className="text-xs text-gray-500">incl. 13.5% VAT</span></span>
+                    <span className="text-gray-700">EV charger</span>
                     <span className="font-semibold">€{(evChargerCost || 0).toLocaleString()}</span>
                   </div>
                 )}
@@ -5154,7 +4973,7 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                           )}
                           {includeEVChargerEquipment && (
                             <div className="flex justify-between py-2 border-b">
-                              <span>EV Charger <span className="text-xs text-gray-500">incl. 13.5% VAT</span></span>
+                              <span>EV Charger</span>
                               <span>€{(evChargerCost || 0).toLocaleString()}</span>
                             </div>
                           )}
@@ -5254,11 +5073,6 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                           return Math.round(payment);
                         })()}/month with financing
                         </p> */}
-                <div className="mt-3 pt-3 border-t border-gray-200">
-                  <p className="text-xs text-gray-600 italic text-center">
-                    Price excludes any current promotional offers. Please contact us for details about available promotions.
-                  </p>
-                </div>
               </div>
             </div>
 
@@ -5309,8 +5123,8 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                     variant="outline"
                     className="w-full h-10 bg-white hover:bg-gray-50 border-2 border-gray-200 hover:border-gray-300 text-gray-700 font-medium text-sm transition-all duration-200"
                   >
-                    <FileChartColumnIncreasing className="w-4 h-4 mr-2" />
-                    View My Proposal
+                    <Download className="w-4 h-4 mr-2" />
+                    Download Detailed Plan
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-md">
@@ -5394,10 +5208,10 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                         <p className="text-xs text-gray-600">
                           Questions?{" "}
                           <a
-                            href={`mailto:${branding.email}`}
+                            href="mailto:info@renewables-ireland.ie"
                             className="text-blue-600 hover:text-blue-700 font-medium hover:underline"
                           >
-                            {branding.email}
+                            info@renewables-ireland.ie
                           </a>
                         </p>
                       </div>
@@ -5414,7 +5228,7 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                           </button>
                         </DialogClose>
                         <DialogTitle className="text-2xl font-bold text-gray-900 pr-8">
-                          View My Proposal
+                          Download Your Solar Plan
                         </DialogTitle>
                         <p className="text-gray-600 mt-2">
                           Get your detailed plan emailed to you with financing options and next steps.
@@ -5627,7 +5441,7 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
               className="text-xs px-3 bg-white border border-gray-300 shadow-sm"
               onClick={() => setShowSavePlanDialog(true)}
             >
-              <FileChartColumnIncreasing className="w-3 h-3 mr-1" />
+              <Download className="w-3 h-3 mr-1" />
               Plan
             </Button>
           </div>
@@ -5705,10 +5519,10 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
               <p className="text-xs text-gray-600">
                 Questions?{" "}
                 <a
-                  href={`mailto:${branding.email}`}
+                  href="mailto:info@renewables-ireland.ie"
                   className="text-blue-600 hover:text-blue-700 font-medium hover:underline"
                 >
-                  {branding.email}
+                  info@renewables-ireland.ie
                 </a>
               </p>
             </div>

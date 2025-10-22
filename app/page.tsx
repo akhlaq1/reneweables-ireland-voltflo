@@ -31,7 +31,7 @@ import {
   AddressTemplate6  
 } from "@/components/address-templates"
 import companyService from "./api/company"
-import { Branding } from "@/lib/branding"
+import { Branding, resolveBrandSlugFromHostname } from "@/lib/branding"
 
 const ProgressStep = ({ icon: Icon, label, isActive = false }: { icon: any; label: string; isActive?: boolean }) => (
   <div className="flex flex-col items-center">
@@ -267,8 +267,9 @@ export default function AddressPage() {
   }, [])
 
   const getCompanyData = async () => {
+    const slug = resolveBrandSlugFromHostname((typeof window !== 'undefined' ? window.location.hostname : undefined));
     const payload={
-      "sub_domain": "jr",
+      "sub_domain": slug || "renewables-ireland",
       "required_fields": ["address_template","logo","colors","name"]
     }
     await companyService.getCompanyDatabySubDomain(payload).then((res) => {
@@ -660,6 +661,7 @@ export default function AddressPage() {
       setError("Failed to initialize Google Maps. Please try refreshing the page.")
     }
   }
+
 
   const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setAddress(e.target.value)
