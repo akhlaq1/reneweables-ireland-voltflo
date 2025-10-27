@@ -58,7 +58,8 @@ import api from "@/app/api/api"
 import { AppHeader } from "@/components/app-header"
 import { ProgressBars } from "@/components/progress-bars"
 import { setAppNavigation } from "@/lib/navigation-tracker"
-import { calculateSystemBaseCost, calculateSEAIGrant, resolveBrandSlugFromHostname, Branding, EquipmentOption, getBranding } from "@/lib/branding"
+import { calculateSystemBaseCost, calculateSEAIGrant, resolveBrandSlugFromHostname, Branding, EquipmentOption, getBranding, calculateBatteryPrice, getSEAIGrant } from "@/lib/branding"
+import companyService from "../api/company"
 
 // Helper function to extract filename from datasheet path
 const getDownloadFilename = (datasheetPath: string | undefined, fallbackName: string): string => {
@@ -144,53 +145,14 @@ const CustomDropdown = ({ value, options, onChange, isOpen, onOpen, onClose, pla
     </div>
   )
 }
-import companyService from "../api/company"
-
-// ProgressStep component for navigation
-const ProgressStep = ({ icon: Icon, label, isActive = false }: { icon: any; label: string; isActive?: boolean }) => (
-  <div className="flex flex-col items-center">
-    <div
-      className={`w-6 h-6 md:w-7 md:h-7 rounded-full flex items-center justify-center mb-1 ${isActive ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-500"
-        }`}
-    >
-      {isActive ? <CheckCircle className="w-3 h-3 md:w-3.5 md:h-3.5" /> : <Icon className="w-3 h-3 md:w-3.5 md:h-3.5" />}
-    </div>
-    <span className={`text-xs font-medium ${isActive ? "text-blue-600" : "text-gray-500"}`}>{label}</span>
-  </div>
-)
-
-const energyUsagePatterns = [
-  {
-    id: "morning",
-    label: "Morning Heavy (6am-12pm)",
-    description: "Most energy use before noon",
-    gridRelianceWithoutBattery: 60,
-  },
-  {
-    id: "daytime",
-    label: "Daytime Heavy (12pm-4pm)",
-    description: "Most energy use during peak solar hours",
-    gridRelianceWithoutBattery: 45,
-  },
-  {
-    id: "evening",
-    label: "Evening Heavy (4pm-10pm)",
-    description: "Most energy use after work/school",
-    gridRelianceWithoutBattery: 75,
-  },
-]
 
 export default function SolarEnergyPlanner() {
   const router = useRouter()
   const isMobile = useIsMobile()
-  const default_branding = getBranding("renewables-ireland")
+  // const default_branding = getBranding("renewables-ireland")
   const [branding, setBranding] = useState<Branding | null>(null)
 
   // Equipment options from branding
-  // const solarPanelOptions = branding.equipment.solarPanels
-  // const inverterOptions = branding.equipment.inverters
-  // const batteryOptions = branding.equipment.batteries
-  // const evChargerOptions = branding.equipment.evChargers
   const [solarPanelOptions, setSolarPanelOptions] = useState<EquipmentOption[]>([])
   const [inverterOptions, setInverterOptions] = useState<EquipmentOption[]>([])
   const [batteryOptions, setBatteryOptions] = useState<EquipmentOption[]>([])
@@ -203,11 +165,6 @@ export default function SolarEnergyPlanner() {
   const [selectedInverter, setSelectedInverter] = useState<EquipmentOption | null>(null)
   const [selectedBattery, setSelectedBattery] = useState<EquipmentOption | null>(null)
   const [selectedEVCharger, setSelectedEVCharger] = useState<EquipmentOption | null>(null)
-
-  // const [selectedSolarPanel, setSelectedSolarPanel] = useState(solarPanelOptions[0])
-  // const [selectedInverter, setSelectedInverter] = useState(inverterOptions[0])
-  // const [selectedBattery, setSelectedBattery] = useState(batteryOptions[0])
-  // const [selectedEVCharger, setSelectedEVCharger] = useState(evChargerOptions[0])
 
   const [includeBattery, setIncludeBattery] = useState(false)
   const [batteryCount, setBatteryCount] = useState(1)
@@ -236,6 +193,11 @@ export default function SolarEnergyPlanner() {
   const [showInverterDropdown, setShowInverterDropdown] = useState(false)
   const [showBatteryDropdown, setShowBatteryDropdown] = useState(false)
   const [showEVChargerDropdown, setShowEVChargerDropdown] = useState(false)
+
+    // Grid and export rates for savings calculation
+    const [gridRate, setGridRate] = useState(0.35)
+    const [exportRate, setexportRate] = useState(0.20)
+    
 
   // Helper function to close all dropdowns
   const closeAllDropdowns = () => {
@@ -329,6 +291,11 @@ export default function SolarEnergyPlanner() {
         setSelectedEVCharger(response.equipment.evChargers[0])
       }
 
+      if (response.energy) {
+        setGridRate(response?.energy.gridRateDay)
+        setexportRate(response?.energy.exportRate)
+      }
+
     }).catch(async (e) => {
       console.error('Error fetching company data from API:', e);
 
@@ -362,8 +329,6 @@ export default function SolarEnergyPlanner() {
     })
   }
 
-
-
   // Sync modal tab with main battery toggle - prefer Battery Arbitrage when battery is on
   useEffect(() => {
     setSavingsModalTab(includeBattery ? "nightCharge" : "solarOnly")
@@ -372,50 +337,50 @@ export default function SolarEnergyPlanner() {
 
   // Function to save new bill amount
   const handleSaveBillAmount = () => {
-    console.log('handleSaveBillAmount called with tempMonthlyBill:', tempMonthlyBill)
+    // console.log('handleSaveBillAmount called with tempMonthlyBill:', tempMonthlyBill)
     const monthlyAmount = parseFloat(tempMonthlyBill) || 0
     const newAnnualBill = monthlyAmount * 12
-    
+
     // Update localStorage - preserve existing personalise_answers and only update billAmount
     const storedPersonaliseAnswers = localStorage.getItem('personalise_answers')
-    console.log('Current localStorage personalise_answers:', storedPersonaliseAnswers)
+    // console.log('Current localStorage personalise_answers:', storedPersonaliseAnswers)
     let personaliseData: any = {}
-    
+
     if (storedPersonaliseAnswers) {
       try {
         personaliseData = JSON.parse(storedPersonaliseAnswers)
-        console.log('Parsed personaliseData:', personaliseData)
+        // console.log('Parsed personaliseData:', personaliseData)
       } catch (error) {
-        console.error('Error parsing personaliseAnswers from localStorage:', error)
+        // console.error('Error parsing personaliseAnswers from localStorage:', error)
         personaliseData = {}
       }
     }
-    
+
     // Update only the billAmount property
     personaliseData.billAmount = tempMonthlyBill
-    console.log('Updated personaliseData with new billAmount:', personaliseData)
+    // console.log('Updated personaliseData with new billAmount:', personaliseData)
     localStorage.setItem('personalise_answers', JSON.stringify(personaliseData))
-    
+
     // Verify the save
     const verifyData = localStorage.getItem('personalise_answers')
-    console.log('Verified localStorage after save:', verifyData)
-    
+    // console.log('Verified localStorage after save:', verifyData)
+
     // Update state variables
-    console.log('Updating annualBillAmount from', annualBillAmount, 'to', newAnnualBill)
+    // console.log('Updating annualBillAmount from', annualBillAmount, 'to', newAnnualBill)
     setAnnualBillAmount(newAnnualBill)
     setCustomAnnualBill(newAnnualBill)
-    
+
     // Force a small delay to ensure state has updated
     setTimeout(() => {
       console.log('Forced update - annualBillAmount should now be:', newAnnualBill)
       console.log('Monthly bill should now be:', Math.round(newAnnualBill / 12))
     }, 100)
-    
-    console.log('State updated - new calculations should trigger')
-    
+
+    // console.log('State updated - new calculations should trigger')
+
     // Close the edit modal
     setShowEnergyProfileModal(false)
-    
+
     // Determine energy profile based on monthly bill
     if (monthlyAmount <= 150) {
       setEnergyProfile("small")
@@ -436,6 +401,7 @@ export default function SolarEnergyPlanner() {
   const [submitError, setSubmitError] = useState("")
   const [emailSubmissionSuccess, setEmailSubmissionSuccess] = useState(false)
 
+
   // Check localStorage for email submission success on component mount
   useEffect(() => {
     const savedEmailSuccess = localStorage.getItem('email_submission_success')
@@ -449,7 +415,7 @@ export default function SolarEnergyPlanner() {
   // Calculate additional panels needed (for display and savings calculation only)
   const evPanelsNeeded = includeEVCharger ? 3 : 0
   const heatPumpPanelsNeeded = includeHeatPump ? 3 : 0
-  
+
   const totalPanelCount = basePanelCount
 
   const recommendedPanelCount = businessProposal?.system_size ? Math.round(businessProposal.system_size / parseFloat(process.env.NEXT_PUBLIC_PANEL_WATTAGE || '0.45')) : 12
@@ -464,16 +430,13 @@ export default function SolarEnergyPlanner() {
     return Math.round(totalPanelCount * perPanelGeneration);
   }, [totalPanelCount, perPanelGeneration]);
 
-  // Grid and export rates for savings calculation
-  const gridRate = branding?.energy.gridRateDay
-  const exportRate = branding?.energy.exportRate
 
   // Base solar-only savings (30% self-use / 70% export) retained for breakdown displays
   const solarAnnualSavings = useMemo(() => {
     const selfUseFraction = 0.30
     const exportFraction = 0.70
     return Math.round(annualPVGeneration * (selfUseFraction * (gridRate || 0) + exportFraction * (exportRate || 0))) || 0
-  }, [annualPVGeneration])
+  }, [annualPVGeneration, gridRate, exportRate])
 
   // console.log("Solar Annual Savings:", solarAnnualSavings)
   // console.log("Annual PV Generation:", annualPVGeneration)
@@ -527,15 +490,51 @@ export default function SolarEnergyPlanner() {
   }, [includeBattery, totalAnnualSavings, solarAnnualSavings, savingsModalTab, annualPVGeneration, batteryCount, batteryNightChargeSavings])
 
   // Calculate system cost using the centralized function that supports both pricing methods
-  const systemBaseCost = selectedSolarPanel && selectedInverter && branding?.pricing
-    ? calculateSystemBaseCost(basePanelCount, selectedSolarPanel, selectedInverter, branding.pricing)
-    : 0
-  const batteryCost = includeBattery ? (selectedBattery?.price || 0) * batteryCount : 0
+  // const systemBaseCost = selectedSolarPanel && selectedInverter && branding?.pricing
+  //   ? calculateSystemBaseCost(
+  //     basePanelCount, 
+  //     selectedSolarPanel, 
+  //     selectedInverter, 
+  //     branding.pricing,
+  //     includeBattery,
+  //     selectedBattery || undefined,
+  //   )
+  //   : 0
+    // const batteryCost = includeBattery && selectedInverter && selectedBattery ? calculateBatteryPrice(selectedBattery, selectedInverter, basePanelCount) * batteryCount : 0
   // IMPORTANT: use full EV charger price here (not netPrice) so the grant is applied only once
-  const evChargerCost = includeEVChargerEquipment ? (selectedEVCharger?.price || 0) : 0
+  // const evChargerCost = includeEVChargerEquipment ? (selectedEVCharger?.price || 0) : 0
+ // IMPORTANT: use full EV charger price here (not netPrice) so the grant is applied only once
+ 
+
+  // Calculate system cost using the centralized function that supports both pricing methods
+  // Now passing battery object for inverter-specific pricing with battery configurations
+  const systemCombinedCost = selectedSolarPanel && selectedInverter && branding?.pricing ? calculateSystemBaseCost(
+    basePanelCount,
+    selectedSolarPanel,
+    selectedInverter,
+    branding?.pricing,
+    includeBattery,
+    selectedBattery || undefined,
+  ) : 0
+   // Battery cost is now included in systemBaseCost when using inverter-specific pricing
+  // For legacy pricing, we still add it separately (price will be 0 for new system)
+  // Calculate the dynamic battery price for display/breakdown purposes
+  const batteryCost = includeBattery && selectedInverter && selectedBattery ? calculateBatteryPrice(selectedBattery, selectedInverter, basePanelCount) * batteryCount : 0
+
+  const systemBaseCost = systemCombinedCost - batteryCost
+ 
+ const evChargerCost = useMemo(()=>{
+    return includeEVChargerEquipment ? (selectedEVCharger?.price || 0) : 0
+  },[includeEVChargerEquipment, selectedEVCharger?.price])
 
   const totalSystemCost = systemBaseCost + batteryCost + evChargerCost
-  const seaiGrant = isEligibleForSEAIGrant ? calculateSEAIGrant(basePanelCount) : 0
+
+  const seaiGrant = useMemo(() => {
+    if (!branding?.pricing) return 0
+    if (isEligibleForSEAIGrant) return getSEAIGrant(basePanelCount, branding.pricing)
+    else return 0
+  }, [basePanelCount, branding?.pricing])
+  
   const evChargerGrant = includeEVChargerEquipment ? (selectedEVCharger?.grant || 0) : 0
   const totalGrants = seaiGrant + evChargerGrant
   const finalPrice = totalSystemCost - totalGrants
@@ -552,17 +551,17 @@ export default function SolarEnergyPlanner() {
   const paybackPeriod = useMemo(() =>
     totalAnnualSavings > 0 ? (paybackPrice / totalAnnualSavings).toFixed(1) : '0.0'
     , [paybackPrice, totalAnnualSavings])
+
   const billOffset = includeBattery ? 94 : 65
   const gridIndependence = batteryCount >= 2 ? 95 : (includeBattery ? 90 : 30)
   const gridRelianceWithoutBattery = 70 // Changed from 65 to 70
   const gridRelianceWithBattery = 15
 
   // Enhanced Modal Calculations
+   // Enhanced Modal Calculations
   const dailyUsageKwh = useMemo(() => {
-    if (!gridRate) return 0
     const annualUsage = annualBillAmount / gridRate
     const result = Math.round(annualUsage / 365)
-    console.log('dailyUsageKwh recalculated:', result, 'from annualBillAmount:', annualBillAmount)
     return result
   }, [annualBillAmount, gridRate])
 
@@ -576,30 +575,29 @@ export default function SolarEnergyPlanner() {
   }, [monthlyBill])
 
   const scenarios = useMemo(() => {
-    const solarOnlyDirectSavings = Math.round(annualPVGeneration * 0.3 * (gridRate || 0))
-    const solarOnlyExportIncome = Math.round(annualPVGeneration * 0.7 * (exportRate || 0))
+    const solarOnlyDirectSavings = Math.round(annualPVGeneration * 0.3 * gridRate)
+    const solarOnlyExportIncome = Math.round(annualPVGeneration * 0.7 * exportRate)
     const solarOnlyTotal = solarOnlyDirectSavings + solarOnlyExportIncome
 
     const { selfUse, export: exportFrac } = scenarioFractions
-    const hybridDirectSavings = Math.round(annualPVGeneration * selfUse * (gridRate || 0))
-    const hybridExportIncome = Math.round(annualPVGeneration * exportFrac * (exportRate || 0))
+    const hybridDirectSavings = Math.round(annualPVGeneration * selfUse * gridRate)
+    const hybridExportIncome = Math.round(annualPVGeneration * exportFrac * exportRate)
     const hybridTotal = hybridDirectSavings + hybridExportIncome
 
     // Battery throughput calculation (kWh/year through battery)
     const batteryThroughput = includeBattery ? Math.round((selectedBattery?.capacity || 0) * batteryCount * 300) : 0 // 300 cycles/year
 
     // Night rate arbitrage (for EV tariff users)
-    const nightRateArbitrage = includeBattery ? Math.round((selectedBattery?.capacity || 0) * batteryCount * 300 * ((gridRate || 0) - (branding?.energy?.gridRateNight || 0))) : 0
+    const nightRateArbitrage = includeBattery ? Math.round((selectedBattery?.capacity || 0) * batteryCount * 300 * (gridRate - (branding?.energy?.gridRateNight || 0))) : 0
 
     // Battery utilization percentage 
     const batteryUtilization = includeBattery && batteryThroughput > 0 ?
       Math.round((batteryThroughput / ((selectedBattery?.capacity || 0) * batteryCount * 365)) * 100) : 0
 
     // Energy independence calculation
-    const annualUsageKwh = annualBillAmount / (gridRate || 1)
+    const annualUsageKwh = annualBillAmount / gridRate
     const solarSelfUse = annualPVGeneration * selfUse
     const energyIndependence = Math.min(95, Math.round((solarSelfUse / annualUsageKwh) * 100))
-    // console.log('scenarios recalculated - energyIndependence:', energyIndependence, 'from annualBillAmount:', annualBillAmount)
 
     return {
       solarOnly: {
@@ -952,9 +950,9 @@ export default function SolarEnergyPlanner() {
 
       await companyService.getCompanyDatabySubDomain({
         "sub_domain": resolveBrandSlugFromHostname(typeof window !== "undefined" ? window.location.hostname : ""),
-        "required_fields": ["emailBranding"]
+        "required_fields": ["emailBranding","name","description","website","email","phone","logo"]
       }).then(async (res) => {
-        const company_res=res?.data?.data;
+        const company_res = res?.data?.data;
         // Prepare API request body with the fetched email branding
         const requestBody = {
           email: email.trim(),
@@ -1020,15 +1018,12 @@ export default function SolarEnergyPlanner() {
   // Enhanced initialization to load all data from localStorage
   useEffect(() => {
     try {
-      console.log("Loading data from localStorage...")
-      
       // Load business proposal
       const storedProposal = localStorage.getItem("business_proposal")
       if (storedProposal) {
         const proposalData = JSON.parse(storedProposal)
         setBusinessProposal(proposalData)
-        console.log("Loaded business proposal from localStorage:", proposalData)
-        
+
         // Calculate basePanelCount from system_size and panel wattage
         if (proposalData.system_size) {
           const systemSizeKw = parseFloat(proposalData.system_size)
@@ -1036,36 +1031,30 @@ export default function SolarEnergyPlanner() {
           const calculatedPanelCount = Math.round(systemSizeKw / panelWattageKw)
           setBasePanelCount(calculatedPanelCount)
           setOriginalBusinessProposalPanelCount(calculatedPanelCount) // Store the original count for scaling
-          console.log(`Calculated basePanelCount: ${calculatedPanelCount} (${systemSizeKw}kW / ${panelWattageKw}kW)`)
         }
       }
 
       // Load bill amount from personalise_answers
       const storedPersonaliseAnswers = localStorage.getItem("personalise_answers")
-      console.log("Initial load - localStorage personalise_answers:", storedPersonaliseAnswers)
       if (storedPersonaliseAnswers) {
         const personaliseData = JSON.parse(storedPersonaliseAnswers)
-        console.log("Initial load - parsed personaliseData:", personaliseData)
-        
+
         // Check SEAI grant eligibility based on house build date
         if (personaliseData["house-built-date"]) {
           const houseBuildDate = personaliseData["house-built-date"]
           const isEligible = houseBuildDate === "before-2021" || houseBuildDate === "not-sure"
           setIsEligibleForSEAIGrant(isEligible)
-          console.log(`SEAI grant eligibility: ${isEligible} (house built: ${houseBuildDate})`)
         } else {
           // Default to eligible for backward compatibility
           setIsEligibleForSEAIGrant(true)
-          console.log("No house build date found, defaulting to SEAI grant eligible")
         }
-        
+
         if (personaliseData.billAmount) {
           const monthlyBill = parseFloat(personaliseData.billAmount)
           const calculatedAnnualBill = Math.round(monthlyBill * 12)
           setAnnualBillAmount(calculatedAnnualBill)
           setCustomAnnualBill(calculatedAnnualBill)
-          console.log(`Initial load - monthly bill: €${monthlyBill}, calculated annual bill: €${calculatedAnnualBill}`)
-          
+
           // Set energy profile based on monthly bill
           if (monthlyBill <= 150) {
             setEnergyProfile("small")
@@ -1074,14 +1063,13 @@ export default function SolarEnergyPlanner() {
           } else {
             setEnergyProfile("big")
           }
-          console.log("Initial load - energy profile set based on bill amount")
         } else {
-          console.log("No billAmount found in localStorage, using default")
+          // console.log("No billAmount found in localStorage, using default")
         }
       } else {
-        console.log("No personalise_answers found in localStorage, using defaults")
+        // console.log("No personalise_answers found in localStorage, using defaults")
       }
-      
+
       // Mark data as loaded
       setIsDataLoaded(true)
 
@@ -1090,109 +1078,109 @@ export default function SolarEnergyPlanner() {
       if (storedPlanData) {
         const planData = JSON.parse(storedPlanData)
         console.log("Loading previously saved plan data:", planData)
-        
+
         // Restore system configuration
         if (planData.systemConfiguration) {
           const config = planData.systemConfiguration
-          
+
           // Restore panel count (but only if not overridden by business proposal)
           if (config.basePanelCount && !storedProposal) {
             setBasePanelCount(config.basePanelCount)
-            console.log(`Restored basePanelCount: ${config.basePanelCount}`)
+            // console.log(`Restored basePanelCount: ${config.basePanelCount}`)
           }
-          
+
           // Restore equipment selections
           if (config.selectedSolarPanel?.id) {
             const panel = solarPanelOptions.find(p => p.id === config.selectedSolarPanel.id)
             if (panel) {
               setSelectedSolarPanel(panel)
-              console.log(`Restored solar panel: ${panel.name}`)
+              // console.log(`Restored solar panel: ${panel.name}`)
             }
           }
-          
+
           if (config.selectedInverter?.id) {
             const inverter = inverterOptions.find(i => i.id === config.selectedInverter.id)
             if (inverter) {
               setSelectedInverter(inverter)
-              console.log(`Restored inverter: ${inverter.name}`)
+              // console.log(`Restored inverter: ${inverter.name}`)
             }
           }
-          
+
           if (config.selectedBattery?.id) {
             const battery = batteryOptions.find(b => b.id === config.selectedBattery.id)
             if (battery) {
               setSelectedBattery(battery)
-              console.log(`Restored battery: ${battery.name}`)
+              // console.log(`Restored battery: ${battery.name}`)
             }
           }
-          
+
           if (config.selectedEVCharger?.id) {
             const evCharger = evChargerOptions.find(c => c.id === config.selectedEVCharger.id)
             if (evCharger) {
               setSelectedEVCharger(evCharger)
-              console.log(`Restored EV charger: ${evCharger.name}`)
+              // console.log(`Restored EV charger: ${evCharger.name}`)
             }
           }
-          
+
           // Restore feature toggles
           if (typeof config.includeBattery === 'boolean') {
             setIncludeBattery(config.includeBattery)
-            console.log(`Restored includeBattery: ${config.includeBattery}`)
+            // console.log(`Restored includeBattery: ${config.includeBattery}`)
           }
-          
+
           if (typeof config.includeEVCharger === 'boolean') {
             setIncludeEVCharger(config.includeEVCharger)
-            console.log(`Restored includeEVCharger: ${config.includeEVCharger}`)
+            // console.log(`Restored includeEVCharger: ${config.includeEVCharger}`)
           }
-          
+
           if (typeof config.includeEVChargerEquipment === 'boolean') {
             setIncludeEVChargerEquipment(config.includeEVChargerEquipment)
-            console.log(`Restored includeEVChargerEquipment: ${config.includeEVChargerEquipment}`)
+            // console.log(`Restored includeEVChargerEquipment: ${config.includeEVChargerEquipment}`)
           }
-          
+
           if (typeof config.includeHeatPump === 'boolean') {
             setIncludeHeatPump(config.includeHeatPump)
-            console.log(`Restored includeHeatPump: ${config.includeHeatPump}`)
+            // console.log(`Restored includeHeatPump: ${config.includeHeatPump}`)
           }
-          
+
           if (typeof config.powerOutageBackup === 'boolean') {
             setPowerOutageBackup(config.powerOutageBackup)
-            console.log(`Restored powerOutageBackup: ${config.powerOutageBackup}`)
+            // console.log(`Restored powerOutageBackup: ${config.powerOutageBackup}`)
           }
-          
+
           // Set daily flow type based on battery inclusion
           setDailyFlowType(config.includeBattery ? "solar-battery" : "solar")
         }
-        
+
         // Restore system specs including custom bill amount
         // Only restore bill amount from plan data if not already loaded from personalise_answers
         if (planData.systemSpecs) {
           if (planData.systemSpecs.annualBillAmount && !storedPersonaliseAnswers) {
             setAnnualBillAmount(planData.systemSpecs.annualBillAmount)
             setCustomAnnualBill(planData.systemSpecs.annualBillAmount)
-            console.log(`Restored annual bill amount from plan data: €${planData.systemSpecs.annualBillAmount}`)
+            // console.log(`Restored annual bill amount from plan data: €${planData.systemSpecs.annualBillAmount}`)
           } else if (planData.systemSpecs.annualBillAmount && storedPersonaliseAnswers) {
-            console.log(`Skipping plan data bill amount (€${planData.systemSpecs.annualBillAmount}) - using personalise_answers instead`)
+            // console.log(`Skipping plan data bill amount (€${planData.systemSpecs.annualBillAmount}) - using personalise_answers instead`)
           }
-          
+
           // Restore per panel generation if it exists
           if (planData.systemSpecs.perPanelGeneration) {
             setPerPanelGeneration(planData.systemSpecs.perPanelGeneration)
-            console.log(`Restored perPanelGeneration: ${planData.systemSpecs.perPanelGeneration} kWh/panel/year`)
+            // console.log(`Restored perPanelGeneration: ${planData.systemSpecs.perPanelGeneration} kWh/panel/year`)
           }
-          
+
           // Restore original business proposal panel count if it exists
           if (planData.systemSpecs.originalBusinessProposalPanelCount) {
             setOriginalBusinessProposalPanelCount(planData.systemSpecs.originalBusinessProposalPanelCount)
-            console.log(`Restored originalBusinessProposalPanelCount: ${planData.systemSpecs.originalBusinessProposalPanelCount}`)
+            // console.log(`Restored originalBusinessProposalPanelCount: ${planData.systemSpecs.originalBusinessProposalPanelCount}`)
           }
         }
-        
+
         // Restore user information if it exists
         if (planData.userInfo) {
           setFullName(planData.userInfo.fullName || "")
           setEmail(planData.userInfo.email || "")
-          console.log(`Restored user info: ${planData.userInfo.fullName}, ${planData.userInfo.email}`)
+          // console.log(`Restored user info: ${planData.userInfo.fullName}, ${planData.userInfo.email}`)
         }
       }
 
@@ -1206,7 +1194,7 @@ export default function SolarEnergyPlanner() {
         if (userContact.email && !email) {
           setEmail(userContact.email)
         }
-        console.log("Loaded user contact info:", userContact)
+        // console.log("Loaded user contact info:", userContact)
       }
 
       // Load max_panels from localStorage, default to 22 if not found
@@ -1215,12 +1203,12 @@ export default function SolarEnergyPlanner() {
         const maxPanelsValue = parseInt(storedMaxPanels, 10)
         if (!isNaN(maxPanelsValue) && maxPanelsValue > 0) {
           setMaxPanels(maxPanelsValue)
-          console.log(`Loaded max_panels from localStorage: ${maxPanelsValue}`)
+          // console.log(`Loaded max_panels from localStorage: ${maxPanelsValue}`)
         } else {
-          console.log("Invalid max_panels value in localStorage, using default: 22")
+          // console.log("Invalid max_panels value in localStorage, using default: 22")
         }
       } else {
-        console.log("max_panels not found in localStorage, using default: 22")
+        // console.log("max_panels not found in localStorage, using default: 22")
       }
 
     } catch (error) {
@@ -1593,11 +1581,11 @@ export default function SolarEnergyPlanner() {
                                     </div>
                                   )}
                                 />
-                                <p className="text-xs text-gray-600">
+                                {/* <p className="text-xs text-gray-600">
                                   {selectedSolarPanel?.reason}
-                                </p>
+                                </p> */}
                                 <a href={selectedSolarPanel?.datasheet || "/pdf/jinko_panel.pdf"} download={getDownloadFilename(selectedSolarPanel?.datasheet, "JinkoSolar_450W_Spec_Sheet.pdf")}>
-                                  <Button variant="outline" size="sm" className="h-6 text-xs bg-transparent">
+                                  <Button variant="outline" size="sm" className="h-6 text-xs bg-transparent mt-2">
                                     <Download className="w-3 h-3 mr-1" />
                                     Download Spec Sheet
                                   </Button>
@@ -1651,11 +1639,11 @@ export default function SolarEnergyPlanner() {
                                     </div>
                                   )}
                                 />
-                                <p className="text-xs text-gray-600">
+                                {/* <p className="text-xs text-gray-600">
                                   {selectedInverter?.reason}
-                                </p>
+                                </p> */}
                                 <a href={selectedInverter?.datasheet || "/pdf/sig_inverter.pdf"} download={getDownloadFilename(selectedInverter?.datasheet, "Sigenergy_Inverter_Spec_Sheet.pdf")}>
-                                  <Button variant="outline" size="sm" className="h-6 text-xs bg-transparent">
+                                  <Button variant="outline" size="sm" className="h-6 text-xs bg-transparent mt-2">
                                     <Download className="w-3 h-3 mr-1" />
                                     Download Spec Sheet
                                   </Button>
@@ -1945,7 +1933,7 @@ export default function SolarEnergyPlanner() {
                                       )}
                                     />
                                     <p className="text-xs text-gray-600">
-                                      {batteryCount}x {selectedBattery?.capacity || 0}kWh = {batteryCount * (selectedBattery?.capacity || 0)}kWh total • {selectedBattery?.reason}
+                                      {batteryCount}x {selectedBattery?.capacity || 0}kWh = {batteryCount * (selectedBattery?.capacity || 0)}kWh total
                                     </p>
                                     <a href={selectedBattery?.datasheet || "/pdf/sig_battery.pdf"} download={getDownloadFilename(selectedBattery?.datasheet, `SigEnergy_Battery_${selectedBattery?.capacity || 0}kWh_Spec_Sheet.pdf`)}>
                                       <Button variant="outline" size="sm" className="h-6 text-xs bg-transparent">
@@ -2099,18 +2087,18 @@ export default function SolarEnergyPlanner() {
                                         </div>
                                       )}
                                     />
-                                    <p className="text-xs text-gray-600">
+                                    {/* <p className="text-xs text-gray-600">
                                       {selectedEVCharger?.power} • {selectedEVCharger?.reason}
-                                    </p>
-                                    <div className="flex flex-wrap gap-1">
+                                    </p> */}
+                                    {/* <div className="flex flex-wrap gap-1">
                                       {(selectedEVCharger?.features || []).map((feature, index) => (
                                         <Badge key={index} variant="secondary" className="text-xs px-1">
                                           {feature}
                                         </Badge>
                                       ))}
-                                    </div>
+                                    </div> */}
                                     <a href={selectedEVCharger?.datasheet || "/pdf/myenergi_zappi.pdf"} download={getDownloadFilename(selectedEVCharger?.datasheet, `${selectedEVCharger?.name.replace(/\s+/g, '_')}_Spec_Sheet.pdf`)}>
-                                      <Button variant="outline" size="sm" className="h-6 text-xs bg-transparent">
+                                      <Button variant="outline" size="sm" className="h-6 text-xs bg-transparent mt-2">
                                         <Download className="w-3 h-3 mr-1" />
                                         Download Spec Sheet
                                       </Button>
@@ -6334,7 +6322,7 @@ function MobileEquipmentSelector({
           ))}
         </SelectContent>
       </Select>
-      {extra && <p className="text-[11px] text-gray-600 mt-2">{extra}</p>}
+      {/* {extra && <p className="text-[11px] text-gray-600 mt-2">{extra}</p>} */}
       {downloadUrl && (
         <a href={downloadUrl} download={downloadName}>
           <Button variant="outline" size="sm" className="h-7 text-xs mt-2 bg-transparent">
