@@ -435,7 +435,7 @@ export default function CallPage() {
 
       await companyService.getCompanyDatabySubDomain({
         "sub_domain": resolveBrandSlugFromHostname(typeof window !== "undefined" ? window.location.hostname : ""),
-        "required_fields": ["emailBranding"]
+        "required_fields": ["emailBranding","name","description","website","email","phone","logo"]
       }).then(async (res) => {
         const company_res = res?.data?.data;
         // Prepare API request body
