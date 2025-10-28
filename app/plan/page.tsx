@@ -58,7 +58,18 @@ import api from "@/app/api/api"
 import { AppHeader } from "@/components/app-header"
 import { ProgressBars } from "@/components/progress-bars"
 import { setAppNavigation } from "@/lib/navigation-tracker"
-import { calculateSystemBaseCost, calculateSEAIGrant, resolveBrandSlugFromHostname, Branding, EquipmentOption, getBranding, calculateBatteryPrice, getSEAIGrant } from "@/lib/branding"
+import {
+  // getEmailBranding, 
+  getBranding,
+  calculateSystemBaseCost,
+  getSEAIGrant,
+  getCompatibleBatteries,
+  getCompatibleInverters,
+  calculateBatteryPrice,
+  EquipmentOption,
+  Branding,
+  resolveBrandSlugFromHostname
+} from "@/lib/branding"
 import companyService from "../api/company"
 
 // Helper function to extract filename from datasheet path
@@ -146,17 +157,57 @@ const CustomDropdown = ({ value, options, onChange, isOpen, onOpen, onClose, pla
   )
 }
 
+// ProgressStep component for navigation
+const ProgressStep = ({ icon: Icon, label, isActive = false }: { icon: any; label: string; isActive?: boolean }) => (
+  <div className="flex flex-col items-center">
+    <div
+      className={`w-6 h-6 md:w-7 md:h-7 rounded-full flex items-center justify-center mb-1 ${isActive ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-500"
+        }`}
+    >
+      {isActive ? <CheckCircle className="w-3 h-3 md:w-3.5 md:h-3.5" /> : <Icon className="w-3 h-3 md:w-3.5 md:h-3.5" />}
+    </div>
+    <span className={`text-xs font-medium ${isActive ? "text-blue-600" : "text-gray-500"}`}>{label}</span>
+  </div>
+)
+
+const energyUsagePatterns = [
+  {
+    id: "morning",
+    label: "Morning Heavy (6am-12pm)",
+    description: "Most energy use before noon",
+    gridRelianceWithoutBattery: 60,
+  },
+  {
+    id: "daytime",
+    label: "Daytime Heavy (12pm-4pm)",
+    description: "Most energy use during peak solar hours",
+    gridRelianceWithoutBattery: 45,
+  },
+  {
+    id: "evening",
+    label: "Evening Heavy (4pm-10pm)",
+    description: "Most energy use after work/school",
+    gridRelianceWithoutBattery: 75,
+  },
+]
+
 export default function SolarEnergyPlanner() {
   const router = useRouter()
   const isMobile = useIsMobile()
-  // const default_branding = getBranding("renewables-ireland")
+  // const branding = getBranding()
   const [branding, setBranding] = useState<Branding | null>(null)
 
   // Equipment options from branding
+  // const solarPanelOptions = branding.equipment.solarPanels
+  // const inverterOptions = branding.equipment.inverters
+  // const batteryOptions = branding.equipment.batteries
+  // const evChargerOptions = branding.equipment.
+
   const [solarPanelOptions, setSolarPanelOptions] = useState<EquipmentOption[]>([])
   const [inverterOptions, setInverterOptions] = useState<EquipmentOption[]>([])
   const [batteryOptions, setBatteryOptions] = useState<EquipmentOption[]>([])
   const [evChargerOptions, setEVChargerOptions] = useState<EquipmentOption[]>([])
+
   const [isLoading, setIsLoading] = useState(true)
   const [basePanelCount, setBasePanelCount] = useState(15)
   const [maxPanels, setMaxPanels] = useState(22) // Default to 22, will be loaded from localStorage
@@ -194,10 +245,143 @@ export default function SolarEnergyPlanner() {
   const [showBatteryDropdown, setShowBatteryDropdown] = useState(false)
   const [showEVChargerDropdown, setShowEVChargerDropdown] = useState(false)
 
-    // Grid and export rates for savings calculation
-    const [gridRate, setGridRate] = useState(0.35)
-    const [exportRate, setexportRate] = useState(0.20)
-    
+  // Filter batteries and inverters based on compatibility
+  const [filteredBatteryOptions, setFilteredBatteryOptions] = useState(batteryOptions)
+  const [filteredInverterOptions, setFilteredInverterOptions] = useState(inverterOptions)
+
+  // Grid and export rates for savings calculation
+  const [gridRate, setGridRate] = useState(0.35)
+  const [exportRate, setexportRate] = useState(0.20)
+
+  useEffect(() => {
+    getCompanyData()
+  }, [])
+
+  const getCompanyData = async () => {
+    const payload = {
+      "sub_domain": resolveBrandSlugFromHostname(typeof window !== "undefined" ? window.location.hostname : "") || "caldorsolar",
+      "required_fields": ["equipment", "pricing", "energy", "email"]
+    }
+    await companyService.getCompanyDatabySubDomain(payload).then((res) => {
+      const response = res?.data?.data
+      setBranding({
+        ...branding as Branding,
+        slug: res?.data?.data?.slug,
+        name: res?.data?.data?.name,
+        website: res?.data?.data?.website,
+        email: res?.data?.data?.email,
+        phone: res?.data?.data?.phone,
+        description: res?.data?.data?.description,
+        address_template: res?.data?.data?.address_template,
+        logo: res?.data?.data?.logo,
+        colors: {
+          primary: res?.data?.data?.colors?.primary,
+          secondary: res?.data?.data?.colors?.secondary,
+          accent: res?.data?.data?.colors?.accent
+        },
+        equipment: response.equipment,
+        pricing: { ...response.pricing, useDynamicSEAIGrant: true },
+        energy: response.energy,
+      })
+
+      setSolarPanelOptions(response.equipment.solarPanels)
+      setInverterOptions(response.equipment.inverters)
+      setBatteryOptions(response.equipment.batteries)
+      setEVChargerOptions(response.equipment.evChargers)
+
+      if (response.equipment.solarPanels.length > 0) {
+        setSelectedSolarPanel(response.equipment.solarPanels[0])
+
+      }
+      if (response.equipment.inverters.length > 0) {
+        setSelectedInverter(response.equipment.inverters[0])
+
+        if (response.equipment.inverters[0].compatibleBatteries.length > 0) {
+          const compatibleBatteries = response.equipment.batteries.filter((battery: any) =>
+            response.equipment.inverters[0].compatibleBatteries.includes(battery.id)
+          )
+          const recommendedCompatibleBatteries = compatibleBatteries.filter((battery: any) => battery.recommended)
+          setSelectedBattery(recommendedCompatibleBatteries[0] || compatibleBatteries[0])
+        }
+        else {
+          setSelectedBattery(response.equipment.batteries[0])
+        }
+      }
+
+
+      if (response.equipment.evChargers.length > 0) {
+        setSelectedEVCharger(response.equipment.evChargers[0])
+      }
+
+      if (response.energy) {
+        setGridRate(response?.energy.gridRateDay)
+        setexportRate(response?.energy.exportRate)
+      }
+
+    }).catch(async (e: any) => {
+      // console.error('Error fetching company data from API:', e);
+
+      // Fallback: Get equipment data by hostname using getBranding
+
+      const fallbackBranding = await getBranding();
+      // console.log('Using fallback branding data:', fallbackBranding);
+
+      // console.log("Fallback Equipments: ", fallbackBranding)
+      // Set the branding data
+      setBranding(fallbackBranding);
+
+      // Set equipment options
+      setSolarPanelOptions(fallbackBranding.equipment.solarPanels);
+      setInverterOptions(fallbackBranding.equipment.inverters);
+      setBatteryOptions(fallbackBranding.equipment.batteries);
+      setEVChargerOptions(fallbackBranding.equipment.evChargers);
+
+      // Set selected equipment from the first available options
+      if (fallbackBranding.equipment.solarPanels.length > 0) {
+        setSelectedSolarPanel(fallbackBranding.equipment.solarPanels[0]);
+      }
+      if (fallbackBranding.equipment.inverters.length > 0) {
+        setSelectedInverter(fallbackBranding.equipment.inverters[0]);
+      }
+      if (fallbackBranding.equipment.batteries.length > 0) {
+        setSelectedBattery(fallbackBranding.equipment.batteries[0]);
+      }
+      if (fallbackBranding.equipment.evChargers.length > 0) {
+        setSelectedEVCharger(fallbackBranding.equipment.evChargers[0]);
+      }
+
+    })
+  }
+
+  // Effect to update compatible batteries when inverter changes
+  useEffect(() => {
+    if (selectedInverter && selectedInverter.compatibleBatteries && selectedInverter.compatibleBatteries.length > 0) {
+      const compatibleBatteries = batteryOptions.filter(battery =>
+        selectedInverter.compatibleBatteries?.includes(battery.id)
+      )
+      // console.log("Compatible batteries for inverter", selectedInverter.name, ":", compatibleBatteries)
+      setFilteredBatteryOptions(compatibleBatteries)
+
+      // If current battery is not compatible, switch to first compatible battery
+      if (selectedInverter && !selectedInverter.compatibleBatteries.includes(selectedBattery?.id || "")) {
+        console.log("Current battery is not compatible, switching to first compatible battery")
+        if (compatibleBatteries.length > 0) {
+          setSelectedBattery(compatibleBatteries[0])
+        }
+      }
+    } else {
+      // No compatibility restrictions, show all batteries
+      setFilteredBatteryOptions(batteryOptions)
+    }
+  }, [selectedInverter, batteryOptions])
+
+  // Inverters should always show all options (no filtering based on battery)
+  // Battery selection depends on inverter, not the other way around
+
+  useEffect(() => {
+    // Always show all inverter options
+    setFilteredInverterOptions(inverterOptions)
+  }, [inverterOptions])
 
   // Helper function to close all dropdowns
   const closeAllDropdowns = () => {
@@ -239,144 +423,35 @@ export default function SolarEnergyPlanner() {
   // SEAI Grant eligibility state
   const [isEligibleForSEAIGrant, setIsEligibleForSEAIGrant] = useState(true) // Default to true for backward compatibility
 
-  useEffect(() => {
-    getCompanyData()
-  }, [])
-
-  const getCompanyData = async () => {
-    const payload = {
-      "sub_domain": resolveBrandSlugFromHostname(typeof window !== "undefined" ? window.location.hostname : "") || "renewables-ireland",
-      "required_fields": ["equipment", "pricing", "energy", "email"]
-    }
-    await companyService.getCompanyDatabySubDomain(payload).then((res) => {
-      const response = res?.data?.data
-      setBranding({
-        ...branding as Branding,
-        slug: res?.data?.data?.slug,
-        name: res?.data?.data?.name,
-        website: res?.data?.data?.website,
-        email: res?.data?.data?.email,
-        phone: res?.data?.data?.phone,
-        description: res?.data?.data?.description,
-        address_template: res?.data?.data?.address_template,
-        logo: res?.data?.data?.logo,
-        colors: {
-          primary: res?.data?.data?.colors?.primary,
-          secondary: res?.data?.data?.colors?.secondary,
-          accent: res?.data?.data?.colors?.accent
-        },
-        equipment: response.equipment,
-        pricing: response.pricing,
-        energy: response.energy,
-      })
-
-      setSolarPanelOptions(response.equipment.solarPanels)
-      setInverterOptions(response.equipment.inverters)
-      setBatteryOptions(response.equipment.batteries)
-      setEVChargerOptions(response.equipment.evChargers)
-
-      console.log("Equipments: ", response.equipment)
-
-      if (response.equipment.solarPanels.length > 0) {
-        setSelectedSolarPanel(response.equipment.solarPanels[0])
-
-      }
-      if (response.equipment.inverters.length > 0) {
-        setSelectedInverter(response.equipment.inverters[0])
-      }
-      if (response.equipment.batteries.length > 0) {
-        setSelectedBattery(response.equipment.batteries[0])
-      }
-      if (response.equipment.evChargers.length > 0) {
-        setSelectedEVCharger(response.equipment.evChargers[0])
-      }
-
-      if (response.energy) {
-        setGridRate(response?.energy.gridRateDay)
-        setexportRate(response?.energy.exportRate)
-      }
-
-    }).catch(async (e) => {
-      console.error('Error fetching company data from API:', e);
-
-      // Fallback: Get equipment data by hostname using getBranding
-
-      const fallbackBranding = await getBranding();
-      console.log('Using fallback branding data:', fallbackBranding);
-
-      // Set the branding data
-      setBranding(fallbackBranding);
-
-      // Set equipment options
-      setSolarPanelOptions(fallbackBranding.equipment.solarPanels);
-      setInverterOptions(fallbackBranding.equipment.inverters);
-      setBatteryOptions(fallbackBranding.equipment.batteries);
-      setEVChargerOptions(fallbackBranding.equipment.evChargers);
-
-      // Set selected equipment from the first available options
-      if (fallbackBranding.equipment.solarPanels.length > 0) {
-        setSelectedSolarPanel(fallbackBranding.equipment.solarPanels[0]);
-      }
-      if (fallbackBranding.equipment.inverters.length > 0) {
-        setSelectedInverter(fallbackBranding.equipment.inverters[0]);
-      }
-      if (fallbackBranding.equipment.batteries.length > 0) {
-        setSelectedBattery(fallbackBranding.equipment.batteries[0]);
-      }
-      if (fallbackBranding.equipment.evChargers.length > 0) {
-        setSelectedEVCharger(fallbackBranding.equipment.evChargers[0]);
-      }
-    })
-  }
-
   // Sync modal tab with main battery toggle - prefer Battery Arbitrage when battery is on
   useEffect(() => {
     setSavingsModalTab(includeBattery ? "nightCharge" : "solarOnly")
-
   }, [includeBattery])
 
   // Function to save new bill amount
   const handleSaveBillAmount = () => {
-    // console.log('handleSaveBillAmount called with tempMonthlyBill:', tempMonthlyBill)
     const monthlyAmount = parseFloat(tempMonthlyBill) || 0
     const newAnnualBill = monthlyAmount * 12
 
     // Update localStorage - preserve existing personalise_answers and only update billAmount
     const storedPersonaliseAnswers = localStorage.getItem('personalise_answers')
-    // console.log('Current localStorage personalise_answers:', storedPersonaliseAnswers)
     let personaliseData: any = {}
 
     if (storedPersonaliseAnswers) {
       try {
         personaliseData = JSON.parse(storedPersonaliseAnswers)
-        // console.log('Parsed personaliseData:', personaliseData)
       } catch (error) {
-        // console.error('Error parsing personaliseAnswers from localStorage:', error)
         personaliseData = {}
       }
     }
 
     // Update only the billAmount property
     personaliseData.billAmount = tempMonthlyBill
-    // console.log('Updated personaliseData with new billAmount:', personaliseData)
     localStorage.setItem('personalise_answers', JSON.stringify(personaliseData))
 
-    // Verify the save
-    const verifyData = localStorage.getItem('personalise_answers')
-    // console.log('Verified localStorage after save:', verifyData)
-
     // Update state variables
-    // console.log('Updating annualBillAmount from', annualBillAmount, 'to', newAnnualBill)
     setAnnualBillAmount(newAnnualBill)
     setCustomAnnualBill(newAnnualBill)
-
-    // Force a small delay to ensure state has updated
-    setTimeout(() => {
-      console.log('Forced update - annualBillAmount should now be:', newAnnualBill)
-      console.log('Monthly bill should now be:', Math.round(newAnnualBill / 12))
-    }, 100)
-
-    // console.log('State updated - new calculations should trigger')
 
     // Close the edit modal
     setShowEnergyProfileModal(false)
@@ -401,7 +476,6 @@ export default function SolarEnergyPlanner() {
   const [submitError, setSubmitError] = useState("")
   const [emailSubmissionSuccess, setEmailSubmissionSuccess] = useState(false)
 
-
   // Check localStorage for email submission success on component mount
   useEffect(() => {
     const savedEmailSuccess = localStorage.getItem('email_submission_success')
@@ -418,7 +492,7 @@ export default function SolarEnergyPlanner() {
 
   const totalPanelCount = basePanelCount
 
-  const recommendedPanelCount = businessProposal?.system_size ? Math.round(businessProposal.system_size / parseFloat(process.env.NEXT_PUBLIC_PANEL_WATTAGE || '0.45')) : 12
+  const recommendedPanelCount = businessProposal?.system_size ? Math.round(businessProposal.system_size / parseFloat(process.env.NEXT_PUBLIC_PANEL_WATTAGE || '0.44')) : 12
 
   // Calculations - Make system cost dynamic based on BASE panel count only (EV/heat pump don't affect price)
   const basePanelThreshold = branding?.pricing.basePanelThreshold
@@ -431,15 +505,13 @@ export default function SolarEnergyPlanner() {
   }, [totalPanelCount, perPanelGeneration]);
 
 
+
   // Base solar-only savings (30% self-use / 70% export) retained for breakdown displays
   const solarAnnualSavings = useMemo(() => {
     const selfUseFraction = 0.30
     const exportFraction = 0.70
-    return Math.round(annualPVGeneration * (selfUseFraction * (gridRate || 0) + exportFraction * (exportRate || 0))) || 0
+    return Math.round(annualPVGeneration * (selfUseFraction * gridRate + exportFraction * exportRate)) || 0
   }, [annualPVGeneration, gridRate, exportRate])
-
-  // console.log("Solar Annual Savings:", solarAnnualSavings)
-  // console.log("Annual PV Generation:", annualPVGeneration)
 
   // Determine scenario self-use/export fractions based on battery count
   const scenarioFractions = useMemo(() => {
@@ -452,7 +524,7 @@ export default function SolarEnergyPlanner() {
   const totalAnnualSavings = useMemo(() => {
     // If battery is enabled, use the Solar + Battery (Arbitrage) calculation
     if (includeBattery) {
-      const solarExportIncome = annualPVGeneration * 1.0 * (exportRate || 0) // 100% export at €0.20/kWh for arbitrage mode
+      const solarExportIncome = annualPVGeneration * 1.0 * exportRate // 100% export at €0.20/kWh for arbitrage mode
       const batteryCapacity = (selectedBattery?.capacity || 0) * batteryCount // Total kWh capacity
       const batteryArbitrageSavings = batteryCapacity * 0.9 * 315 * 0.27 // 90% efficiency, 315 cycles, €0.27 savings per kWh
       return Math.round(solarExportIncome + batteryArbitrageSavings) || 0
@@ -460,7 +532,7 @@ export default function SolarEnergyPlanner() {
 
     // For solar only, use the standard calculation
     const { selfUse, export: exportFrac } = scenarioFractions
-    return Math.round(annualPVGeneration * (selfUse * (gridRate || 0) + exportFrac * (exportRate || 0))) || 0
+    return Math.round(annualPVGeneration * (selfUse * gridRate + exportFrac * exportRate)) || 0
   }, [annualPVGeneration, scenarioFractions, gridRate, exportRate, includeBattery, batteryCount, selectedBattery?.capacity])
 
   // Calculate Battery Night Charge Savings specifically for display in Battery Storage card
@@ -479,7 +551,7 @@ export default function SolarEnergyPlanner() {
 
     // If night charge mode is selected, use the night charge calculation
     if (savingsModalTab === "nightCharge") {
-      const solarExportIncome = annualPVGeneration * 1.0 * (exportRate || 0) // 100% export for arbitrage mode
+      const solarExportIncome = annualPVGeneration * 1.0 * exportRate // 100% export for arbitrage mode
       return Math.round(solarExportIncome + batteryNightChargeSavings)
     }
 
@@ -488,23 +560,6 @@ export default function SolarEnergyPlanner() {
     const hybridSavings = Math.max(0, totalAnnualSavings - solarAnnualSavings)
     return Math.max(hybridSavings, batteryNightChargeSavings)
   }, [includeBattery, totalAnnualSavings, solarAnnualSavings, savingsModalTab, annualPVGeneration, batteryCount, batteryNightChargeSavings])
-
-  // Calculate system cost using the centralized function that supports both pricing methods
-  // const systemBaseCost = selectedSolarPanel && selectedInverter && branding?.pricing
-  //   ? calculateSystemBaseCost(
-  //     basePanelCount, 
-  //     selectedSolarPanel, 
-  //     selectedInverter, 
-  //     branding.pricing,
-  //     includeBattery,
-  //     selectedBattery || undefined,
-  //   )
-  //   : 0
-    // const batteryCost = includeBattery && selectedInverter && selectedBattery ? calculateBatteryPrice(selectedBattery, selectedInverter, basePanelCount) * batteryCount : 0
-  // IMPORTANT: use full EV charger price here (not netPrice) so the grant is applied only once
-  // const evChargerCost = includeEVChargerEquipment ? (selectedEVCharger?.price || 0) : 0
- // IMPORTANT: use full EV charger price here (not netPrice) so the grant is applied only once
- 
 
   // Calculate system cost using the centralized function that supports both pricing methods
   // Now passing battery object for inverter-specific pricing with battery configurations
@@ -516,25 +571,30 @@ export default function SolarEnergyPlanner() {
     includeBattery,
     selectedBattery || undefined,
   ) : 0
-   // Battery cost is now included in systemBaseCost when using inverter-specific pricing
+
+
+  // Battery cost is now included in systemBaseCost when using inverter-specific pricing
   // For legacy pricing, we still add it separately (price will be 0 for new system)
   // Calculate the dynamic battery price for display/breakdown purposes
   const batteryCost = includeBattery && selectedInverter && selectedBattery ? calculateBatteryPrice(selectedBattery, selectedInverter, basePanelCount) * batteryCount : 0
 
   const systemBaseCost = systemCombinedCost - batteryCost
- 
- const evChargerCost = useMemo(()=>{
+
+  // IMPORTANT: use full EV charger price here (not netPrice) so the grant is applied only once
+  const evChargerCost = useMemo(() => {
+    // console.log("Include EV Charger Equipment:", includeEVChargerEquipment, selectedEVCharger)
     return includeEVChargerEquipment ? (selectedEVCharger?.price || 0) : 0
-  },[includeEVChargerEquipment, selectedEVCharger?.price])
+  }, [includeEVChargerEquipment, selectedEVCharger?.price])
 
   const totalSystemCost = systemBaseCost + batteryCost + evChargerCost
+  // const seaiGrant = isEligibleForSEAIGrant ? getSEAIGrant(basePanelCount, branding?.pricing ) : 0
 
   const seaiGrant = useMemo(() => {
     if (!branding?.pricing) return 0
     if (isEligibleForSEAIGrant) return getSEAIGrant(basePanelCount, branding.pricing)
     else return 0
   }, [basePanelCount, branding?.pricing])
-  
+
   const evChargerGrant = includeEVChargerEquipment ? (selectedEVCharger?.grant || 0) : 0
   const totalGrants = seaiGrant + evChargerGrant
   const finalPrice = totalSystemCost - totalGrants
@@ -544,21 +604,19 @@ export default function SolarEnergyPlanner() {
   const paybackGrants = seaiGrant
   const paybackPrice = paybackSystemCost - paybackGrants
 
-  console.log("Per Panel Generation:", perPanelGeneration);
+  // console.log("Per Panel Generation:", perPanelGeneration);
 
   // totalAnnualSavings now computed above using scenario fractions (0 batteries: 30/70, 1 battery: 70/30, 2 batteries: 90/10)
 
   const paybackPeriod = useMemo(() =>
     totalAnnualSavings > 0 ? (paybackPrice / totalAnnualSavings).toFixed(1) : '0.0'
     , [paybackPrice, totalAnnualSavings])
-
   const billOffset = includeBattery ? 94 : 65
   const gridIndependence = batteryCount >= 2 ? 95 : (includeBattery ? 90 : 30)
   const gridRelianceWithoutBattery = 70 // Changed from 65 to 70
   const gridRelianceWithBattery = 15
 
   // Enhanced Modal Calculations
-   // Enhanced Modal Calculations
   const dailyUsageKwh = useMemo(() => {
     const annualUsage = annualBillAmount / gridRate
     const result = Math.round(annualUsage / 365)
@@ -566,8 +624,6 @@ export default function SolarEnergyPlanner() {
   }, [annualBillAmount, gridRate])
 
   const monthlyBill = Math.round(annualBillAmount / 12)
-  // console.log('monthlyBill recalculated:', monthlyBill, 'from annualBillAmount:', annualBillAmount)
-  // console.log('Current display values - dailyUsageKwh:', dailyUsageKwh, 'monthlyBill:', monthlyBill, 'energyProfile:', energyProfile)
 
   // Update temp bill when monthly bill changes
   useEffect(() => {
@@ -805,7 +861,7 @@ export default function SolarEnergyPlanner() {
         personaliseAnswers = JSON.parse(storedPersonaliseAnswers);
       }
     } catch (error) {
-      console.error('Error parsing personalise_answers from localStorage:', error);
+      // Error parsing personalise_answers from localStorage
     }
 
     const planData = {
@@ -829,7 +885,7 @@ export default function SolarEnergyPlanner() {
 
       // System Specifications
       systemSpecs: {
-        systemSizeKwp: (totalPanelCount * parseFloat(process.env.NEXT_PUBLIC_PANEL_WATTAGE || '0.45')),
+        systemSizeKwp: (totalPanelCount * parseFloat(process.env.NEXT_PUBLIC_PANEL_WATTAGE || '0.44')),
         annualPVGenerated: annualPVGeneration, // Total annual PV generation from all panels
         perPanelGeneration: perPanelGeneration, // Per panel generation calculated from base panels
         originalBusinessProposalPanelCount: originalBusinessProposalPanelCount, // Store the original panel count for scaling
@@ -871,7 +927,7 @@ export default function SolarEnergyPlanner() {
         solarPanel: {
           ...selectedSolarPanel,
           quantity: totalPanelCount,
-          totalWattage: totalPanelCount * 450, // Assuming 450W panels
+          totalWattage: totalPanelCount * 440, // Assuming 440W panels
         },
         inverter: selectedInverter,
         battery: includeBattery ? {
@@ -906,7 +962,7 @@ export default function SolarEnergyPlanner() {
         planCreatedAt: new Date().toISOString(),
         planVersion: "1.0",
         businessProposal: businessProposal ? {
-          systemSize: (totalPanelCount * parseFloat(process.env.NEXT_PUBLIC_PANEL_WATTAGE || '0.45')).toFixed(1),
+          systemSize: (totalPanelCount * parseFloat(process.env.NEXT_PUBLIC_PANEL_WATTAGE || '0.44')).toFixed(1),
           electricityBillSavings: businessProposal.electricity_bill_savings,
           monthlyPerformance: businessProposal.monthly_performance,
         } : null,
@@ -946,14 +1002,14 @@ export default function SolarEnergyPlanner() {
       const personaliseAnswers = localStorage.getItem('personalise_answers');
       const selectedLocation = localStorage.getItem('selectedLocation');
 
-      // Fetch email branding first
 
       await companyService.getCompanyDatabySubDomain({
         "sub_domain": resolveBrandSlugFromHostname(typeof window !== "undefined" ? window.location.hostname : ""),
-        "required_fields": ["emailBranding","name","description","website","email","phone","logo"]
+        "required_fields": ["emailBranding", "name", "description", "website", "email", "phone", "logo"]
       }).then(async (res) => {
         const company_res = res?.data?.data;
-        // Prepare API request body with the fetched email branding
+
+        // Prepare API request body
         const requestBody = {
           email: email.trim(),
           name: fullName.trim(),
@@ -971,15 +1027,11 @@ export default function SolarEnergyPlanner() {
             website_url: 'https://renewables-ireland.voltflo.ie',
             backend_url: process.env.NEXT_PUBLIC_API_BASE_URL_PRODUCTION
           },
-          company_id: 3,
+          company_id: 3
         };
-
-        // console.log('Submitting plan data:', requestBody);
 
         // Make API call
         const response = await api.post('public_users/new-journey-installer-user', requestBody);
-
-        // console.log('API response:', response.data);
 
         // Save email submission success to localStorage
         localStorage.setItem('email_submission_success', 'true')
@@ -988,20 +1040,20 @@ export default function SolarEnergyPlanner() {
         // Update state
         setEmailSubmissionSuccess(true)
 
-        // Close dialog and show success modal
+        // Close dialog
         setShowSavePlanDialog(false);
-        setShowSuccessModal(true);
 
         // Redirect to PDF preview page with email parameter and from=plan indicator
         const encodedEmail = encodeURIComponent(email.trim());
         router.push(`/pdf-preview?email=${encodedEmail}&from=plan`);
 
-
       }).catch((error) => {
         console.error('Failed to fetch email branding, using fallback:', error);
       });
+
+
+
     } catch (error: any) {
-      console.error('Error submitting plan:', error);
       setSubmitError(
         error?.response?.data?.message ||
         'Failed to save your plan. Please try again.'
@@ -1027,7 +1079,7 @@ export default function SolarEnergyPlanner() {
         // Calculate basePanelCount from system_size and panel wattage
         if (proposalData.system_size) {
           const systemSizeKw = parseFloat(proposalData.system_size)
-          const panelWattageKw = parseFloat(process.env.NEXT_PUBLIC_PANEL_WATTAGE || '0.45')
+          const panelWattageKw = parseFloat(process.env.NEXT_PUBLIC_PANEL_WATTAGE || '0.44')
           const calculatedPanelCount = Math.round(systemSizeKw / panelWattageKw)
           setBasePanelCount(calculatedPanelCount)
           setOriginalBusinessProposalPanelCount(calculatedPanelCount) // Store the original count for scaling
@@ -1063,11 +1115,7 @@ export default function SolarEnergyPlanner() {
           } else {
             setEnergyProfile("big")
           }
-        } else {
-          // console.log("No billAmount found in localStorage, using default")
         }
-      } else {
-        // console.log("No personalise_answers found in localStorage, using defaults")
       }
 
       // Mark data as loaded
@@ -1077,7 +1125,6 @@ export default function SolarEnergyPlanner() {
       const storedPlanData = localStorage.getItem("solar_plan_data")
       if (storedPlanData) {
         const planData = JSON.parse(storedPlanData)
-        console.log("Loading previously saved plan data:", planData)
 
         // Restore system configuration
         if (planData.systemConfiguration) {
@@ -1086,7 +1133,6 @@ export default function SolarEnergyPlanner() {
           // Restore panel count (but only if not overridden by business proposal)
           if (config.basePanelCount && !storedProposal) {
             setBasePanelCount(config.basePanelCount)
-            // console.log(`Restored basePanelCount: ${config.basePanelCount}`)
           }
 
           // Restore equipment selections
@@ -1094,7 +1140,6 @@ export default function SolarEnergyPlanner() {
             const panel = solarPanelOptions.find(p => p.id === config.selectedSolarPanel.id)
             if (panel) {
               setSelectedSolarPanel(panel)
-              // console.log(`Restored solar panel: ${panel.name}`)
             }
           }
 
@@ -1102,7 +1147,6 @@ export default function SolarEnergyPlanner() {
             const inverter = inverterOptions.find(i => i.id === config.selectedInverter.id)
             if (inverter) {
               setSelectedInverter(inverter)
-              // console.log(`Restored inverter: ${inverter.name}`)
             }
           }
 
@@ -1110,7 +1154,6 @@ export default function SolarEnergyPlanner() {
             const battery = batteryOptions.find(b => b.id === config.selectedBattery.id)
             if (battery) {
               setSelectedBattery(battery)
-              // console.log(`Restored battery: ${battery.name}`)
             }
           }
 
@@ -1118,34 +1161,28 @@ export default function SolarEnergyPlanner() {
             const evCharger = evChargerOptions.find(c => c.id === config.selectedEVCharger.id)
             if (evCharger) {
               setSelectedEVCharger(evCharger)
-              // console.log(`Restored EV charger: ${evCharger.name}`)
             }
           }
 
           // Restore feature toggles
           if (typeof config.includeBattery === 'boolean') {
             setIncludeBattery(config.includeBattery)
-            // console.log(`Restored includeBattery: ${config.includeBattery}`)
           }
 
           if (typeof config.includeEVCharger === 'boolean') {
             setIncludeEVCharger(config.includeEVCharger)
-            // console.log(`Restored includeEVCharger: ${config.includeEVCharger}`)
           }
 
           if (typeof config.includeEVChargerEquipment === 'boolean') {
             setIncludeEVChargerEquipment(config.includeEVChargerEquipment)
-            // console.log(`Restored includeEVChargerEquipment: ${config.includeEVChargerEquipment}`)
           }
 
           if (typeof config.includeHeatPump === 'boolean') {
             setIncludeHeatPump(config.includeHeatPump)
-            // console.log(`Restored includeHeatPump: ${config.includeHeatPump}`)
           }
 
           if (typeof config.powerOutageBackup === 'boolean') {
             setPowerOutageBackup(config.powerOutageBackup)
-            // console.log(`Restored powerOutageBackup: ${config.powerOutageBackup}`)
           }
 
           // Set daily flow type based on battery inclusion
@@ -1158,21 +1195,16 @@ export default function SolarEnergyPlanner() {
           if (planData.systemSpecs.annualBillAmount && !storedPersonaliseAnswers) {
             setAnnualBillAmount(planData.systemSpecs.annualBillAmount)
             setCustomAnnualBill(planData.systemSpecs.annualBillAmount)
-            // console.log(`Restored annual bill amount from plan data: €${planData.systemSpecs.annualBillAmount}`)
-          } else if (planData.systemSpecs.annualBillAmount && storedPersonaliseAnswers) {
-            // console.log(`Skipping plan data bill amount (€${planData.systemSpecs.annualBillAmount}) - using personalise_answers instead`)
           }
 
           // Restore per panel generation if it exists
           if (planData.systemSpecs.perPanelGeneration) {
             setPerPanelGeneration(planData.systemSpecs.perPanelGeneration)
-            // console.log(`Restored perPanelGeneration: ${planData.systemSpecs.perPanelGeneration} kWh/panel/year`)
           }
 
           // Restore original business proposal panel count if it exists
           if (planData.systemSpecs.originalBusinessProposalPanelCount) {
             setOriginalBusinessProposalPanelCount(planData.systemSpecs.originalBusinessProposalPanelCount)
-            // console.log(`Restored originalBusinessProposalPanelCount: ${planData.systemSpecs.originalBusinessProposalPanelCount}`)
           }
         }
 
@@ -1180,7 +1212,6 @@ export default function SolarEnergyPlanner() {
         if (planData.userInfo) {
           setFullName(planData.userInfo.fullName || "")
           setEmail(planData.userInfo.email || "")
-          // console.log(`Restored user info: ${planData.userInfo.fullName}, ${planData.userInfo.email}`)
         }
       }
 
@@ -1194,7 +1225,6 @@ export default function SolarEnergyPlanner() {
         if (userContact.email && !email) {
           setEmail(userContact.email)
         }
-        // console.log("Loaded user contact info:", userContact)
       }
 
       // Load max_panels from localStorage, default to 22 if not found
@@ -1203,22 +1233,15 @@ export default function SolarEnergyPlanner() {
         const maxPanelsValue = parseInt(storedMaxPanels, 10)
         if (!isNaN(maxPanelsValue) && maxPanelsValue > 0) {
           setMaxPanels(maxPanelsValue)
-          // console.log(`Loaded max_panels from localStorage: ${maxPanelsValue}`)
-        } else {
-          // console.log("Invalid max_panels value in localStorage, using default: 22")
         }
-      } else {
-        // console.log("max_panels not found in localStorage, using default: 22")
       }
 
     } catch (error) {
-      console.error("Error loading data from localStorage:", error)
       // If there's an error, we'll fall back to defaults
       setBusinessProposal(null)
     } finally {
       // Set loading to false regardless of success or failure
       setIsLoading(false)
-      console.log("Finished loading data from localStorage")
     }
   }, [])
 
@@ -1233,12 +1256,10 @@ export default function SolarEnergyPlanner() {
       );
       const calculatedPerPanelGeneration = Math.round(calculatedAnnualPVGeneration / originalBusinessProposalPanelCount);
       setPerPanelGeneration(calculatedPerPanelGeneration);
-      console.log(`Calculated perPanelGeneration: ${calculatedPerPanelGeneration} kWh/panel/year from business proposal (${calculatedAnnualPVGeneration} kWh / ${originalBusinessProposalPanelCount} panels)`);
     } else if (!businessProposal) {
       // Use fallback calculation only if we have no business proposal
       const fallbackPerPanelGeneration = 410; // Default value
       setPerPanelGeneration(fallbackPerPanelGeneration);
-      console.log(`Using fallback perPanelGeneration: ${fallbackPerPanelGeneration} kWh/panel/year`);
     }
   }, [businessProposal, originalBusinessProposalPanelCount]); // React to both businessProposal and originalBusinessProposalPanelCount changes
 
@@ -1334,7 +1355,7 @@ export default function SolarEnergyPlanner() {
           setSelectedEVCharger={setSelectedEVCharger}
           solarPanelOptions={solarPanelOptions}
           inverterOptions={inverterOptions}
-          batteryOptions={batteryOptions}
+          batteryOptions={filteredBatteryOptions}
           evChargerOptions={evChargerOptions}
           systemBaseCost={systemBaseCost}
           batteryCost={batteryCost}
@@ -1392,7 +1413,7 @@ export default function SolarEnergyPlanner() {
           energyProfile={energyProfile}
           dailyUsageKwh={dailyUsageKwh}
           monthlyBill={monthlyBill}
-          gridRate={gridRate || 0}
+          gridRate={gridRate}
           hasEV={includeEVCharger}
           hasHeatPump={includeHeatPump}
           scenarios={scenarios}
@@ -1432,7 +1453,7 @@ export default function SolarEnergyPlanner() {
                             <p className="text-sm md:text-base opacity-90">Solar + Battery + EV Charging Solution</p>
                           </div>
                           <div className="mt-2 md:mt-0 bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-medium">
-                            {totalPanelCount} Panels | {(totalPanelCount * parseFloat(process.env.NEXT_PUBLIC_PANEL_WATTAGE || '0.45')).toFixed(1)} kWp System
+                            {totalPanelCount} Panels | {(totalPanelCount * parseFloat(process.env.NEXT_PUBLIC_PANEL_WATTAGE || '0.44')).toFixed(1)} kWp System
                           </div>
                         </div>
                       </div>
@@ -1584,7 +1605,7 @@ export default function SolarEnergyPlanner() {
                                 {/* <p className="text-xs text-gray-600">
                                   {selectedSolarPanel?.reason}
                                 </p> */}
-                                <a href={selectedSolarPanel?.datasheet || "/pdf/jinko_panel.pdf"} download={getDownloadFilename(selectedSolarPanel?.datasheet, "JinkoSolar_450W_Spec_Sheet.pdf")}>
+                                <a target="_blank" href={selectedSolarPanel?.datasheet || "/pdf/jinko_panel.pdf"} download={getDownloadFilename(selectedSolarPanel?.datasheet, "JinkoSolar_440W_Spec_Sheet.pdf")}>
                                   <Button variant="outline" size="sm" className="h-6 text-xs bg-transparent mt-2">
                                     <Download className="w-3 h-3 mr-1" />
                                     Download Spec Sheet
@@ -1611,9 +1632,9 @@ export default function SolarEnergyPlanner() {
                                 </div>
                                 <CustomDropdown
                                   value={selectedInverter?.id || ""}
-                                  options={inverterOptions}
+                                  options={filteredInverterOptions}
                                   onChange={(value) => {
-                                    const inverter = inverterOptions.find((i) => i.id === value)
+                                    const inverter = filteredInverterOptions.find((i) => i.id === value)
                                     if (inverter) setSelectedInverter(inverter)
                                   }}
                                   isOpen={showInverterDropdown}
@@ -1642,7 +1663,7 @@ export default function SolarEnergyPlanner() {
                                 {/* <p className="text-xs text-gray-600">
                                   {selectedInverter?.reason}
                                 </p> */}
-                                <a href={selectedInverter?.datasheet || "/pdf/sig_inverter.pdf"} download={getDownloadFilename(selectedInverter?.datasheet, "Sigenergy_Inverter_Spec_Sheet.pdf")}>
+                                <a target="_blank" href={selectedInverter?.datasheet || "/pdf/sig_inverter.pdf"} download={getDownloadFilename(selectedInverter?.datasheet, "Sigenergy_Inverter_Spec_Sheet.pdf")}>
                                   <Button variant="outline" size="sm" className="h-6 text-xs bg-transparent mt-2">
                                     <Download className="w-3 h-3 mr-1" />
                                     Download Spec Sheet
@@ -1908,9 +1929,9 @@ export default function SolarEnergyPlanner() {
                                     </div>
                                     <CustomDropdown
                                       value={selectedBattery?.id || ""}
-                                      options={batteryOptions}
+                                      options={filteredBatteryOptions}
                                       onChange={(value) => {
-                                        const battery = batteryOptions.find((b) => b.id === value)
+                                        const battery = filteredBatteryOptions.find((b) => b.id === value)
                                         if (battery) setSelectedBattery(battery)
                                       }}
                                       isOpen={showBatteryDropdown}
@@ -1918,13 +1939,13 @@ export default function SolarEnergyPlanner() {
                                       onClose={closeAllDropdowns}
                                       renderValue={(battery) => (
                                         <span className="text-xs">
-                                          {battery.name} ({battery.capacity}kWh) - €{battery.price}
+                                          {battery.name} ({battery.capacity}kWh) - €{selectedInverter ? calculateBatteryPrice(battery, selectedInverter, basePanelCount).toLocaleString() : 0}
                                         </span>
                                       )}
                                       renderOption={(battery) => (
                                         <div className="flex items-center justify-between w-full">
                                           <span className="text-xs">
-                                            {battery.name} ({battery.capacity}kWh) - €{battery.price}
+                                            {battery.name} ({battery.capacity}kWh) - €{selectedInverter ? calculateBatteryPrice(battery, selectedInverter, basePanelCount).toLocaleString() : 0}
                                           </span>
                                           {battery.recommended && (
                                             <Badge className="ml-1 bg-green-600 text-xs px-1">Recommended</Badge>
@@ -1932,11 +1953,11 @@ export default function SolarEnergyPlanner() {
                                         </div>
                                       )}
                                     />
-                                    <p className="text-xs text-gray-600">
+                                    <p className="text-xs text-gray-600 pb-2">
                                       {batteryCount}x {selectedBattery?.capacity || 0}kWh = {batteryCount * (selectedBattery?.capacity || 0)}kWh total
                                     </p>
-                                    <a href={selectedBattery?.datasheet || "/pdf/sig_battery.pdf"} download={getDownloadFilename(selectedBattery?.datasheet, `SigEnergy_Battery_${selectedBattery?.capacity || 0}kWh_Spec_Sheet.pdf`)}>
-                                      <Button variant="outline" size="sm" className="h-6 text-xs bg-transparent">
+                                    <a target="_blank" href={selectedBattery?.datasheet || "/pdf/sig_battery.pdf"} download={getDownloadFilename(selectedBattery?.datasheet, `SigEnergy_Battery_${selectedBattery?.capacity || 0}kWh_Spec_Sheet.pdf`)}>
+                                      <Button variant="outline" size="sm" className="h-6 text-xs bg-transparent mt-2">
                                         <Download className="w-3 h-3 mr-1" />
                                         Download Spec Sheet
                                       </Button>
@@ -2097,7 +2118,7 @@ export default function SolarEnergyPlanner() {
                                         </Badge>
                                       ))}
                                     </div> */}
-                                    <a href={selectedEVCharger?.datasheet || "/pdf/myenergi_zappi.pdf"} download={getDownloadFilename(selectedEVCharger?.datasheet, `${selectedEVCharger?.name.replace(/\s+/g, '_')}_Spec_Sheet.pdf`)}>
+                                    <a target="_blank" href={selectedEVCharger?.datasheet || "/pdf/myenergi_zappi.pdf"} download={getDownloadFilename(selectedEVCharger?.datasheet, `${selectedEVCharger?.name.replace(/\s+/g, '_')}_Spec_Sheet.pdf`)}>
                                       <Button variant="outline" size="sm" className="h-6 text-xs bg-transparent mt-2">
                                         <Download className="w-3 h-3 mr-1" />
                                         Download Spec Sheet
@@ -2417,7 +2438,7 @@ export default function SolarEnergyPlanner() {
                           <div className="space-y-3">
                             <div className="flex justify-between items-center p-3 bg-green-50 rounded">
                               <span className="font-medium">Solar Panels</span>
-                              <span className="text-green-600 font-bold">30 Years Performance</span>
+                              <span className="text-green-600 font-bold">25 Years Performance</span>
                             </div>
                             <div className="flex justify-between items-center p-3 bg-blue-50 rounded">
                               <span className="font-medium">Inverter</span>
@@ -2789,11 +2810,6 @@ export default function SolarEnergyPlanner() {
                           return Math.round(payment);
                         })()}/month with financing
                         </p> */}
-                          <div className="mt-3 pt-3 border-t border-gray-200">
-                            <p className="text-xs text-gray-600 italic text-center">
-                              Price excludes any current promotional offers. Please contact us for details about available promotions.
-                            </p>
-                          </div>
                         </div>
                       </div>
 
@@ -2915,8 +2931,8 @@ export default function SolarEnergyPlanner() {
                                   <p className="text-xs text-gray-600">
                                     Questions or need help?{" "}
                                     {branding?.email && (
-                                      <a href={`mailto:${branding.email}`} className="text-blue-600 hover:text-blue-700 font-medium hover:underline">
-                                        {branding.email}
+                                      <a href={`mailto:${branding?.email}`} className="text-blue-600 hover:text-blue-700 font-medium hover:underline">
+                                        {branding?.email}
                                       </a>
                                     )}
                                   </p>
@@ -3609,7 +3625,7 @@ export default function SolarEnergyPlanner() {
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                                  <span><strong>Night Charging:</strong> Store cheap electricity (€{branding?.energy?.gridRateNight?.toFixed(2) || '0.08'}/kWh) at night</span>
+                                  <span><strong>Night Charging:</strong> Store cheap electricity (€{branding?.energy?.gridRateNight.toFixed(2)}/kWh) at night</span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <div className="w-2 h-2 bg-green-400 rounded-full"></div>
@@ -3619,7 +3635,7 @@ export default function SolarEnergyPlanner() {
                                   <div className="text-gray-600 mb-1">
                                     <strong>Economic Benefit:</strong>
                                   </div>
-                                  <div>• Night rate: €{branding?.energy?.gridRateNight?.toFixed(2) || '0.08'}/kWh</div>
+                                  <div>• Night rate: €{branding?.energy?.gridRateNight.toFixed(2)}/kWh</div>
                                   <div>• Peak rate: €0.35/kWh</div>
                                   <div className="text-green-600 font-medium mt-1">
                                     Night charging saves €0.27/kWh on battery cycles!
@@ -3651,7 +3667,7 @@ export default function SolarEnergyPlanner() {
                                 </div>
                               </div>
                             </div>
-                            <span className="text-blue-600 font-medium">€{Math.round(annualPVGeneration * 1.0 * (exportRate || 0))}</span>
+                            <span className="text-blue-600 font-medium">€{Math.round(annualPVGeneration * 1.0 * exportRate)}</span>
                           </div>
 
                           <div className="flex justify-between items-center">
@@ -3670,7 +3686,7 @@ export default function SolarEnergyPlanner() {
 
                           <div className="border-t pt-3 flex justify-between font-bold">
                             <span>Total Benefit</span>
-                            <span className="text-green-600 text-lg">€{Math.round(annualPVGeneration * 1.0 * (exportRate || 0) + batteryCount * (selectedBattery?.capacity || 0) * 0.9 * 315 * 0.27)}</span>
+                            <span className="text-green-600 text-lg">€{Math.round(annualPVGeneration * 1.0 * exportRate + batteryCount * (selectedBattery?.capacity || 0) * 0.9 * 315 * 0.27)}</span>
                           </div>
                         </div>
 
@@ -3689,7 +3705,7 @@ export default function SolarEnergyPlanner() {
                               <div className="space-y-1">
                                 <div>• Annual generation: {annualPVGeneration} kWh</div>
                                 <div>
-                                  • Solar export (100%): {Math.round(annualPVGeneration * 1.0)} kWh × €0.20 = €{Math.round(annualPVGeneration * 1.0 * (exportRate || 0))}
+                                  • Solar export (100%): {Math.round(annualPVGeneration * 1.0)} kWh × €0.20 = €{Math.round(annualPVGeneration * 1.0 * exportRate)}
                                 </div>
                                 <div>
                                   • Battery capacity: {batteryCount * (selectedBattery?.capacity || 0)}kWh × 90% efficiency = {Math.round(batteryCount * (selectedBattery?.capacity || 0) * 0.9)}kWh usable
@@ -3697,7 +3713,7 @@ export default function SolarEnergyPlanner() {
                                 <div>
                                   • Night charge cycles: 315 cycles/year × €0.27 savings = €{Math.round(batteryCount * (selectedBattery?.capacity || 0) * 0.9 * 315 * 0.27)}
                                 </div>
-                                <div className="font-medium pt-1 border-t">Total: €{Math.round(annualPVGeneration * 1.0 * (exportRate || 0) + batteryCount * (selectedBattery?.capacity || 0) * 0.9 * 315 * 0.27)}</div>
+                                <div className="font-medium pt-1 border-t">Total: €{Math.round(annualPVGeneration * 1.0 * exportRate + batteryCount * (selectedBattery?.capacity || 0) * 0.9 * 315 * 0.27)}</div>
                               </div>
                             </div>
                           )}
@@ -3796,7 +3812,7 @@ export default function SolarEnergyPlanner() {
                     />
                   </div>
                   <p className="text-xs text-gray-500">
-                    Annual bill: €{((parseFloat(tempMonthlyBill) || 0) * 12).toLocaleString()} • Daily usage: ~{Math.round(((parseFloat(tempMonthlyBill) || 0) * 12) / (gridRate || 1) / 365)} kWh
+                    Annual bill: €{((parseFloat(tempMonthlyBill) || 0) * 12).toLocaleString()} • Daily usage: ~{Math.round(((parseFloat(tempMonthlyBill) || 0) * 12) / gridRate / 365)} kWh
                   </p>
                 </div>
 
@@ -4130,7 +4146,7 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
               <div className="flex-1">
                 <h3 className="font-semibold text-sm">Solar System <br></br> (€{totalAnnualSavings} savings/year)</h3>
                 <p className="text-xs text-gray-600">
-                  {totalPanelCount} panels • {(totalPanelCount * parseFloat(process.env.NEXT_PUBLIC_PANEL_WATTAGE || '0.45')).toFixed(2)} kWp
+                  {totalPanelCount} panels • {(totalPanelCount * 0.44).toFixed(2)} kWp
                 </p>
                 <p className="text-[11px] text-green-700">{getRecommendationText()}</p>
               </div>
@@ -4304,10 +4320,10 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                     </Button>
                     <div className="text-center">
                       <div className="text-sm font-bold">
-                        {batteryCount}x {selectedBattery?.capacity || 0}kWh
+                        {batteryCount}x {selectedBattery.capacity || 0}kWh
                       </div>
                       <div className="text-xs text-gray-600">
-                        Total: {batteryCount * (selectedBattery?.capacity || 0)}kWh storage
+                        Total: {batteryCount * (selectedBattery.capacity || 0)}kWh storage
                       </div>
                     </div>
                     <Button
@@ -4377,7 +4393,7 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                     />
                     <p className={`text-xs ${includeBattery ? "text-blue-800" : "text-orange-700"}`}>
                       {includeBattery
-                        ? `With ${batteryCount > 1 ? `${batteryCount} batteries` : 'battery storage'} (${batteryCount * (selectedBattery?.capacity || 0)}kWh total), you'll use your own solar power even after sunset, ${batteryCount >= 2 ? 'achieving near-complete' : 'dramatically reducing'} grid dependence.`
+                        ? `With ${batteryCount > 1 ? `${batteryCount} batteries` : 'battery storage'} (${batteryCount * (selectedBattery.capacity || 0)}kWh total), you'll use your own solar power even after sunset, ${batteryCount >= 2 ? 'achieving near-complete' : 'dramatically reducing'} grid dependence.`
                         : "Adding battery storage can increase your energy independence from 30% to 85%, powering your home through nights and outages."}
                     </p>
                   </div>
@@ -4398,7 +4414,7 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                 <MobileEquipmentSelector
                   title="Solar Panel"
                   options={solarPanelOptions}
-                  value={selectedSolarPanel?.id}
+                  value={selectedSolarPanel.id}
                   onChange={(value: string) => {
                     const found = solarPanelOptions.find((p: any) => p.id === value)
                     if (found) setSelectedSolarPanel(found)
@@ -4406,22 +4422,22 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                   extra={`${selectedSolarPanel.efficiency} • ${selectedSolarPanel.reason}`}
                   imagePath={selectedSolarPanel.image || `/images/solar-panels/${selectedSolarPanel.id}.png`}
                   downloadUrl={selectedSolarPanel.datasheet || "/pdf/jinko_panel.pdf"}
-                  downloadName="JinkoSolar_450W_Spec_Sheet.pdf"
+                  downloadName="JinkoSolar_440W_Spec_Sheet.pdf"
                 />
                 {/* Inverter Selection */}
                 <MobileEquipmentSelector
                   title="Inverter"
                   options={inverterOptions}
-                  value={selectedInverter?.id}
+                  value={selectedInverter.id}
                   onChange={(value: string) => {
                     const found = inverterOptions.find((i: any) => i.id === value)
                     if (found) setSelectedInverter(found)
                   }}
-                  extra={`${selectedInverter?.efficiency} • ${selectedInverter?.reason}${powerOutageBackup ? " • Hybrid recommended for backup" : ""
+                  extra={`${selectedInverter.efficiency} • ${selectedInverter.reason}${powerOutageBackup ? " • Hybrid recommended for backup" : ""
                     }`}
                   rightBadge={powerOutageBackup ? "Hybrid" : undefined}
-                  imagePath={selectedInverter?.image || `/images/inverters/${selectedInverter?.id}.png`}
-                  downloadUrl={selectedInverter?.datasheet || "/pdf/sig_inverter.pdf"}
+                  imagePath={selectedInverter.image || `/images/inverters/${selectedInverter.id}.png`}
+                  downloadUrl={selectedInverter.datasheet || "/pdf/sig_inverter.pdf"}
                   downloadName="Sigenergy_Inverter_Spec_Sheet.pdf"
                 />
                 {/* Battery Selection - Show when battery is enabled */}
@@ -4429,15 +4445,15 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                   <MobileEquipmentSelector
                     title="Battery"
                     options={batteryOptions}
-                    value={selectedBattery?.id}
+                    value={selectedBattery.id}
                     onChange={(value: string) => {
                       const found = batteryOptions.find((b: any) => b.id === value)
                       if (found) setSelectedBattery(found)
                     }}
-                    extra={`${batteryCount}x ${selectedBattery?.capacity || 0} kWh (${batteryCount * (selectedBattery?.capacity || 0)} kWh total) • ${selectedBattery?.reason}`}
-                    imagePath={selectedBattery?.image || `/images/batteries/${selectedBattery?.id}.png`}
-                    downloadUrl={selectedBattery?.datasheet || "/pdf/sig_battery.pdf"}
-                    downloadName={`SigEnergy_Battery_${selectedBattery?.capacity || 0}kWh_Spec_Sheet.pdf`}
+                    extra={`${batteryCount}x ${selectedBattery.capacity || 0} kWh (${batteryCount * (selectedBattery.capacity || 0)} kWh total) • ${selectedBattery.reason}`}
+                    imagePath={selectedBattery.image || `/images/batteries/${selectedBattery.id}.png`}
+                    downloadUrl={selectedBattery.datasheet || "/pdf/sig_battery.pdf"}
+                    downloadName={`SigEnergy_Battery_${selectedBattery.capacity || 0}kWh_Spec_Sheet.pdf`}
                   />
                 )}
               </CollapsibleContent>
@@ -4510,7 +4526,7 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                 {includeEVChargerEquipment && (
                   <div className="mt-2">
                     <div className="text-sm font-bold">€{(evChargerCost || 0).toLocaleString()}</div>
-                    <div className="text-xs text-gray-600">€{selectedEVCharger?.grant || 0} Grant Available</div>
+                    <div className="text-xs text-gray-600">€{selectedEVCharger.grant || 0} Grant Available</div>
                   </div>
                 )}
               </div>
@@ -4521,7 +4537,7 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                   <MobileEquipmentSelector
                     title="EV Charger"
                     options={evChargerOptions}
-                    value={selectedEVCharger?.id}
+                    value={selectedEVCharger.id}
                     onChange={(value: string) => {
                       const found = evChargerOptions.find((c: any) => c.id === value)
                       if (found) setSelectedEVCharger(found)
@@ -4679,11 +4695,11 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                         />
                         <MobileBreakdownRow
                           title="Battery Savings (Arbitrage)"
-                          detail={`${batteryCount * (selectedBattery?.capacity || 0)} kWh × (€${gridRate.toFixed(2)} − €0.08) × 365`}
-                          value={`€${Math.round(batteryCount * (selectedBattery?.capacity || 0) * (gridRate - 0.08) * 365)}`}
+                          detail={`${batteryCount * (selectedBattery.capacity || 0)} kWh × (€${gridRate.toFixed(2)} − €0.08) × 365`}
+                          value={`€${Math.round(batteryCount * (selectedBattery.capacity || 0) * (gridRate - 0.08) * 365)}`}
                           color="purple"
                         />
-                        <MobileTotalRow value={`€${Math.round(annualPVGeneration * 1.0 * 0.2) + Math.round(batteryCount * (selectedBattery?.capacity || 0) * (gridRate - 0.08) * 365)}`} />
+                        <MobileTotalRow value={`€${Math.round(annualPVGeneration * 1.0 * 0.2) + Math.round(batteryCount * (selectedBattery.capacity || 0) * (gridRate - 0.08) * 365)}`} />
                       </div>
                     </div>
                   </TabsContent>
@@ -5256,11 +5272,6 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                           return Math.round(payment);
                         })()}/month with financing
                         </p> */}
-                <div className="mt-3 pt-3 border-t border-gray-200">
-                  <p className="text-xs text-gray-600 italic text-center">
-                    Price excludes any current promotional offers. Please contact us for details about available promotions.
-                  </p>
-                </div>
               </div>
             </div>
 
@@ -5994,7 +6005,7 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                     </div>
                   </div>
                   <div className="mt-2 flex items-center justify-between text-xs text-gray-600">
-                    <span>Capacity: {batteryCount * (selectedBattery?.capacity || 0)}kWh total</span>
+                    <span>Capacity: {batteryCount * (selectedBattery.capacity || 0)}kWh total</span>
                     <span>{batteryCount === 1 ? '1 day' : '2 days'} backup power</span>
                   </div>
                 </div>
@@ -6100,17 +6111,17 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                         <div className="relative group">
                           <Info className="w-3 h-3 text-gray-400 cursor-help" />
                           <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-white text-gray-800 text-xs rounded-lg shadow-lg border opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 w-40">
-                            {batteryCount * (selectedBattery?.capacity || 0)}kW × 90% efficiency × 315 cycles × €0.27 savings.
+                            {batteryCount * (selectedBattery.capacity || 0)}kW × 90% efficiency × 315 cycles × €0.27 savings.
                             <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-white"></div>
                           </div>
                         </div>
                       </div>
-                      <span className="text-green-600 font-medium">€{Math.round(batteryCount * (selectedBattery?.capacity || 0) * 0.9 * 315 * 0.27)}</span>
+                      <span className="text-green-600 font-medium">€{Math.round(batteryCount * (selectedBattery.capacity || 0) * 0.9 * 315 * 0.27)}</span>
                     </div>
 
                     <div className="border-t pt-2 flex justify-between font-bold text-sm">
                       <span>Total Benefit</span>
-                      <span className="text-green-600">€{Math.round(annualPVGeneration * 1.0 * 0.2 + batteryCount * (selectedBattery?.capacity || 0) * 0.9 * 315 * 0.27)}</span>
+                      <span className="text-green-600">€{Math.round(annualPVGeneration * 1.0 * 0.2 + batteryCount * (selectedBattery.capacity || 0) * 0.9 * 315 * 0.27)}</span>
                     </div>
                   </div>
 
@@ -6123,9 +6134,9 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                       <div className="space-y-1">
                         <div>• Annual generation: {annualPVGeneration} kWh</div>
                         <div>• Solar export (100%): {Math.round(annualPVGeneration * 1.0)} kWh × €0.20 = €{Math.round(annualPVGeneration * 1.0 * 0.2)}</div>
-                        <div>• Battery capacity: {batteryCount * (selectedBattery?.capacity || 0)}kW × 90% efficiency = {Math.round(batteryCount * (selectedBattery?.capacity || 0) * 0.9)}kW usable</div>
-                        <div>• Night charge cycles: 315 cycles/year × €0.27 savings = €{Math.round(batteryCount * (selectedBattery?.capacity || 0) * 0.9 * 315 * 0.27)}</div>
-                        <div className="font-medium pt-1 border-t">Total: €{Math.round(annualPVGeneration * 1.0 * 0.2 + batteryCount * (selectedBattery?.capacity || 0) * 0.9 * 315 * 0.27)}</div>
+                        <div>• Battery capacity: {batteryCount * (selectedBattery.capacity || 0)}kW × 90% efficiency = {Math.round(batteryCount * (selectedBattery.capacity || 0) * 0.9)}kW usable</div>
+                        <div>• Night charge cycles: 315 cycles/year × €0.27 savings = €{Math.round(batteryCount * (selectedBattery.capacity || 0) * 0.9 * 315 * 0.27)}</div>
+                        <div className="font-medium pt-1 border-t">Total: €{Math.round(annualPVGeneration * 1.0 * 0.2 + batteryCount * (selectedBattery.capacity || 0) * 0.9 * 315 * 0.27)}</div>
                       </div>
                     </CollapsibleContent>
                   </Collapsible>
@@ -6164,8 +6175,8 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                     </div>
                   </div>
                   <div className="mt-2 flex items-center justify-between text-xs text-gray-600">
-                    <span>Night cycles: {Math.round(batteryCount * (selectedBattery?.capacity || 0) * 0.9 * 315)} kWh/year</span>
-                    <span>Arbitrage: €{Math.round(batteryCount * (selectedBattery?.capacity || 0) * 0.9 * 315 * 0.27)}/year</span>
+                    <span>Night cycles: {Math.round(batteryCount * (selectedBattery.capacity || 0) * 0.9 * 315)} kWh/year</span>
+                    <span>Arbitrage: €{Math.round(batteryCount * (selectedBattery.capacity || 0) * 0.9 * 315 * 0.27)}/year</span>
                   </div>
                 </div>
 
@@ -6324,7 +6335,7 @@ function MobileEquipmentSelector({
       </Select>
       {/* {extra && <p className="text-[11px] text-gray-600 mt-2">{extra}</p>} */}
       {downloadUrl && (
-        <a href={downloadUrl} download={downloadName}>
+        <a href={downloadUrl} download={downloadName} target="_blank">
           <Button variant="outline" size="sm" className="h-7 text-xs mt-2 bg-transparent">
             <Download className="w-3 h-3 mr-1" />
             Download Spec Sheet
