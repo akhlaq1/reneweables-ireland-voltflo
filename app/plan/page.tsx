@@ -682,10 +682,14 @@ export default function SolarEnergyPlanner() {
 
   // Battery cost is now included in systemBaseCost when using inverter-specific pricing
   // For legacy pricing, we still add it separately (price will be 0 for new system)
-  // Calculate the dynamic battery price for display/breakdown purposes
-  const batteryCost = includeBattery && selectedInverter && selectedBattery ? calculateBatteryPrice(selectedBattery, selectedInverter, basePanelCount) * batteryCount : 0
-
-  const systemBaseCost = systemCombinedCost - batteryCost
+  // Calculate the single battery price first
+  const singleBatteryPrice = includeBattery && selectedInverter && selectedBattery ? calculateBatteryPrice(selectedBattery, selectedInverter, basePanelCount) : 0
+  
+  // The base system cost should only subtract one battery price (systemCombinedCost includes 1 battery if includeBattery is true)
+  const systemBaseCost = systemCombinedCost - singleBatteryPrice
+  
+  // The total battery cost is the single battery price times the number of batteries selected
+  const batteryCost = singleBatteryPrice * batteryCount
 
   // IMPORTANT: use full EV charger price here (not netPrice) so the grant is applied only once
   const evChargerCost = useMemo(() => {
