@@ -1307,8 +1307,8 @@ export default function PDFProposal({ apiData }: PDFProposalProps) {
                 <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-100">
                   <span className="text-gray-700 font-semibold">Solar Panels</span>
                   <span className="font-bold text-blue-700 text-right">
-                    <span className="hidden sm:inline">25 years performance</span>
-                    <span className="sm:hidden">25 years</span>
+                    <span className="hidden sm:inline">30 years performance</span>
+                    <span className="sm:hidden">30 years</span>
                   </span>
                 </div>
                 <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-100">
