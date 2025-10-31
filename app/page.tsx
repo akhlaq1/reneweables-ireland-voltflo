@@ -1977,7 +1977,7 @@ export default function AddressPage() {
 
             switch (templateId) {
               case 1:
-                return <AddressTemplate0 {...templateProps} />
+                return <AddressTemplate1 {...templateProps} />
               case 2:
                 return <AddressTemplate2 {...templateProps} />
               case 3:

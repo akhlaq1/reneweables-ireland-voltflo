@@ -353,7 +353,7 @@ export const AddressTemplate2 = ({
             alt={`${branding.name} Logo`}
             width={80}
             height={40}
-            className="h-16 sm:h-20 mx-auto mb-4 brightness-0 invert object-contain"
+            className="h-16 sm:h-20 mx-auto mb-4 object-contain"
           />
           <div className="w-20 h-1 bg-gradient-to-r from-emerald-400 to-blue-400 mx-auto rounded-full"></div>
         </div>
