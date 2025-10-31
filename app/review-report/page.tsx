@@ -5,11 +5,41 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Calendar, MessageCircle, Instagram, Linkedin, Facebook } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { setAppNavigation } from "@/lib/navigation-tracker"
-import { getBranding } from "@/lib/branding"
+import { Branding, getBranding, resolveBrandSlugFromHostname } from "@/lib/branding"
+import {useEffect, useState} from 'react';
+import companyService from "@/app/api/company"
 
 export default function ReviewReportLanding() {
   const router = useRouter()
-  const branding = getBranding()
+  // const branding = getBranding()
+  const [branding, setBranding] = useState<Branding | null>(null)
+  
+  useEffect(() => {
+
+    getCompanyData()
+  }, [])
+
+  const getCompanyData = async () => {
+    const slug = resolveBrandSlugFromHostname((typeof window !== 'undefined' ? window.location.hostname : undefined));
+    const payload={
+      "sub_domain": slug || "renewables-ireland",
+      "required_fields": ["logo","name","social","email"]
+    }
+    await companyService.getCompanyDatabySubDomain(payload).then((res) => {
+      setBranding({
+        ...branding as Branding,
+        name: res?.data?.data?.name,
+        email: res?.data?.data?.email,
+        logo: res?.data?.data?.logo,
+        social: {
+          instagram: res?.data?.data?.social?.instagram,
+          linkedin: res?.data?.data?.social?.linkedin,
+          facebook: res?.data?.data?.social?.facebook
+        }
+      })
+    })
+    
+  }
 
   const handleBookConsultation = () => {
     setAppNavigation()
@@ -17,19 +47,19 @@ export default function ReviewReportLanding() {
   }
 
   const handleInstagramClick = () => {
-    if (branding.social?.instagram) {
+    if (branding?.social?.instagram) {
       window.open(branding.social.instagram, '_blank')
     }
   }
 
   const handleFacebookClick = () => {
-    if (branding.social?.facebook) {
+    if (branding?.social?.facebook) {
       window.open(branding.social.facebook, '_blank')
     }
   }
 
   const handleLinkedinClick = () => {
-    if (branding.social?.linkedin) {
+    if (branding?.social?.linkedin) {
       window.open(branding.social.linkedin, '_blank')
     }
   }
@@ -188,15 +218,15 @@ export default function ReviewReportLanding() {
             <CardContent className="p-2 sm:p-3">
               <div className="text-center mb-2">
                 <div className="mx-auto w-8 h-8 sm:w-10 sm:h-10 mb-1">
-                  <img src={branding.logo} alt={branding.name} className="w-full h-full object-contain" />
+                  <img src={branding?.logo} alt={branding?.name} className="w-full h-full object-contain" />
                 </div>
-                <h2 className="text-base sm:text-lg font-bold text-gray-900">Follow {branding.name}</h2>
+                <h2 className="text-base sm:text-lg font-bold text-gray-900">Follow {branding?.name}</h2>
               </div>
               <p className="text-gray-600 text-center mb-2 text-sm">
                 See real solar installations from Irish homeowners and stay updated with our latest projects! 🏠⚡
               </p>
               <div className="flex gap-1 sm:gap-1.5 justify-center flex-wrap">
-                {branding.social?.instagram && (
+                {branding?.social?.instagram && (
                   <Button
                     variant="outline"
                     onClick={handleInstagramClick}
@@ -206,7 +236,7 @@ export default function ReviewReportLanding() {
                     Instagram
                   </Button>
                 )}
-                {branding.social?.linkedin && (
+                {branding?.social?.linkedin && (
                   <Button
                     variant="outline"
                     onClick={handleLinkedinClick}
@@ -216,7 +246,7 @@ export default function ReviewReportLanding() {
                     LinkedIn
                   </Button>
                 )}
-                {branding.social?.facebook && (
+                {branding?.social?.facebook && (
                   <Button
                     variant="outline"
                     onClick={handleFacebookClick}
@@ -235,7 +265,7 @@ export default function ReviewReportLanding() {
         <div className="text-center space-y-2 py-3 sm:py-4 border-t border-blue-100">
           <p className="text-xs sm:text-sm text-gray-600">
             Questions or need help?{" "}
-            {branding.email && (
+            {branding?.email && (
               <a href={`mailto:${branding.email}`} className="text-blue-600 hover:text-blue-700 font-medium hover:underline">
               {branding.email}
               </a>

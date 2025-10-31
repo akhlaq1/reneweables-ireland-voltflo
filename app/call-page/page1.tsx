@@ -14,7 +14,6 @@ import { format, addDays } from "date-fns"
 import { cn } from "@/lib/utils"
 import { hasAppNavigation, setAppNavigation } from "@/lib/navigation-tracker"
 import { useIsMobile } from "@/hooks/use-mobile"
-// import { getEmailBranding } from "@/lib/branding"
 import { resolveBrandSlugFromHostname } from "@/lib/branding"
 import companyService from "../api/company"
 
@@ -321,16 +320,16 @@ export default function CallPage() {
         }
       }
     }
-
+    
     // Check if this is the next day (tomorrow)
     const selectedDate = new Date(year, month, day)
     const tomorrow = new Date(today)
     tomorrow.setDate(today.getDate() + 1)
     tomorrow.setHours(0, 0, 0, 0)
     selectedDate.setHours(0, 0, 0, 0)
-
+    
     const isNextDay = selectedDate.getTime() === tomorrow.getTime()
-
+    
     if (isNextDay) {
       // For next day bookings, only show slots after 12 PM (4-6 PM window)
       addWindow(16, 18)
@@ -339,7 +338,7 @@ export default function CallPage() {
       addWindow(9, 11)
       addWindow(16, 18)
     }
-
+    
     return slots
   }
 
@@ -435,9 +434,8 @@ export default function CallPage() {
 
       await companyService.getCompanyDatabySubDomain({
         "sub_domain": resolveBrandSlugFromHostname(typeof window !== "undefined" ? window.location.hostname : ""),
-        "required_fields": ["emailBranding","name","description","website","email","phone","logo"]
+        "required_fields": ["emailBranding"]
       }).then(async (res) => {
-        const company_res = res?.data?.data;
         // Prepare API request body
         const requestBody = {
           email: finalEmail,
@@ -448,19 +446,8 @@ export default function CallPage() {
           solar_plan_data: solarPlanData ? JSON.parse(solarPlanData) : null,
           personalise_answers: personaliseAnswers ? JSON.parse(personaliseAnswers) : null,
           selectedLocation: selectedLocation ? JSON.parse(selectedLocation) : null,
-          branding: {
-            ...company_res.emailBranding,
-            company_name: company_res.name,
-            company_tagline: company_res.description,
-            support_email: company_res.email,
-            phone_number: company_res.phone,
-            phone_number_clean: company_res.phone,
-            platform_name: 'Voltflo',
-            website_url: 'https://renewables-ireland.voltflo.ie',
-            backend_url: process.env.NEXT_PUBLIC_API_BASE_URL_PRODUCTION
-          },
+          branding: res?.data?.data?.emailBranding,
           company_id: 3,
-
         }
 
         // Make API call to the same endpoint as plan page
@@ -474,12 +461,12 @@ export default function CallPage() {
         }
         localStorage.setItem("user_contact_info", JSON.stringify(contactInfoToSave))
 
-        console.log("REsponse:", response)
-
         // Show the booking success terminal UI
         setStep("booking-success")
 
-      })
+      }).catch((error) => {
+        console.error('Failed to fetch email branding, using fallback:', error);
+      });
 
 
 

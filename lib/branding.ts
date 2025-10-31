@@ -2,6 +2,8 @@
 // All brand-related data (logos, contact, equipment catalogs, pricing formulas) lives here.
 // Extend or add new brands by updating the brands map below.
 
+import companyService from '../app/api/company';
+
 export interface EquipmentOption {
   id: string;
   name: string;
@@ -9,7 +11,7 @@ export interface EquipmentOption {
   warranty: string;
   efficiency?: string;
   priceAdjustment?: number; // For panels/inverters where base system price is adjusted
-  price?: number; // Absolute price (e.g., battery, EV charger unit price)
+  price?: number; // Absolute price (e.g., battery, EV charger unit price). For batteries: set to 0 when using inverter-specific slab pricing (price will be calculated dynamically)
   capacity?: number; // kWh for batteries
   power?: string; // kW rating for EV charger
   grant?: number; // Applicable grant for this equipment (e.g. EV charger grant)
@@ -18,6 +20,32 @@ export interface EquipmentOption {
   datasheet?: string; // Path to downloadable PDF if available
   features?: string[];
   image?: string; // Path to equipment image/logo
+  compatibleBatteries?: string[]; // IDs of compatible batteries (for inverters)
+  compatibleInverters?: string[]; // IDs of compatible inverters (for batteries)
+  pricingConfig?: InverterPricingConfig; // Inverter-specific pricing configuration
+}
+
+
+/**
+ * Battery-specific pricing configuration for an inverter
+ * Each battery (identified by ID) can have its own slab pricing
+ * The batteryId references the actual battery object which contains the capacity
+ */
+export interface BatteryPricingConfig {
+  batteryId: string; // Battery ID (e.g., 'sigenergy5', 'sigenergy8', 'tesla5')
+  slabPricing: PricingSlabTier[]; // Pricing slabs for this battery configuration
+}
+
+/**
+ * Inverter-specific pricing configuration
+ * Supports different pricing for:
+ * - Inverter only (no battery)
+ * - Inverter + Battery (different slabs per battery capacity)
+ */
+export interface InverterPricingConfig {
+  inverterId: string; // Reference to the inverter ID
+  inverterOnlyPricing: PricingSlabTier[]; // Pricing when no battery is included
+  withBatteryPricing: BatteryPricingConfig[]; // Pricing for each battery configuration
 }
 
 /**
@@ -64,6 +92,8 @@ export interface PricingFormulaConfig {
   // Slab pricing (new method)
   slabPricing?: PricingSlabTier[]; // Array of panel count -> price mappings
   seaiGrant: number; // Default SEAI grant (if eligible)
+  panelWattage?: number; // Wattage per panel for dynamic SEAI grant calculation (default: 440W)
+  useDynamicSEAIGrant?: boolean; // If true, calculate SEAI grant based on system size
   defaultEVGrant: number; // Default EV charger grant (if equipment entry has grant undefined)
 }
 
@@ -160,10 +190,30 @@ export interface Branding {
 }
 
 // Helper calculation utilities centralised here for reuse
-export function calculateSystemBaseCost(panelCount: number, panel: EquipmentOption, inverter: EquipmentOption, pricing: PricingFormulaConfig) {
+export function calculateSystemBaseCost(
+  panelCount: number, 
+  panel: EquipmentOption, 
+  inverter: EquipmentOption, 
+  pricing: PricingFormulaConfig,
+  includeBattery: boolean = false,
+  battery?: EquipmentOption // Changed: now accepts full battery object instead of just capacity
+) {
   const panelAdj = panel.priceAdjustment || 0;
   const inverterAdj = inverter.priceAdjustment || 0;
   
+  // Check if inverter has its own pricing configuration
+  if (inverter.pricingConfig) {
+    return calculateInverterSpecificCost(
+      panelCount,
+      inverter.pricingConfig,
+      panelAdj,
+      inverterAdj,
+      includeBattery,
+      battery?.id // Pass battery ID for matching
+    );
+  }
+  
+  // Fallback to brand-level pricing (legacy support)
   if (pricing.pricingType === 'slab_pricing' && pricing.slabPricing) {
     // Find the appropriate slab tier for the panel count
     const slabTier = findSlabTierForPanelCount(panelCount, pricing.slabPricing);
@@ -176,6 +226,61 @@ export function calculateSystemBaseCost(panelCount: number, panel: EquipmentOpti
     }
     return baseSystemPrice + (panelCount - basePanelThreshold) * additionalPanelCost + panelAdj + inverterAdj;
   }
+}
+
+// export function calculateSystemBaseCost(panelCount: number, panel: EquipmentOption, inverter: EquipmentOption, pricing: PricingFormulaConfig) {
+//   const panelAdj = panel.priceAdjustment || 0;
+//   const inverterAdj = inverter.priceAdjustment || 0;
+  
+//   if (pricing.pricingType === 'slab_pricing' && pricing.slabPricing) {
+//     // Find the appropriate slab tier for the panel count
+//     const slabTier = findSlabTierForPanelCount(panelCount, pricing.slabPricing);
+//     return slabTier.price + panelAdj + inverterAdj;
+//   } else {
+//     // Use original base + incremental pricing
+//     const { basePanelThreshold, baseSystemPrice, additionalPanelCost } = pricing;
+//     if (panelCount <= basePanelThreshold) {
+//       return baseSystemPrice + panelAdj + inverterAdj;
+//     }
+//     return baseSystemPrice + (panelCount - basePanelThreshold) * additionalPanelCost + panelAdj + inverterAdj;
+//   }
+// }
+
+/**
+ * Calculate system cost using inverter-specific pricing configuration
+ * Supports different pricing slabs for inverter-only vs inverter+battery configurations
+ */
+export function calculateInverterSpecificCost(
+  panelCount: number,
+  pricingConfig: InverterPricingConfig,
+  panelAdj: number,
+  inverterAdj: number,
+  includeBattery: boolean,
+  batteryId?: string
+): number {
+  let baseCost: number;
+  
+  if (includeBattery && batteryId) {
+    // Find pricing for this specific battery ID
+    const batteryConfig = pricingConfig.withBatteryPricing.find(
+      config => config.batteryId === batteryId
+    );
+    
+    if (batteryConfig) {
+      const slabTier = findSlabTierForPanelCount(panelCount, batteryConfig.slabPricing);
+      baseCost = slabTier.price;
+    } else {
+      // Fallback to inverter-only pricing if battery config not found
+      const slabTier = findSlabTierForPanelCount(panelCount, pricingConfig.inverterOnlyPricing);
+      baseCost = slabTier.price;
+    }
+  } else {
+    // Use inverter-only pricing
+    const slabTier = findSlabTierForPanelCount(panelCount, pricingConfig.inverterOnlyPricing);
+    baseCost = slabTier.price;
+  }
+  
+  return baseCost + panelAdj + inverterAdj;
 }
 
 // Helper function to find the appropriate slab tier for a given panel count
@@ -196,6 +301,111 @@ export function findSlabTierForPanelCount(panelCount: number, slabPricing: Prici
   
   return selectedTier;
 }
+
+/**
+ * Calculate the actual price of a battery for a given configuration
+ * When using inverter-specific pricing, the battery price is the difference between
+ * the withBatteryPricing and inverterOnlyPricing slabs
+ * 
+ * @param battery Battery equipment option
+ * @param inverter Inverter equipment option
+ * @param panelCount Number of panels in the system
+ * @returns Battery price in euros
+ */
+export function calculateBatteryPrice(
+  battery: EquipmentOption,
+  inverter: EquipmentOption,
+  panelCount: number
+): number {
+  // If battery has a static price defined, use it (legacy pricing)
+  if (battery.price && battery.price > 0) {
+    return battery.price;
+  }
+  
+  // If inverter has pricing config, calculate dynamic battery price
+  if (inverter.pricingConfig) {
+    const { pricingConfig } = inverter;
+    
+    // Find the inverter-only pricing for this panel count
+    const inverterOnlyTier = findSlabTierForPanelCount(panelCount, pricingConfig.inverterOnlyPricing);
+    const inverterOnlyPrice = inverterOnlyTier.price;
+    
+    // Find the pricing with this specific battery
+    const batteryConfig = pricingConfig.withBatteryPricing.find(
+      config => config.batteryId === battery.id
+    );
+    
+    if (batteryConfig) {
+      const withBatteryTier = findSlabTierForPanelCount(panelCount, batteryConfig.slabPricing);
+      const withBatteryPrice = withBatteryTier.price;
+      
+      // Battery price is the difference
+      return Math.max(0, withBatteryPrice - inverterOnlyPrice);
+    }
+    
+    // If no battery config found, return 0 (fallback)
+    return 0;
+  }
+  
+  // No pricing config available, return static price or 0
+  return battery.price || 0;
+}
+
+
+/**
+ * Get the SEAI grant for a specific panel count, considering brand pricing configuration
+ * Uses dynamic calculation if enabled, otherwise returns default grant
+ * 
+ * @param panelCount Number of solar panels
+ * @param pricing Pricing configuration from branding
+ * @returns SEAI grant amount in euros
+ */
+export function getSEAIGrant(panelCount: number, pricing: PricingFormulaConfig): number {
+  if (pricing.useDynamicSEAIGrant) {
+    const panelWattage = pricing.panelWattage || 440;
+    return calculateSEAIGrant(panelCount, panelWattage);
+  }
+  return pricing.seaiGrant;
+}
+
+/**
+ * Check if a battery is compatible with the selected inverter
+ */
+export function isBatteryCompatibleWithInverter(battery: EquipmentOption, inverter: EquipmentOption): boolean {
+  // If no compatibility constraints defined, assume all are compatible (backward compatibility)
+  if (!inverter.compatibleBatteries || inverter.compatibleBatteries.length === 0) {
+    return true;
+  }
+  
+  return inverter.compatibleBatteries.includes(battery.id);
+}
+
+/**
+ * Check if an inverter is compatible with the selected battery
+ */
+export function isInverterCompatibleWithBattery(inverter: EquipmentOption, battery: EquipmentOption): boolean {
+  // If no compatibility constraints defined, assume all are compatible (backward compatibility)
+  if (!battery.compatibleInverters || battery.compatibleInverters.length === 0) {
+    return true;
+  }
+  
+  return battery.compatibleInverters.includes(inverter.id);
+}
+
+/**
+ * Filter batteries that are compatible with the selected inverter
+ */
+export function getCompatibleBatteries(batteries: EquipmentOption[], inverter: EquipmentOption): EquipmentOption[] {
+  return batteries.filter(battery => isBatteryCompatibleWithInverter(battery, inverter));
+}
+
+/**
+ * Filter inverters that are compatible with the selected battery
+ */
+export function getCompatibleInverters(inverters: EquipmentOption[], battery: EquipmentOption): EquipmentOption[] {
+  return inverters.filter(inverter => isInverterCompatibleWithBattery(inverter, battery));
+}
+
 
 export function getBatteryCost(includeBattery: boolean, battery: EquipmentOption, count: number) {
   if (!includeBattery) return 0;
@@ -248,7 +458,7 @@ export function calculateSEAIGrant(panelCount: number, wattsPerPanel: number = 4
 // Brand definitions
 const brands: Record<string, Branding> = {
   renewables: {
-    slug: 'renewables',
+    slug: 'renewables-ireland',
     name: 'Renewables Ireland Limited',
     website: 'https://renewables-ireland.ie',
     email: 'info@renewables-ireland.ie',
@@ -324,7 +534,42 @@ const brands: Record<string, Branding> = {
           recommended: true,
           reason: 'Industry-leading reliability',
           datasheet: '/pdf/huawei_inverter.pdf',
-          image: '/images/inverters/huawei.png'
+          image: '/images/inverters/huawei.png',
+          compatibleBatteries: ['huawei5','huawei10'],
+          pricingConfig: {
+            inverterId: 'huawei',
+             // Pricing for Huawei inverter without battery
+            inverterOnlyPricing:[
+              { panelCount: 8, price: 7360 },
+              { panelCount: 10, price: 7660 },
+              { panelCount: 12, price: 7800 },
+              { panelCount: 14, price: 8165 },
+              { panelCount: 16, price: 8350 },
+            ],
+             // Pricing for Huawei inverter with different batteries
+            withBatteryPricing: [
+              {
+                batteryId: 'huawei5', // Sigen 5kWh battery
+                slabPricing: [
+                  { panelCount: 8, price: 9855 },
+                  { panelCount: 10, price: 10155 },
+                  { panelCount: 12, price: 10295 },
+                  { panelCount: 14, price: 10660 },
+                  { panelCount: 16, price: 10845 },
+                    ]
+              },
+              {
+                batteryId: 'huawei10', // Sigen 5kWh battery
+                slabPricing: [
+                  { panelCount: 8, price: 12350 },
+                  { panelCount: 10, price: 12650 },
+                  { panelCount: 12, price: 12790 },
+                  { panelCount: 14, price: 13155 },
+                  { panelCount: 16, price: 13340 }
+                    ]
+              },
+            ]
+          }
         }
       ],
       batteries: [
@@ -338,7 +583,8 @@ const brands: Record<string, Branding> = {
           recommended: false,
           reason: 'Compact solution, lower capacity',
           datasheet: '/pdf/huawei_battery.pdf',
-          image: '/images/batteries/huwaei5kw.jpg'
+          image: '/images/batteries/huwaei5kw.jpg',
+          compatibleInverters: ['huawei']
         },
         {
           id: 'huawei10',
@@ -350,7 +596,8 @@ const brands: Record<string, Branding> = {
           recommended: false,
           reason: 'Compact solution, lower capacity',
           datasheet: '/pdf/huawei_battery.pdf',
-          image: '/images/batteries/huawei10kw.jpg'
+          image: '/images/batteries/huawei10kw.jpg',
+          compatibleInverters: ['huawei']
         },
       ],
       evChargers: [
@@ -375,7 +622,22 @@ const brands: Record<string, Branding> = {
       basePanelThreshold: 8,
       baseSystemPrice: 7360,
       additionalPanelCost: 200,
-      seaiGrant: 1800,
+      slabPricing: [
+        { panelCount: 8, price: 6500 },
+        { panelCount: 9, price: 6600 },
+        { panelCount: 10, price: 6750 },
+        { panelCount: 11, price: 7050 },
+        { panelCount: 12, price: 7350 },
+        { panelCount: 13, price: 7600 },
+        { panelCount: 14, price: 7850 },
+        { panelCount: 15, price: 8100 },
+        { panelCount: 16, price: 8300 },
+        { panelCount: 17, price: 8550 },
+        { panelCount: 18, price: 8850 },
+      ],
+      seaiGrant: 1800, // Default fallback value
+      panelWattage: 440, // Wattage per panel for SEAI grant calculation
+      useDynamicSEAIGrant: true, // Enable dynamic SEAI grant calculation based on system size
       defaultEVGrant: 300
     },
     energy: {
@@ -413,6 +675,7 @@ const brands: Record<string, Branding> = {
     email: 'info@renewables-ireland.ie',
     phone: '+353 (0)1 298 6140',
     logo: '/renewables.png',
+    logo_with_name: '/logo_with_name.png',
     description: "Example configuration using base + incremental pricing",
     address_template: 1, // Use template 1
     colors: { primary: '#1d4ed8', secondary: '#059669', accent: '#f59e0b' },
@@ -527,21 +790,23 @@ const brands: Record<string, Branding> = {
 };
 
 export function resolveBrandSlugFromHostname(host?: string): string {
-  return 'renewables';
+  return 'renewables-ireland';
 }
 
-export function getBranding(hostname?: string): Branding {
+// create a async api function
+export async function getBranding(hostname?: string): Promise<Branding> {
   const slug = resolveBrandSlugFromHostname(hostname || (typeof window !== 'undefined' ? window.location.hostname : undefined));
-  return brands[slug] || brands.renewables;
-}
-
-export function listBrands(): Branding[] { return Object.values(brands); }
-
-// Convenience helpers
-export function getPrimaryColor() { return getBranding().colors.primary }
-export function getSecondaryColor() { return getBranding().colors.secondary }
-export function getAccentColor() { return getBranding().colors.accent }
-export function getSupportEmail() { return getBranding().email }
-export function getEmailBranding(hostname?: string): EmailBranding { 
-  return getBranding(hostname).emailBranding 
+  return companyService.getCompanyDatabySubDomain({
+    "sub_domain": slug,
+    "required_fields": ["name", "logo","slug"]
+  }).then((res) => {
+    return {
+      ...res.data.data
+    };
+   
+  }).catch((error) => {
+    console.error('Error fetching branding:', error);
+    return brands[slug] || brands.renewables;
+  });
+  
 }
