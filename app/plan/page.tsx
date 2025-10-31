@@ -253,6 +253,113 @@ export default function SolarEnergyPlanner() {
   const [gridRate, setGridRate] = useState(0.35)
   const [exportRate, setexportRate] = useState(0.20)
 
+  /**
+   * Get available panel counts from pricing configuration
+   * Returns an array of valid panel counts based on the current inverter's pricing config
+   */
+  const getAvailablePanelCounts = useCallback((): number[] => {
+    if (!selectedInverter || !branding?.pricing) {
+      return [8, 10, 12, 14, 16, 18, 20, 22]; // Default fallback
+    }
+
+    // Check if inverter has its own pricing configuration
+    if (selectedInverter.pricingConfig) {
+      const config = selectedInverter.pricingConfig;
+      
+      // Determine which pricing to use based on battery selection
+      let slabPricing;
+      if (includeBattery && selectedBattery) {
+        const batteryConfig = config.withBatteryPricing.find(
+          bc => bc.batteryId === selectedBattery.id
+        );
+        slabPricing = batteryConfig?.slabPricing || config.inverterOnlyPricing;
+      } else {
+        slabPricing = config.inverterOnlyPricing;
+      }
+      
+      // Extract panel counts from slab pricing and sort
+      return slabPricing.map(tier => tier.panelCount).sort((a, b) => a - b);
+    }
+    
+    // Check brand-level slab pricing
+    if (branding.pricing.pricingType === 'slab_pricing' && branding.pricing.slabPricing) {
+      return branding.pricing.slabPricing.map(tier => tier.panelCount).sort((a, b) => a - b);
+    }
+    
+    // For base + incremental pricing, return a range from base threshold to max
+    const baseThreshold = branding.pricing.basePanelThreshold || 8;
+    const counts: number[] = [];
+    for (let i = baseThreshold; i <= maxPanels; i++) {
+      counts.push(i);
+    }
+    return counts;
+  }, [selectedInverter, branding?.pricing, includeBattery, selectedBattery, maxPanels]);
+
+  /**
+   * Get the next valid panel count (for increment)
+   * If current count is not in the list, finds the next higher valid count
+   */
+  const getNextPanelCount = useCallback((currentCount: number): number => {
+    const availableCounts = getAvailablePanelCounts();
+    
+    // Find the next higher count in the available list
+    const nextCount = availableCounts.find(count => count > currentCount);
+    
+    // If found and within max limit, return it; otherwise return current or max
+    if (nextCount && nextCount <= maxPanels) {
+      return nextCount;
+    }
+    
+    // If we're at or above the highest tier, cap at maxPanels
+    return Math.min(currentCount, maxPanels);
+  }, [getAvailablePanelCounts, maxPanels]);
+
+  /**
+   * Get the previous valid panel count (for decrement)
+   * If current count is not in the list, finds the next lower valid count
+   */
+  const getPreviousPanelCount = useCallback((currentCount: number): number => {
+    const availableCounts = getAvailablePanelCounts();
+    
+    // Find the next lower count in the available list
+    const reverseCounts = [...availableCounts].reverse();
+    const prevCount = reverseCounts.find(count => count < currentCount);
+    
+    // If found, return it; otherwise return the minimum available count
+    if (prevCount !== undefined) {
+      return prevCount;
+    }
+    
+    // Return the minimum available count (or 8 as absolute minimum)
+    return Math.max(availableCounts[0] || 8, 8);
+  }, [getAvailablePanelCounts]);
+
+  /**
+   * Snap panel count to the nearest valid tier
+   * Used when loading saved configurations or initializing
+   */
+  const snapToNearestPanelCount = useCallback((count: number): number => {
+    const availableCounts = getAvailablePanelCounts();
+    
+    if (availableCounts.includes(count)) {
+      return count; // Already valid
+    }
+    
+    // Find the closest valid count
+    let closest = availableCounts[0];
+    let minDiff = Math.abs(count - closest);
+    
+    for (const validCount of availableCounts) {
+      const diff = Math.abs(count - validCount);
+      if (diff < minDiff) {
+        minDiff = diff;
+        closest = validCount;
+      }
+    }
+    
+    return closest;
+  }, [getAvailablePanelCounts]);
+
   useEffect(() => {
     getCompanyData()
   }, [])
@@ -1081,8 +1188,10 @@ export default function SolarEnergyPlanner() {
           const systemSizeKw = parseFloat(proposalData.system_size)
           const panelWattageKw = parseFloat(process.env.NEXT_PUBLIC_PANEL_WATTAGE || '0.44')
           const calculatedPanelCount = Math.round(systemSizeKw / panelWattageKw)
-          setBasePanelCount(calculatedPanelCount)
-          setOriginalBusinessProposalPanelCount(calculatedPanelCount) // Store the original count for scaling
+          // Snap to nearest valid panel count from pricing tiers
+          const snappedPanelCount = snapToNearestPanelCount(calculatedPanelCount)
+          setBasePanelCount(snappedPanelCount)
+          setOriginalBusinessProposalPanelCount(snappedPanelCount) // Store the original count for scaling
         }
       }
 
@@ -1333,6 +1442,9 @@ export default function SolarEnergyPlanner() {
           totalPanelCount={totalPanelCount}
           maxPanels={maxPanels}
           recommendedPanelCount={recommendedPanelCount}
+          getAvailablePanelCounts={getAvailablePanelCounts}
+          getNextPanelCount={getNextPanelCount}
+          getPreviousPanelCount={getPreviousPanelCount}
           powerOutageBackup={powerOutageBackup}
           setPowerOutageBackup={setPowerOutageBackup}
           includeBattery={includeBattery}
@@ -1512,10 +1624,10 @@ export default function SolarEnergyPlanner() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => {
-                                  const newBasePanelCount = Math.max(8, basePanelCount - 1)
+                                  const newBasePanelCount = getPreviousPanelCount(basePanelCount)
                                   setBasePanelCount(newBasePanelCount)
                                 }}
-                                disabled={basePanelCount <= 8}
+                                disabled={basePanelCount <= getAvailablePanelCounts()[0]}
                               >
                                 <Minus className="w-4 h-4" />
                               </Button>
@@ -1524,10 +1636,10 @@ export default function SolarEnergyPlanner() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => {
-                                  const newBasePanelCount = Math.min(maxPanels, basePanelCount + 1)
+                                  const newBasePanelCount = getNextPanelCount(basePanelCount)
                                   setBasePanelCount(newBasePanelCount)
                                 }}
-                                disabled={totalPanelCount >= maxPanels}
+                                disabled={totalPanelCount >= maxPanels || getNextPanelCount(basePanelCount) === basePanelCount}
                               >
                                 <Plus className="w-4 h-4" />
                               </Button>
@@ -3861,6 +3973,9 @@ interface SolarDashboardMobileProps {
   totalPanelCount: number;
   maxPanels: number;
   recommendedPanelCount: number;
+  getAvailablePanelCounts: () => number[];
+  getNextPanelCount: (current: number) => number;
+  getPreviousPanelCount: (current: number) => number;
   powerOutageBackup: boolean;
   setPowerOutageBackup: (backup: boolean) => void;
   includeBattery: boolean;
@@ -3958,6 +4073,9 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
     totalPanelCount,
     maxPanels,
     recommendedPanelCount,
+    getAvailablePanelCounts,
+    getNextPanelCount,
+    getPreviousPanelCount,
     powerOutageBackup,
     setPowerOutageBackup,
     includeBattery,
@@ -4161,8 +4279,11 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
               <Button
                 variant="outline"
                 size="icon"
-                onClick={() => setBasePanelCount(Math.max(8, basePanelCount - 1))}
-                disabled={basePanelCount <= 8}
+                onClick={() => {
+                  const newBasePanelCount = getPreviousPanelCount(basePanelCount)
+                  setBasePanelCount(newBasePanelCount)
+                }}
+                disabled={basePanelCount <= getAvailablePanelCounts()[0]}
               >
                 <Minus className="w-4 h-4" />
               </Button>
@@ -4171,10 +4292,10 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                 variant="outline"
                 size="icon"
                 onClick={() => {
-                  const newBasePanelCount = Math.min(maxPanels, basePanelCount + 1)
+                  const newBasePanelCount = getNextPanelCount(basePanelCount)
                   setBasePanelCount(newBasePanelCount)
                 }}
-                disabled={totalPanelCount >= maxPanels}
+                disabled={totalPanelCount >= maxPanels || getNextPanelCount(basePanelCount) === basePanelCount}
               >
                 <Plus className="w-4 h-4" />
               </Button>
