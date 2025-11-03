@@ -71,6 +71,7 @@ import {
   resolveBrandSlugFromHostname
 } from "@/lib/branding"
 import companyService from "../api/company"
+import { useToast } from "@/hooks/use-toast"
 
 // Helper function to extract filename from datasheet path
 const getDownloadFilename = (datasheetPath: string | undefined, fallbackName: string): string => {
@@ -194,14 +195,8 @@ const energyUsagePatterns = [
 export default function SolarEnergyPlanner() {
   const router = useRouter()
   const isMobile = useIsMobile()
-  // const branding = getBranding()
+  const { toast } = useToast()
   const [branding, setBranding] = useState<Branding | null>(null)
-
-  // Equipment options from branding
-  // const solarPanelOptions = branding.equipment.solarPanels
-  // const inverterOptions = branding.equipment.inverters
-  // const batteryOptions = branding.equipment.batteries
-  // const evChargerOptions = branding.equipment.
 
   const [solarPanelOptions, setSolarPanelOptions] = useState<EquipmentOption[]>([])
   const [inverterOptions, setInverterOptions] = useState<EquipmentOption[]>([])
@@ -265,7 +260,7 @@ export default function SolarEnergyPlanner() {
     // Check if inverter has its own pricing configuration
     if (selectedInverter.pricingConfig) {
       const config = selectedInverter.pricingConfig;
-      
+
       // Determine which pricing to use based on battery selection
       let slabPricing;
       if (includeBattery && selectedBattery) {
@@ -276,16 +271,16 @@ export default function SolarEnergyPlanner() {
       } else {
         slabPricing = config.inverterOnlyPricing;
       }
-      
+
       // Extract panel counts from slab pricing and sort
       return slabPricing.map(tier => tier.panelCount).sort((a, b) => a - b);
     }
-    
+
     // Check brand-level slab pricing
     if (branding.pricing.pricingType === 'slab_pricing' && branding.pricing.slabPricing) {
       return branding.pricing.slabPricing.map(tier => tier.panelCount).sort((a, b) => a - b);
     }
-    
+
     // For base + incremental pricing, return a range from base threshold to max
     const baseThreshold = branding.pricing.basePanelThreshold || 8;
     const counts: number[] = [];
@@ -301,15 +296,15 @@ export default function SolarEnergyPlanner() {
    */
   const getNextPanelCount = useCallback((currentCount: number): number => {
     const availableCounts = getAvailablePanelCounts();
-    
+
     // Find the next higher count in the available list
     const nextCount = availableCounts.find(count => count > currentCount);
-    
+
     // If found and within max limit, return it; otherwise return current or max
     if (nextCount && nextCount <= maxPanels) {
       return nextCount;
     }
-    
+
     // If we're at or above the highest tier, cap at maxPanels
     return Math.min(currentCount, maxPanels);
   }, [getAvailablePanelCounts, maxPanels]);
@@ -320,16 +315,16 @@ export default function SolarEnergyPlanner() {
    */
   const getPreviousPanelCount = useCallback((currentCount: number): number => {
     const availableCounts = getAvailablePanelCounts();
-    
+
     // Find the next lower count in the available list
     const reverseCounts = [...availableCounts].reverse();
     const prevCount = reverseCounts.find(count => count < currentCount);
-    
+
     // If found, return it; otherwise return the minimum available count
     if (prevCount !== undefined) {
       return prevCount;
     }
-    
+
     // Return the minimum available count (or 8 as absolute minimum)
     return Math.max(availableCounts[0] || 8, 8);
   }, [getAvailablePanelCounts]);
@@ -340,15 +335,15 @@ export default function SolarEnergyPlanner() {
    */
   const snapToNearestPanelCount = useCallback((count: number): number => {
     const availableCounts = getAvailablePanelCounts();
-    
+
     if (availableCounts.includes(count)) {
       return count; // Already valid
     }
-    
+
     // Find the closest valid count
     let closest = availableCounts[0];
     let minDiff = Math.abs(count - closest);
-    
+
     for (const validCount of availableCounts) {
       const diff = Math.abs(count - validCount);
       if (diff < minDiff) {
@@ -356,12 +351,17 @@ export default function SolarEnergyPlanner() {
         closest = validCount;
       }
     }
-    
+
     return closest;
   }, [getAvailablePanelCounts]);
 
   useEffect(() => {
     getCompanyData()
+    const storedUserContact = localStorage.getItem("user_contact_info")
+    const userContact = JSON.parse(storedUserContact || "{}")
+    setFullName(userContact.fullName)
+    setEmail(userContact.email)
+    setAgreeToTerms(userContact.agreeToTerms)
   }, [])
 
   const getCompanyData = async () => {
@@ -684,10 +684,10 @@ export default function SolarEnergyPlanner() {
   // For legacy pricing, we still add it separately (price will be 0 for new system)
   // Calculate the single battery price first
   const singleBatteryPrice = includeBattery && selectedInverter && selectedBattery ? calculateBatteryPrice(selectedBattery, selectedInverter, basePanelCount) : 0
-  
+
   // The base system cost should only subtract one battery price (systemCombinedCost includes 1 battery if includeBattery is true)
   const systemBaseCost = systemCombinedCost - singleBatteryPrice
-  
+
   // The total battery cost is the single battery price times the number of batteries selected
   const batteryCost = singleBatteryPrice * batteryCount
 
@@ -1101,12 +1101,26 @@ export default function SolarEnergyPlanner() {
         agreeToTerms,
       });
 
-      // Also save user contact info separately
-      saveUserContactInfo({
+      // Also save user contact info separately, preserving existing data
+      const existingContactInfo = localStorage.getItem("user_contact_info");
+      let contactInfoToSave: any = {
         fullName: fullName.trim(),
         email: email.trim(),
         submittedAt: new Date().toISOString(),
-      });
+      };
+
+      // Preserve existing phone and agreeToTerms if they exist
+      if (existingContactInfo) {
+        try {
+          const existing = JSON.parse(existingContactInfo);
+          if (existing.phone) contactInfoToSave.phone = existing.phone;
+          if (existing.agreeToTerms !== undefined) contactInfoToSave.agreeToTerms = existing.agreeToTerms;
+        } catch (error) {
+          console.warn("Error parsing existing contact info:", error);
+        }
+      }
+
+      saveUserContactInfo(contactInfoToSave);
 
       // Collect data from localStorage for API call
       const solarPlanData = localStorage.getItem('solar_plan_data');
@@ -1135,14 +1149,22 @@ export default function SolarEnergyPlanner() {
             phone_number: company_res.phone,
             phone_number_clean: company_res.phone,
             platform_name: 'Voltflo',
-            website_url: 'https://renewables-ireland.voltflo.ie',
-            backend_url: process.env.NEXT_PUBLIC_API_BASE_URL_PRODUCTION
+            website_url: company_res.website || 'https://renewables-ireland.voltflo.ie',
+            backend_url: company_res.emailBranding.backend_url || process.env.NEXT_PUBLIC_API_BASE_URL_PRODUCTION
           },
           company_id: 3
         };
 
         // Make API call
         const response = await api.post('public_users/new-journey-installer-user', requestBody);
+        if (response.status !== 200) {
+          toast({
+            title: submitError,
+            description: "Please try again with new email",
+            duration: 300, // Stay until user closes it,
+            color: "red",
+          })
+        }
 
         // Save email submission success to localStorage
         localStorage.setItem('email_submission_success', 'true')
@@ -1160,6 +1182,12 @@ export default function SolarEnergyPlanner() {
 
       }).catch((error) => {
         console.error('Failed to fetch email branding, using fallback:', error);
+        toast({
+          title: `❌ ${error?.response?.data?.message}`,
+          description: "",
+          duration: Infinity, // Stay until user closes it
+          color: "red"
+        })
       });
 
 
@@ -1169,10 +1197,27 @@ export default function SolarEnergyPlanner() {
         error?.response?.data?.message ||
         'Failed to save your plan. Please try again.'
       );
+      toast({
+        title: `❌ ${error?.response?.data?.message}`,
+        description: "",
+        duration: Infinity, // Stay until user closes it
+        color: "red"
+      })
     } finally {
       setIsSubmitting(false);
     }
   }
+
+  // const handleDirectProposalView = () => {
+  //   try {
+  //     handleSavePlan()
+
+  //   } catch (error) {
+  //     console.error('Error reading contact info:', error)
+  //     // Fall back to showing the dialog on error
+  //     // setShowSavePlanDialog(true)
+  //   }
+  // }
 
   // Calculate current and new annual bills for circular progress
   const currentAnnualBill = annualBillAmount
@@ -2943,9 +2988,18 @@ export default function SolarEnergyPlanner() {
                           </span>
                         </Button>
 
-
-
+                        
                         {/* Secondary CTA - Download Plan */}
+                        <Button
+                          variant="outline"
+                          className="w-full h-10 bg-white hover:bg-gray-50 border-2 border-gray-200 hover:border-gray-300 text-gray-700 font-medium text-sm transition-all duration-200"
+                          onClick={handleSavePlan}
+                          disabled={isSubmitting}
+                        >
+                          <FileChartColumnIncreasing className="w-4 h-4 mr-2" />
+                          {isSubmitting ? "Getting Your Plan..." : "View My Proposal"}
+                        </Button>
+
                         <Dialog
                           open={showSavePlanDialog}
                           onOpenChange={(open) => {
@@ -2957,7 +3011,7 @@ export default function SolarEnergyPlanner() {
                             }
                           }}
                         >
-                          <DialogTrigger asChild>
+                          {/* <DialogTrigger asChild>
                             <Button
                               variant="outline"
                               className="w-full h-10 bg-white hover:bg-gray-50 border-2 border-gray-200 hover:border-gray-300 text-gray-700 font-medium text-sm transition-all duration-200"
@@ -2965,7 +3019,7 @@ export default function SolarEnergyPlanner() {
                               <FileChartColumnIncreasing className="w-4 h-4 mr-2" />
                               View My Proposal
                             </Button>
-                          </DialogTrigger>
+                          </DialogTrigger> */}
                           <DialogContent className="sm:max-w-md">
                             {emailSubmissionSuccess ? (
                               // Success State
@@ -5418,6 +5472,16 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                 </div>
               </Button>
               {/* Secondary CTA - Download Plan */}
+              <Button
+                variant="outline"
+                className="w-full h-10 bg-white hover:bg-gray-50 border-2 border-gray-200 hover:border-gray-300 text-gray-700 font-medium text-sm transition-all duration-200"
+                onClick={handleSavePlan}
+                disabled={isSubmitting}
+              >
+                <FileChartColumnIncreasing className="w-4 h-4 mr-2" />
+                {isSubmitting ? "Getting Your Plan..." : "View My Proposal"}
+              </Button>
+
               <Dialog
                 open={showSavePlanDialog}
                 onOpenChange={(open) => {
@@ -5442,7 +5506,7 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                   }
                 }}
               >
-                <DialogTrigger asChild>
+                {/* <DialogTrigger asChild>
                   <Button
                     variant="outline"
                     className="w-full h-10 bg-white hover:bg-gray-50 border-2 border-gray-200 hover:border-gray-300 text-gray-700 font-medium text-sm transition-all duration-200"
@@ -5450,7 +5514,7 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                     <FileChartColumnIncreasing className="w-4 h-4 mr-2" />
                     View My Proposal
                   </Button>
-                </DialogTrigger>
+                </DialogTrigger> */}
                 <DialogContent className="sm:max-w-md">
                   {emailSubmissionSuccess ? (
                     // Success State
@@ -5763,10 +5827,11 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
               variant="outline"
               size="sm"
               className="text-xs px-3 bg-white border border-gray-300 shadow-sm"
-              onClick={() => setShowSavePlanDialog(true)}
+              // onClick={() => setShowSavePlanDialog(true)}
+              onClick={handleSavePlan}
             >
               <FileChartColumnIncreasing className="w-3 h-3 mr-1" />
-              Plan
+              {isSubmitting ? "Submitting..." : "Plan"}
             </Button>
           </div>
         </div>
