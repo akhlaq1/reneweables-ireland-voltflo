@@ -227,14 +227,14 @@ export default function AddressPage() {
   // Set navigation marker for this app session
   useEffect(() => {
     setAppNavigation()
-    getCompanyData()
+    getCompanyData() 
   }, [])
 
   const getCompanyData = async () => {
     const slug = resolveBrandSlugFromHostname((typeof window !== 'undefined' ? window.location.hostname : undefined));
     const payload={
       "sub_domain": slug || "renewables-ireland",
-      "required_fields": ["address_template","logo","colors","name",""]
+      "required_fields": ["address_template","logo","colors","name"]
     }
     await companyService.getCompanyDatabySubDomain(payload).then((res) => {
       setBranding({
@@ -246,7 +246,7 @@ export default function AddressPage() {
           primary: res?.data?.data?.colors?.primary,
           secondary: res?.data?.data?.colors?.secondary,
           accent: res?.data?.data?.colors?.accent
-        }
+        } 
       })
     })
     
@@ -320,6 +320,17 @@ export default function AddressPage() {
       return () => clearTimeout(timeoutId)
     }
   }, [isLoading, isMapVisible, showBillSelection])
+
+  // Re-bind main autocomplete when the address template switches (input element changes)
+  useEffect(() => {
+    if (!window.google || isLoading) return
+    // Reset instance so we can bind to the newly rendered input
+    mainAutocompleteRef.current = null
+    const t = setTimeout(() => {
+      initializeGoogleMaps()
+    }, 100)
+    return () => clearTimeout(t)
+  }, [branding?.address_template])
 
   useEffect(() => {
     if (!isMapVisible || !pendingPlace?.geometry?.location) return
