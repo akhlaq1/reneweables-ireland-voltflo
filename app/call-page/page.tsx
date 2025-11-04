@@ -435,7 +435,7 @@ export default function CallPage() {
 
       await companyService.getCompanyDatabySubDomain({
         "sub_domain": resolveBrandSlugFromHostname(typeof window !== "undefined" ? window.location.hostname : ""),
-        "required_fields": ["emailBranding", "name", "description", "website", "email", "phone", "logo"]
+        "required_fields": ["emailBranding", "name", "description", "website", "email", "phone", "logo","id"]
       }).then(async (res) => {
         const company_res = res?.data?.data;
         // Prepare API request body
@@ -459,7 +459,7 @@ export default function CallPage() {
             website_url: company_res.website || 'https://renewables-ireland.voltflo.ie',
             backend_url: company_res.emailBranding.backend_url || process.env.NEXT_PUBLIC_API_BASE_URL_PRODUCTION
           },
-          company_id: 3,
+          company_id: company_res.id || 3,
 
         }
 
