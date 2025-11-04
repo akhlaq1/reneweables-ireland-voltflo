@@ -435,7 +435,7 @@ export default function CallPage() {
 
       await companyService.getCompanyDatabySubDomain({
         "sub_domain": resolveBrandSlugFromHostname(typeof window !== "undefined" ? window.location.hostname : ""),
-        "required_fields": ["emailBranding","name","description","website","email","phone","logo"]
+        "required_fields": ["emailBranding", "name", "description", "website", "email", "phone", "logo"]
       }).then(async (res) => {
         const company_res = res?.data?.data;
         // Prepare API request body
@@ -467,15 +467,26 @@ export default function CallPage() {
         const response = await api.post('public_users/new-journey-installer-user', requestBody)
 
         // Save contact info to localStorage for future use
-        const contactInfoToSave = {
-          email: finalEmail,
-          fullName: finalName,
-          phone: finalPhone
+
+        // Also save user contact info separately, preserving existing data
+        const existingContactInfo = localStorage.getItem("user_contact_info");
+        let contactInfoToSave: any = {
+          fullName: fullName.trim(),
+          email: finalEmail.trim(),
+          submittedAt: new Date().toISOString(),
+        };
+
+        // Preserve existing phone and agreeToTerms if they exist
+        if (existingContactInfo) {
+          try {
+            const existing = JSON.parse(existingContactInfo);
+            if (existing.phone) contactInfoToSave.phone = existing.phone;
+            if (existing.agreeToTerms !== undefined) contactInfoToSave.agreeToTerms = existing.agreeToTerms;
+          } catch (error) {
+            console.warn("Error parsing existing contact info:", error);
+          }
         }
         localStorage.setItem("user_contact_info", JSON.stringify(contactInfoToSave))
-
-        console.log("REsponse:", response)
-
         // Show the booking success terminal UI
         setStep("booking-success")
 

@@ -364,13 +364,16 @@ export default function SolarEnergyPlanner() {
     setAgreeToTerms(userContact.agreeToTerms)
   }, [])
 
+  const [companyData,setCompanyData] = useState<any>(null)
+
   const getCompanyData = async () => {
     const payload = {
       "sub_domain": resolveBrandSlugFromHostname(typeof window !== "undefined" ? window.location.hostname : "") || "caldorsolar",
-      "required_fields": ["equipment", "pricing", "energy", "email"]
+      "required_fields": ["equipment", "pricing", "energy", "email","id"]
     }
     await companyService.getCompanyDatabySubDomain(payload).then((res) => {
       const response = res?.data?.data
+      setCompanyData(response)
       setBranding({
         ...branding as Branding,
         slug: res?.data?.data?.slug,
@@ -1245,9 +1248,10 @@ export default function SolarEnergyPlanner() {
       }
 
       // Load bill amount from personalise_answers
+      let personaliseData= null;
       const storedPersonaliseAnswers = localStorage.getItem("personalise_answers")
       if (storedPersonaliseAnswers) {
-        const personaliseData = JSON.parse(storedPersonaliseAnswers)
+        personaliseData = JSON.parse(storedPersonaliseAnswers)
 
         // Check SEAI grant eligibility based on house build date
         if (personaliseData["house-built-date"]) {
@@ -1279,10 +1283,12 @@ export default function SolarEnergyPlanner() {
       // Mark data as loaded
       setIsDataLoaded(true)
 
+      let planData = null;
       // Load previously saved plan data to restore user selections
       const storedPlanData = localStorage.getItem("solar_plan_data")
+      // console.log("CRM1: ", storedPlanData)
       if (storedPlanData) {
-        const planData = JSON.parse(storedPlanData)
+        planData = JSON.parse(storedPlanData)
 
         // Restore system configuration
         if (planData.systemConfiguration) {
@@ -1373,10 +1379,11 @@ export default function SolarEnergyPlanner() {
         }
       }
 
+      let userContact= null;
       // Load user contact info separately
       const storedUserContact = localStorage.getItem("user_contact_info")
       if (storedUserContact) {
-        const userContact = JSON.parse(storedUserContact)
+        userContact = JSON.parse(storedUserContact)
         if (userContact.fullName && !fullName) {
           setFullName(userContact.fullName)
         }
@@ -1393,6 +1400,45 @@ export default function SolarEnergyPlanner() {
           setMaxPanels(maxPanelsValue)
         }
       }
+
+      let selectedLocation= null;
+      const storedSelectedLocation = localStorage.getItem("selectedLocation")
+      if (storedSelectedLocation) {
+        selectedLocation = JSON.parse(storedSelectedLocation)
+      }
+
+
+      // send the lead to CRM 
+      const toInt = (value: unknown): number | null => {
+        if (typeof value === 'number') return value
+        if (typeof value === 'string') {
+          const digitsOnly = value.replace(/\D+/g, '')
+          return digitsOnly ? parseInt(digitsOnly, 10) : null
+        }
+        return null
+      }
+      const payload={
+        home_type: personaliseData["homeType"],
+        bedroom_count: toInt(personaliseData["bedrooms"]),
+        house_build_year: toInt(personaliseData["house-built-date"]),
+        name: userContact.fullName,
+        email: userContact.email,
+        phone: userContact.phone,
+        address: selectedLocation?.address || "",
+        solar_plan_data: planData,
+        personalise_answers: personaliseData,
+        selected_location: selectedLocation,
+        company_id: companyData?.id || 6, 
+      }
+      const response = companyService.addLeadInCRM(payload);
+      console.log("CRM Add Lead : ", response)
+      // if (response.status !== 200) {
+      //   toast({
+      //     title: 'Error sending lead to CRM',
+      //     description: response.data.message,
+      //     duration: 3000,
+      //   })
+      // }
 
     } catch (error) {
       // If there's an error, we'll fall back to defaults
