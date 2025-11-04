@@ -4,6 +4,8 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, ArrowRight, Lightbulb, Clock, Info, CheckCircle, ChevronLeft, ChevronRight, X, Square, CheckSquare, TrendingUp, Settings, Clipboard, Home } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog"
@@ -25,6 +27,27 @@ export default function PersonalisePage() {
     "house-built-date"?: string
   }>({})
 
+  const [showContactForm, setShowContactForm] = useState(false)
+  const [contactData, setContactData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    agreeToTerms: false
+  })
+  const [contactErrors, setContactErrors] = useState<{
+    name?: string
+    email?: string
+    agreeToTerms?: string
+  }>({})
+  const [isSubmittingContact, setIsSubmittingContact] = useState(false)
+  
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    notes: ""
+  })
+
   // Scroll to top when component mounts
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -36,11 +59,27 @@ export default function PersonalisePage() {
         // Ensure motivation is properly formatted as string array
         if (parsed.motivation && Array.isArray(parsed.motivation)) {
           // Filter out any non-string values and single characters that might be artifacts
-          parsed.motivation = parsed.motivation.filter((item: any) => 
+          parsed.motivation = parsed.motivation.filter((item: any) =>
             typeof item === 'string' && item.length > 1
           )
         }
         setAnswers(parsed)
+      } catch (e) {
+        // Ignore parse errors
+      }
+    }
+
+    // Load contact data from localStorage if available
+    const savedContactData = localStorage.getItem("user_contact_info")
+    if (savedContactData) {
+      try {
+        const parsed = JSON.parse(savedContactData)
+        setContactData({
+          name: parsed.fullName || "",
+          email: parsed.email || "",
+          phone: parsed.phone || "",
+          agreeToTerms: parsed.agreeToTerms || false
+        })
       } catch (e) {
         // Ignore parse errors
       }
@@ -62,7 +101,7 @@ export default function PersonalisePage() {
               Your usage pattern determines how much you'll benefit from battery storage.
             </p>
           </div>
-          
+
           <div className="space-y-3">
             <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 rounded-xl p-4 shadow-sm">
               <div className="flex items-start gap-3 mb-3">
@@ -180,7 +219,7 @@ export default function PersonalisePage() {
               SEAI grants are available for homes built before 31st December 2020.
             </p>
           </div>
-          
+
           <div className="space-y-3">
             <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-4 shadow-sm">
               <div className="flex items-start gap-3 mb-3">
@@ -257,16 +296,74 @@ export default function PersonalisePage() {
 
   const currentQuestion = questions[questionIndex]
 
+  const validateContactForm = () => {
+    const errors: { name?: string; email?: string; agreeToTerms?: string } = {}
+    
+    if (!contactData.name.trim()) {
+      errors.name = "Name is required"
+    }
+    
+    if (!contactData.email.trim()) {
+      errors.email = "Email is required"
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactData.email)) {
+      errors.email = "Please enter a valid email address"
+    }
+    
+    if (!contactData.agreeToTerms) {
+      errors.agreeToTerms = "You must agree to the terms and conditions"
+    }
+    
+    setContactErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
+  const handleContactSubmit = async () => {
+    if (!validateContactForm()) {
+      return
+    }
+
+    setIsSubmittingContact(true)
+    
+    try {
+      // Save contact data to localStorage
+      const contactInfo = {
+        fullName: contactData.name,
+        email: contactData.email,
+        phone: contactData.phone,
+        agreeToTerms: contactData.agreeToTerms
+      }
+      localStorage.setItem("user_contact_info", JSON.stringify(contactInfo))
+      
+      // Save answers before navigation
+      localStorage.setItem("personalise_answers", JSON.stringify(answers))
+      
+      // Navigate to plan page
+      router.push("/plan")
+    } catch (error) {
+      console.error("Error saving contact data:", error)
+    } finally {
+      setIsSubmittingContact(false)
+    }
+  }
+
+  const handleContactChange = (field: string, value: string | boolean) => {
+    setContactData(prev => ({ ...prev, [field]: value }))
+    // Clear error when user starts typing
+    if (contactErrors[field as keyof typeof contactErrors]) {
+      setContactErrors(prev => ({ ...prev, [field]: undefined }))
+    }
+  }
+
   const handleSelect = (id: string, value: string) => {
     if (id === "motivation") {
       handleMultiSelect(id, value)
       return
     }
-    
+
     setSelectedOption(value)
     const newAnswers = { ...answers, [id]: value }
     setAnswers(newAnswers)
-    
+
     // Save to localStorage
     localStorage.setItem("personalise_answers", JSON.stringify(newAnswers))
 
@@ -277,9 +374,9 @@ export default function PersonalisePage() {
         setSelectedOption(null)
         window.scrollTo({ top: 0, behavior: 'smooth' })
       } else {
-        // Ensure latest answers are saved before navigating to plan page
-        localStorage.setItem("personalise_answers", JSON.stringify(newAnswers))
-        router.push("/plan")
+        // Show contact form after the last question (house-built-date)
+        setShowContactForm(true)
+        window.scrollTo({ top: 0, behavior: 'smooth' })
       }
     }, 200)
   }
@@ -287,14 +384,14 @@ export default function PersonalisePage() {
   const handleMultiSelect = (id: string, value: string) => {
     const currentAnswer = answers[id as keyof typeof answers]
     let currentSelections: string[] = []
-    
+
     // Safely get current selections and ensure they are valid strings
     if (Array.isArray(currentAnswer)) {
       currentSelections = currentAnswer.filter(item => typeof item === 'string' && item.length > 1)
     }
-    
+
     let newSelections: string[]
-    
+
     if (currentSelections.includes(value)) {
       // Remove if already selected
       newSelections = currentSelections.filter(item => item !== value)
@@ -302,16 +399,19 @@ export default function PersonalisePage() {
       // Add if not selected
       newSelections = [...currentSelections, value]
     }
-    
+
     const newAnswers = { ...answers, [id]: newSelections }
     setAnswers(newAnswers)
-    
+
     // Save to localStorage
     localStorage.setItem("personalise_answers", JSON.stringify(newAnswers))
   }
 
   const handleBack = () => {
-    if (questionIndex > 0) {
+    if (showContactForm) {
+      setShowContactForm(false)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    } else if (questionIndex > 0) {
       setQuestionIndex(questionIndex - 1)
       setSelectedOption(null)
       window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -324,9 +424,9 @@ export default function PersonalisePage() {
       setSelectedOption(null)
       window.scrollTo({ top: 0, behavior: 'smooth' })
     } else {
-      // Ensure latest answers are saved before navigating to plan page
-      localStorage.setItem("personalise_answers", JSON.stringify(answers))
-      router.push("/plan")
+      // Show contact form after the last question
+      setShowContactForm(true)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
     }
   }
 
@@ -335,46 +435,48 @@ export default function PersonalisePage() {
   return (
     <div className="flex min-h-screen flex-col bg-gradient-to-br from-slate-50 via-white to-blue-50">
       <AppHeader showBackButton={true} maxWidth="max-w-4xl" />
-      
+
       {/* Progress Bar */}
-      <ProgressBars 
+      <ProgressBars
         addressActive={true}
         potentialActive={true}
         personaliseActive={true}
         planActive={false}
         maxWidth="max-w-4xl"
       />
-      
+
       <main className="flex-1">
         <div className="container mx-auto max-w-4xl px-2 md:px-4 lg:px-0 py-2 md:py-4">
           <div className="space-y-2 md:space-y-4">
-            {/* Progress Header */}
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-center space-y-1 md:space-y-2"
-            >
-              <div className="flex items-center justify-center gap-2">
-                <span className="text-base md:text-xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
-                  Question {questionIndex + 1} of {questions.length}
-                </span>
-              </div>
-              
-              {/* Progress Bar */}
-              <div className="w-full max-w-xs md:max-w-md mx-auto">
-                <Progress value={progress} className="w-full h-2" />
-                <p className="text-xs text-gray-500 mt-1">{Math.round(progress)}% complete</p>
-              </div>
-            </motion.div>
+            {!showContactForm ? (
+              <>
+                {/* Progress Header */}
+                <motion.div
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-center space-y-1 md:space-y-2"
+                >
+                  <div className="flex items-center justify-center gap-2">
+                    <span className="text-base md:text-xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
+                      Question {questionIndex + 1} of {questions.length}
+                    </span>
+                  </div>
 
-            {/* Question Card */}
-            <motion.div
-              key={questionIndex}
-              initial={{ opacity: 0, x: 50 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -50 }}
-              transition={{ duration: 0.2 }}
-            >
+                  {/* Progress Bar */}
+                  <div className="w-full max-w-xs md:max-w-md mx-auto">
+                    <Progress value={progress} className="w-full h-2" />
+                    <p className="text-xs text-gray-500 mt-1">{Math.round(progress)}% complete</p>
+                  </div>
+                </motion.div>
+
+                {/* Question Card */}
+                <motion.div
+                  key={questionIndex}
+                  initial={{ opacity: 0, x: 50 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -50 }}
+                  transition={{ duration: 0.2 }}
+                >
               <Card className="rounded-xl md:rounded-2xl shadow-lg overflow-hidden border border-gray-100">
                 <CardContent className="p-3 md:p-6">
                   <div className="text-center mb-3 md:mb-5">
@@ -386,8 +488,8 @@ export default function PersonalisePage() {
                     >
                       <currentQuestion.icon className="w-7 h-7 md:w-10 md:h-10 text-white" />
                     </motion.div>
-                    
-                    <motion.h2 
+
+                    <motion.h2
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.2 }}
@@ -431,7 +533,7 @@ export default function PersonalisePage() {
                                           <X className="w-3 h-3 text-gray-500" />
                                         </Button>
                                       </DialogClose>
-                                      
+
                                       <DialogHeader className="space-y-2 pb-2">
                                         <DialogTitle className="text-lg md:text-xl font-bold text-center bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent pr-8">
                                           {currentQuestion.infoModalTitle}
@@ -460,18 +562,18 @@ export default function PersonalisePage() {
                     {currentQuestion.options.map((opt, index) => {
                       const isMultiSelect = currentQuestion.id === "motivation"
                       const currentAnswer = answers[currentQuestion.id as keyof typeof answers]
-                      
+
                       let isSelected: boolean
                       if (isMultiSelect) {
                         isSelected = Array.isArray(currentAnswer) && currentAnswer.includes(opt.value)
                       } else {
                         isSelected = currentAnswer === opt.value
                       }
-                      
+
                       const isCurrentlySelected = selectedOption === opt.value
 
                       return (
-                        <motion.div 
+                        <motion.div
                           key={opt.value}
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
@@ -553,10 +655,178 @@ export default function PersonalisePage() {
                 </CardFooter>
               </Card>
             </motion.div>
+              </>
+            ) : (
+              /* Contact Form */
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <div className="text-center space-y-1 md:space-y-2 mb-4">
+                  <span className="text-base md:text-xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
+                    Almost done! Let's get your contact details
+                  </span>
+                  <div className="w-full max-w-xs md:max-w-md mx-auto">
+                    <Progress value={100} className="w-full h-2" />
+                    <p className="text-xs text-gray-500 mt-1">100% complete</p>
+                  </div>
+                </div>
+
+                <Card className="rounded-xl md:rounded-2xl shadow-lg overflow-hidden border border-gray-100">
+                  <CardContent className="p-6">
+                    <div className="text-center mb-6">
+                      <motion.div
+                        initial={{ scale: 0, rotate: -180 }}
+                        animate={{ scale: 1, rotate: 0 }}
+                        transition={{ delay: 0.1, type: "spring", stiffness: 200 }}
+                        className="w-14 h-14 md:w-20 md:h-20 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg"
+                      >
+                        <CheckCircle className="w-7 h-7 md:w-10 md:h-10 text-white" />
+                      </motion.div>
+
+                      <motion.h2
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.2 }}
+                        className="text-lg md:text-2xl font-bold mb-2 bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent"
+                      >
+                        Get Your Personalized Solar Plan
+                      </motion.h2>
+
+                      <motion.p
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.3 }}
+                        className="text-sm md:text-base text-gray-600 mb-4"
+                      >
+                        We'll email you a detailed solar proposal based on your answers
+                      </motion.p>
+                    </div>
+
+                    <div className="space-y-4 max-w-md mx-auto">
+                      <div>
+                        <label htmlFor="contact-name" className="block text-sm font-medium text-gray-700 mb-1">
+                          Full Name <span className="text-red-500">*</span>
+                        </label>
+                        <Input
+                          id="contact-name"
+                          type="text"
+                          placeholder="Enter your full name"
+                          value={contactData.name}
+                          onChange={(e) => handleContactChange('name', e.target.value)}
+                          className={cn(
+                            "w-full",
+                            contactErrors.name && "border-red-500 focus:border-red-500 focus:ring-red-500"
+                          )}
+                        />
+                        {contactErrors.name && (
+                          <p className="mt-1 text-sm text-red-600">{contactErrors.name}</p>
+                        )}
+                      </div>
+
+                      <div>
+                        <label htmlFor="contact-email" className="block text-sm font-medium text-gray-700 mb-1">
+                          Email Address <span className="text-red-500">*</span>
+                        </label>
+                        <Input
+                          id="contact-email"
+                          type="email"
+                          placeholder="Enter your email address"
+                          value={contactData.email}
+                          onChange={(e) => handleContactChange('email', e.target.value)}
+                          className={cn(
+                            "w-full",
+                            contactErrors.email && "border-red-500 focus:border-red-500 focus:ring-red-500"
+                          )}
+                        />
+                        {contactErrors.email && (
+                          <p className="mt-1 text-sm text-red-600">{contactErrors.email}</p>
+                        )}
+                      </div>
+
+                      <div>
+                        <label htmlFor="contact-phone" className="block text-sm font-medium text-gray-700 mb-1">
+                          Phone Number <span className="text-gray-500">(optional)</span>
+                        </label>
+                        <Input
+                          id="contact-phone"
+                          type="tel"
+                          placeholder="Enter your phone number"
+                          value={contactData.phone}
+                          onChange={(e) => handleContactChange('phone', e.target.value)}
+                          className="w-full"
+                        />
+                      </div>
+
+                      <div className="space-y-3">
+                        <div className="flex items-start gap-3">
+                          <Checkbox
+                            id="agree-terms"
+                            checked={contactData.agreeToTerms}
+                            onCheckedChange={(checked) => 
+                              handleContactChange('agreeToTerms', checked === true)
+                            }
+                            className="mt-1"
+                          />
+                          <div className="flex-1">
+                            <label 
+                              htmlFor="agree-terms" 
+                              className="text-sm text-gray-700 leading-relaxed cursor-pointer"
+                            >
+                              I agree to the{" "}
+                              <a 
+                                href="/terms-of-use" 
+                                target="_blank" 
+                                className="text-blue-600 hover:text-blue-800 underline"
+                              >
+                                Terms and Conditions
+                              </a>{" "}
+                              and{" "}
+                              <a 
+                                href="/privacy-policy" 
+                                target="_blank" 
+                                className="text-blue-600 hover:text-blue-800 underline"
+                              >
+                                Privacy Policy
+                              </a>
+                              <span className="text-red-500 ml-1">*</span>
+                            </label>
+                            {contactErrors.agreeToTerms && (
+                              <p className="mt-1 text-sm text-red-600">{contactErrors.agreeToTerms}</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+
+                  <CardFooter className="flex flex-col sm:flex-row gap-2 justify-between items-center p-4 md:p-6 bg-gray-50/50">
+                    <Button
+                      variant="outline"
+                      onClick={handleBack}
+                      className="flex items-center gap-2 w-full sm:w-auto"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                      Back
+                    </Button>
+
+                    <Button
+                      onClick={handleContactSubmit}
+                      disabled={isSubmittingContact}
+                      className="flex items-center gap-2 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 w-full sm:w-auto"
+                    >
+                      {isSubmittingContact ? "Getting Your Plan..." : "Get My Solar Plan"}
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
+                  </CardFooter>
+                </Card>
+              </motion.div>
+            )}
           </div>
         </div>
-      </main> 
-      
+      </main>
+
       <AvatarAssistant step={questionIndex + 1} pageType="personalise" />
     </div>
   )

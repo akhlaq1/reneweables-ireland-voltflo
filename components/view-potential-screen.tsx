@@ -17,6 +17,7 @@ interface ViewPotentialScreenProps {
   systemSizeKw: number
   annualHomeKwh: number
   onContinue: () => void
+  onBookCall?: () => void
 }
 
 const ProgressStep = ({ icon: Icon, label, isActive = false }: { icon: any; label: string; isActive?: boolean }) => (
@@ -41,6 +42,7 @@ export function ViewPotentialScreen({
   systemSizeKw,
   annualHomeKwh,
   onContinue,
+  onBookCall,
 }: ViewPotentialScreenProps) {
   return (
     <div className="min-h-screen bg-gray-50">
@@ -77,11 +79,11 @@ export function ViewPotentialScreen({
               treesSaved={treesSaved}
             />
             {/* <HowSolarWorksSection /> */}
-            <HowWeSizeSystemCard panelCount={panelCount} systemSizeKw={systemSizeKw} annualHomeKwh={annualHomeKwh} />
+            {/* <HowWeSizeSystemCard panelCount={panelCount} systemSizeKw={systemSizeKw} annualHomeKwh={annualHomeKwh} /> */}
           </div>
         </div>
       </main>
-      <ContinueCTA onContinue={onContinue} />
+      <ContinueCTA onContinue={onContinue} onBookCall={onBookCall} />
     </div>
   )
 }

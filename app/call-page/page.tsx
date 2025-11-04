@@ -456,8 +456,8 @@ export default function CallPage() {
             phone_number: company_res.phone,
             phone_number_clean: company_res.phone,
             platform_name: 'Voltflo',
-            website_url: 'https://renewables-ireland.voltflo.ie',
-            backend_url: process.env.NEXT_PUBLIC_API_BASE_URL_PRODUCTION
+            website_url: company_res.website || 'https://renewables-ireland.voltflo.ie',
+            backend_url: company_res.emailBranding.backend_url || process.env.NEXT_PUBLIC_API_BASE_URL_PRODUCTION
           },
           company_id: 3,
 
