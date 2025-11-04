@@ -588,7 +588,7 @@ export const AddressTemplate3 = ({
 
           {isGeocoding && (
             <div className="text-center text-purple-600 mt-4 text-sm">
-              🔍 Analyzing location...
+              🔍 Analysing location...
             </div>
           )}
         </div>
@@ -864,7 +864,7 @@ export const AddressTemplate5 = ({
               <div className="text-center text-blue-600 mt-4">
                 <div className="flex items-center justify-center gap-2">
                   <div className="animate-pulse text-lg">🔍</div>
-                  <span>Analyzing property coordinates...</span>
+                  <span>Analysing property coordinates...</span>
                 </div>
               </div>
             )}

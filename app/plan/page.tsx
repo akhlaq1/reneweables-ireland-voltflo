@@ -1583,7 +1583,7 @@ export default function SolarEnergyPlanner() {
                         <div className="w-6 h-6 md:w-8 md:h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-semibold text-sm md:text-base">
                           1
                         </div>
-                        Customize Your System
+                        Customise Your System
                       </CardTitle>
                       <p className="text-sm md:text-base text-gray-600">
                         Select your hardware. All costs and savings will update instantly.
@@ -3530,7 +3530,7 @@ export default function SolarEnergyPlanner() {
                             <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-80 p-3 bg-white border border-gray-200 rounded-lg shadow-lg text-sm opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
                               <div className="font-medium mb-2">Battery Benefits</div>
                               <div className="text-gray-600 mb-2">
-                                Maximize your solar energy consumption and reduce grid dependency:
+                                Maximise your solar energy consumption and reduce grid dependency:
                               </div>
                               <div className="text-xs text-gray-700 space-y-1.5">
                                 <div className="flex items-center gap-2">
@@ -3732,7 +3732,7 @@ export default function SolarEnergyPlanner() {
                             <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-80 p-3 bg-white border border-gray-200 rounded-lg shadow-lg text-sm opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
                               <div className="font-medium mb-2">Night Charge Strategy</div>
                               <div className="text-gray-600 mb-2">
-                                Maximize battery value by storing cheap night electricity and selling solar to grid:
+                                Maximise battery value by storing cheap night electricity and selling solar to grid:
                               </div>
                               <div className="text-xs text-gray-700 space-y-1.5">
                                 <div className="flex items-center gap-2">
@@ -3881,7 +3881,7 @@ export default function SolarEnergyPlanner() {
                         <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
                           <span className="text-amber-600">💡</span>
                           <span className="text-sm text-amber-700">
-                            Adding a second battery extends your backup time and maximizes savings under time-of-use tariffs.
+                            Adding a second battery extends your backup time and maximises savings under time-of-use tariffs.
                           </span>
                         </div>
                       )}
@@ -4249,14 +4249,14 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
       </div>
 
       <main className="p-4 space-y-6 pb-6">
-        {/* Customize Your System */}
+        {/* Customise Your System */}
         <Card>
           <CardHeader className="pb-1">
             <CardTitle className="flex items-center gap-2 text-base">
               <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs">
                 1
               </div>
-              Customize Your System
+              Customise Your System
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-5">
@@ -6015,7 +6015,7 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                     <Info className="w-3 h-3 text-blue-500 cursor-help hover:text-blue-600 transition-colors" />
                     <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-72 p-2 bg-white border border-gray-200 rounded-lg shadow-lg text-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
                       <div className="font-medium mb-1">Battery Benefits</div>
-                      <div className="text-gray-600 mb-1">Maximize your solar energy consumption:</div>
+                      <div className="text-gray-600 mb-1">Maximise your solar energy consumption:</div>
                       <div className="text-xs text-gray-700 space-y-1">
                         <div className="flex items-center gap-1">
                           <div className="w-1.5 h-1.5 bg-red-400 rounded-full"></div>
@@ -6185,7 +6185,7 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                     <Info className="w-3 h-3 text-blue-500 cursor-help hover:text-blue-600 transition-colors" />
                     <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-72 p-2 bg-white border border-gray-200 rounded-lg shadow-lg text-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
                       <div className="font-medium mb-1">Night Charge Strategy</div>
-                      <div className="text-gray-600 mb-1">Maximize battery value by storing cheap night electricity:</div>
+                      <div className="text-gray-600 mb-1">Maximise battery value by storing cheap night electricity:</div>
                       <div className="text-xs text-gray-700 space-y-1">
                         <div className="flex items-center gap-1">
                           <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full"></div>
@@ -6309,7 +6309,7 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                   <div className="flex items-center gap-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
                     <span className="text-amber-600 text-sm">💡</span>
                     <span className="text-xs text-amber-700">
-                      Adding a second battery extends your backup time and maximizes savings under time-of-use tariffs.
+                      Adding a second battery extends your backup time and maximises savings under time-of-use tariffs.
                     </span>
                   </div>
                 )}

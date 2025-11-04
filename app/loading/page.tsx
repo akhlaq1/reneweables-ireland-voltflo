@@ -25,9 +25,9 @@ const ProgressStep = ({ icon: Icon, label, isActive = false }: { icon: any; labe
 
 // Define our checklist items with detailed descriptions
 const ANALYSIS_STEPS = [
-  "**Scanning Roof** - Analyzing dimensions and orientation",
+  "**Scanning Roof** - Analysing dimensions and orientation",
   "**Calculating Sunlight** - Measuring annual exposure",
-  "**Optimizing Layout** - Finding best panel placement",
+  "**Optimising Layout** - Finding best panel placement",
   "**Projecting Savings** - Estimating your benefits",
 ]
 
@@ -50,7 +50,7 @@ export default function LoadingPage() {
     {
       id: "scanning",
       title: "Scanning Roof",
-      description: "Analyzing dimensions and orientation",
+      description: "Analysing dimensions and orientation",
       icon: <Home className="w-5 h-5 text-white" />,
     },
     {
@@ -61,7 +61,7 @@ export default function LoadingPage() {
     },
     {
       id: "optimizing",
-      title: "Optimizing Layout",
+      title: "Optimising Layout",
       description: "Finding best panel placement", 
       icon: <Calculator className="w-5 h-5 text-white" />,
     },
@@ -360,7 +360,7 @@ export default function LoadingPage() {
               <Sun className="w-6 h-6 md:w-8 md:h-8 text-white animate-spin" style={{ animationDuration: "8s" }} />
             </div>
             <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 bg-gradient-to-r from-orange-600 to-yellow-600 bg-clip-text text-transparent">
-              Analyzing Your Solar Potential
+              Analysing Your Solar Potential
             </h1>
           </div>
 

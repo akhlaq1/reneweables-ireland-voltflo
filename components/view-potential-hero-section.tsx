@@ -34,7 +34,7 @@ export function ViewPotentialHeroSection({
         <div className="relative h-[160px] md:h-[300px]">
           <img
             src={imageUrl}
-            alt="Your home with solar panels visualization"
+            alt="Your home with solar panels visualisation"
             className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />

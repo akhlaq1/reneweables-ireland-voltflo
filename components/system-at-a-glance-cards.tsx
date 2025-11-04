@@ -41,7 +41,7 @@ export function SystemAtAGlanceCards({
               <ul className="space-y-2 text-sm text-blue-800">
                 <li>• {panelCount} high-efficiency solar panels</li>
                 <li>• {systemSizeKw}kW total system capacity</li>
-                <li>• Optimized for your roof orientation and shading</li>
+                <li>• Optimised for your roof orientation and shading</li>
                 <li>• Professional installation included</li>
               </ul>
             </div>

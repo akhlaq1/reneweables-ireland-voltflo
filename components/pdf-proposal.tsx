@@ -560,7 +560,7 @@ export default function PDFProposal({ apiData }: PDFProposalProps) {
             <Zap className="mr-3 h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
             Your System
           </h2>
-          <p className="text-sm sm:text-base text-gray-600">Personalized solar solution designed for your home</p>
+          <p className="text-sm sm:text-base text-gray-600">Personalised solar solution designed for your home</p>
         </div>
 
         <Card className="border border-gray-200 shadow-sm">

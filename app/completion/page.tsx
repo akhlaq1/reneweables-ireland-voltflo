@@ -157,7 +157,7 @@ export default function CompletionPage() {
                       <div>
                         <h4 className="font-medium">Want a professional assessment?</h4>
                         <p className="mt-1 text-sm text-gray-600">
-                          Our experts can visit your home to provide a detailed assessment and optimize your solar
+                          Our experts can visit your home to provide a detailed assessment and optimise your solar
                           setup.
                         </p>
                         <Button

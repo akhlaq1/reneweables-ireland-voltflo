@@ -15,13 +15,13 @@ export function ContinueCTA({ onContinue }: ContinueCTAProps) {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-2 md:gap-3">
             <div className="text-center sm:text-left">
               <h3 className="text-sm md:text-base font-bold text-gray-900">Get your personalised solar plan</h3>
-              <p className="text-xs md:text-sm text-gray-600">Customize your system to fit your needs and budget</p>
+              <p className="text-xs md:text-sm text-gray-600">Customise your system to fit your needs and budget</p>
             </div>
             <Button
               onClick={onContinue}
               className="bg-blue-600 hover:bg-blue-700 text-white px-4 md:px-6 py-2 md:py-3 text-sm font-semibold w-full sm:w-auto shrink-0"
             >
-              Continue to Personalization
+              Continue to Personalisation
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </div>

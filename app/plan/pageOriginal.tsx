@@ -1284,7 +1284,7 @@ export default function SolarEnergyPlanner() {
                         <div className="w-6 h-6 md:w-8 md:h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-semibold text-sm md:text-base">
                           1
                         </div>
-                        Customize Your System
+                        Customise Your System
                       </CardTitle>
                       <p className="text-sm md:text-base text-gray-600">
                         Select your hardware. All costs and savings will update instantly.
@@ -3928,14 +3928,14 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
       </div>
 
       <main className="p-4 space-y-6 pb-6">
-        {/* Customize Your System */}
+        {/* Customise Your System */}
         <Card>
           <CardHeader className="pb-1">
             <CardTitle className="flex items-center gap-2 text-base">
               <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs">
                 1
               </div>
-              Customize Your System
+              Customise Your System
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-5">

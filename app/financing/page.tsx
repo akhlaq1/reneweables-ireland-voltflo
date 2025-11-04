@@ -1718,7 +1718,7 @@ export default function FinancingPage() {
               </button>
 
               <div className="text-left">
-                <h2 className="text-lg md:text-xl font-bold text-gray-900">Customize Your Financing</h2>
+                <h2 className="text-lg md:text-xl font-bold text-gray-900">Customise Your Financing</h2>
                 <p className="mt-1 text-sm text-gray-600">Adjust your loan terms to fit your budget</p>
               </div>
             </div>
