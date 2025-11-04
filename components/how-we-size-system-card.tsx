@@ -40,7 +40,7 @@ export function HowWeSizeSystemCard({ panelCount, systemSizeKw, annualHomeKwh }:
             </DialogHeader>
             <div className="space-y-6">
               <p className="text-gray-600 text-sm md:text-base">
-                We use advanced AI and satellite imagery to analyze your roof:
+                We use advanced AI and satellite imagery to analyse your roof:
               </p>
 
               <div className="space-y-4">
@@ -51,7 +51,7 @@ export function HowWeSizeSystemCard({ panelCount, systemSizeKw, annualHomeKwh }:
                   <div>
                     <h3 className="font-semibold text-blue-900 mb-1 text-sm md:text-base">Computer Vision Models</h3>
                     <p className="text-xs md:text-sm text-blue-800">
-                      AI analyzes roof structure, obstacles, and optimal panel placement.
+                      AI analyses roof structure, obstacles, and optimal panel placement.
                     </p>
                   </div>
                 </div>

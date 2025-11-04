@@ -190,7 +190,7 @@ export default function CompletionPage() {
                       <h4 className="font-medium">What happens next?</h4>
                       <p className="mt-1 text-sm text-gray-600">
                         {selectedInstaller
-                          ? `${installerName} will contact you to arrange a detailed assessment and provide a final quote. Your Credit Union advisor will also be in touch to finalize your financing options.`
+                          ? `${installerName} will contact you to arrange a detailed assessment and provide a final quote. Your Credit Union advisor will also be in touch to finalise your financing options.`
                           : hasSiteVisit
                             ? "After your site visit, you'll receive a final quote within 48 hours. Your Credit Union advisor will contact you to discuss financing options and help you complete any paperwork."
                             : "Your Credit Union advisor will contact you to discuss financing options and next steps. They'll help you arrange a site visit if needed and guide you through the installation process."}

@@ -22,8 +22,8 @@ export function AvatarAssistant({ step, pageType, onComplete }: AvatarAssistantP
   // Messages for different steps and pages
   const stepMessages = {
     address:
-      "Enter your full address so we can analyze your roof's solar potential. This helps us calculate your potential savings accurately.",
-    loading: "We're analyzing your home's energy profile using satellite imagery. This only takes a few seconds!",
+      "Enter your full address so we can analyse your roof's solar potential. This helps us calculate your potential savings accurately.",
+    loading: "We're analysing your home's energy profile using satellite imagery. This only takes a few seconds!",
     snapshot:
       "Look at those potential savings! This is just an estimate - we'll refine it as you provide more details.",
     personalise1:
@@ -46,7 +46,7 @@ export function AvatarAssistant({ step, pageType, onComplete }: AvatarAssistantP
     "bill-upload":
       "Uploading your bill helps us fine-tune your plan. We only extract usage data and then delete the file - your privacy is important!",
     "installer-booking":
-      "Choose a trusted installer from our Credit Union-vetted partners. They'll visit your home to confirm measurements and finalize your installation plan.",
+      "Choose a trusted installer from our Credit Union-vetted partners. They'll visit your home to confirm measurements and finalise your installation plan.",
     completion:
       "Congratulations! You've completed all the steps. Your energy upgrade journey is now in motion, and you'll soon be enjoying the benefits!",
     signup:
@@ -54,8 +54,8 @@ export function AvatarAssistant({ step, pageType, onComplete }: AvatarAssistantP
   }
 
   const completionMessages = {
-    address: "Great job! We've found your home and can now analyze your solar potential.",
-    snapshot: "Excellent! Now let's personalise your plan to maximize your savings.",
+    address: "Great job! We've found your home and can now analyse your solar potential.",
+    snapshot: "Excellent! Now let's personalise your plan to maximise your savings.",
     personalise1: "Perfect! Now let's talk about your home's energy efficiency.",
     personalise2: "Thanks for that information! Now let's consider your transportation needs.",
     personalise3: "You're doing great! Just one more question about energy storage.",

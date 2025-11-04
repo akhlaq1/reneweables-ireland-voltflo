@@ -5691,7 +5691,7 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                     <Info className="w-3 h-3 text-blue-500 cursor-help hover:text-blue-600 transition-colors" />
                     <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-72 p-2 bg-white border border-gray-200 rounded-lg shadow-lg text-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
                       <div className="font-medium mb-1">Battery Benefits</div>
-                      <div className="text-gray-600 mb-1">Maximize your solar energy consumption:</div>
+                      <div className="text-gray-600 mb-1">Maximise your solar energy consumption:</div>
                       <div className="text-xs text-gray-700 space-y-1">
                         <div className="flex items-center gap-1">
                           <div className="w-1.5 h-1.5 bg-red-400 rounded-full"></div>
@@ -5861,7 +5861,7 @@ function SolarDashboardMobile(props: SolarDashboardMobileProps) {
                     <Info className="w-3 h-3 text-blue-500 cursor-help hover:text-blue-600 transition-colors" />
                     <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-72 p-2 bg-white border border-gray-200 rounded-lg shadow-lg text-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
                       <div className="font-medium mb-1">Night Charge Strategy</div>
-                      <div className="text-gray-600 mb-1">Maximize battery value by storing cheap night electricity:</div>
+                      <div className="text-gray-600 mb-1">Maximise battery value by storing cheap night electricity:</div>
                       <div className="text-xs text-gray-700 space-y-1">
                         <div className="flex items-center gap-1">
                           <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full"></div>
