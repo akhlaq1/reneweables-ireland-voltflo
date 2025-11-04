@@ -435,7 +435,7 @@ export default function CallPage() {
 
       await companyService.getCompanyDatabySubDomain({
         "sub_domain": resolveBrandSlugFromHostname(typeof window !== "undefined" ? window.location.hostname : ""),
-        "required_fields": ["emailBranding","name","description","website","email","phone","logo"]
+        "required_fields": ["emailBranding", "name", "description", "website", "email", "phone", "logo","id"]
       }).then(async (res) => {
         const company_res = res?.data?.data;
         // Prepare API request body
@@ -459,7 +459,7 @@ export default function CallPage() {
             website_url: company_res.website || 'https://renewables-ireland.voltflo.ie',
             backend_url: company_res.emailBranding.backend_url || process.env.NEXT_PUBLIC_API_BASE_URL_PRODUCTION
           },
-          company_id: 3,
+          company_id: company_res.id || 3,
 
         }
 
@@ -467,15 +467,26 @@ export default function CallPage() {
         const response = await api.post('public_users/new-journey-installer-user', requestBody)
 
         // Save contact info to localStorage for future use
-        const contactInfoToSave = {
-          email: finalEmail,
-          fullName: finalName,
-          phone: finalPhone
+
+        // Also save user contact info separately, preserving existing data
+        const existingContactInfo = localStorage.getItem("user_contact_info");
+        let contactInfoToSave: any = {
+          fullName: fullName.trim(),
+          email: finalEmail.trim(),
+          submittedAt: new Date().toISOString(),
+        };
+
+        // Preserve existing phone and agreeToTerms if they exist
+        if (existingContactInfo) {
+          try {
+            const existing = JSON.parse(existingContactInfo);
+            if (existing.phone) contactInfoToSave.phone = existing.phone;
+            if (existing.agreeToTerms !== undefined) contactInfoToSave.agreeToTerms = existing.agreeToTerms;
+          } catch (error) {
+            console.warn("Error parsing existing contact info:", error);
+          }
         }
         localStorage.setItem("user_contact_info", JSON.stringify(contactInfoToSave))
-
-        console.log("REsponse:", response)
-
         // Show the booking success terminal UI
         setStep("booking-success")
 

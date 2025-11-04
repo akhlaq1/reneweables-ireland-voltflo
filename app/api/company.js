@@ -19,6 +19,10 @@ const companyService = {
       console.error('Error fetching company data:', error);
       throw error;
     }
+  },
+
+  addLeadInCRM(payload){
+    return api.post(`${process.env.NEXT_PUBLIC_API_BASE_URL_CRM_PRODUCTION}/leads/add_lead_with_address`, payload);
   }
   
 };

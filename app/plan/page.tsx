@@ -364,13 +364,16 @@ export default function SolarEnergyPlanner() {
     setAgreeToTerms(userContact.agreeToTerms)
   }, [])
 
+  const [companyData, setCompanyData] = useState<any>(null)
+
   const getCompanyData = async () => {
     const payload = {
       "sub_domain": resolveBrandSlugFromHostname(typeof window !== "undefined" ? window.location.hostname : "") || "caldorsolar",
-      "required_fields": ["equipment", "pricing", "energy", "email"]
+      "required_fields": ["equipment", "pricing", "energy", "email", "id"]
     }
     await companyService.getCompanyDatabySubDomain(payload).then((res) => {
       const response = res?.data?.data
+      setCompanyData(response)
       setBranding({
         ...branding as Branding,
         slug: res?.data?.data?.slug,
@@ -1130,7 +1133,7 @@ export default function SolarEnergyPlanner() {
 
       await companyService.getCompanyDatabySubDomain({
         "sub_domain": resolveBrandSlugFromHostname(typeof window !== "undefined" ? window.location.hostname : ""),
-        "required_fields": ["emailBranding", "name", "description", "website", "email", "phone", "logo"]
+        "required_fields": ["emailBranding", "name", "description", "website", "email", "phone", "logo", "id"]
       }).then(async (res) => {
         const company_res = res?.data?.data;
 
@@ -1138,6 +1141,7 @@ export default function SolarEnergyPlanner() {
         const requestBody = {
           email: email.trim(),
           name: fullName.trim(),
+          phone: phoneNumber?.trim() || null,
           solar_plan_data: solarPlanData ? JSON.parse(solarPlanData) : null,
           personalise_answers: personaliseAnswers ? JSON.parse(personaliseAnswers) : null,
           selectedLocation: selectedLocation ? JSON.parse(selectedLocation) : null,
@@ -1152,7 +1156,7 @@ export default function SolarEnergyPlanner() {
             website_url: company_res.website || 'https://renewables-ireland.voltflo.ie',
             backend_url: company_res.emailBranding.backend_url || process.env.NEXT_PUBLIC_API_BASE_URL_PRODUCTION
           },
-          company_id: 3
+          company_id: company_res.id || 3
         };
 
         // Make API call
@@ -1223,6 +1227,10 @@ export default function SolarEnergyPlanner() {
   const currentAnnualBill = annualBillAmount
   const newAnnualBill = Math.round(currentAnnualBill * (1 - billOffset / 100))
 
+  const [solarPlanData, setSolarPlanData] = useState<any>(null)
+  const [personaliseData, setPersonaliseData] = useState<any>(null)
+  const [phoneNumber, setPhoneNumber] = useState<any>(null)
+
   // Enhanced initialization to load all data from localStorage
   useEffect(() => {
     try {
@@ -1245,9 +1253,11 @@ export default function SolarEnergyPlanner() {
       }
 
       // Load bill amount from personalise_answers
+      let personaliseData = null;
       const storedPersonaliseAnswers = localStorage.getItem("personalise_answers")
       if (storedPersonaliseAnswers) {
-        const personaliseData = JSON.parse(storedPersonaliseAnswers)
+        personaliseData = JSON.parse(storedPersonaliseAnswers)
+        setPersonaliseData(personaliseData)
 
         // Check SEAI grant eligibility based on house build date
         if (personaliseData["house-built-date"]) {
@@ -1279,10 +1289,13 @@ export default function SolarEnergyPlanner() {
       // Mark data as loaded
       setIsDataLoaded(true)
 
+      let planData = null;
       // Load previously saved plan data to restore user selections
       const storedPlanData = localStorage.getItem("solar_plan_data")
+      // console.log("CRM1: ", storedPlanData)
       if (storedPlanData) {
-        const planData = JSON.parse(storedPlanData)
+        planData = JSON.parse(storedPlanData)
+        setSolarPlanData(planData)
 
         // Restore system configuration
         if (planData.systemConfiguration) {
@@ -1373,15 +1386,19 @@ export default function SolarEnergyPlanner() {
         }
       }
 
+      let userContact = null;
       // Load user contact info separately
       const storedUserContact = localStorage.getItem("user_contact_info")
       if (storedUserContact) {
-        const userContact = JSON.parse(storedUserContact)
+        userContact = JSON.parse(storedUserContact)
         if (userContact.fullName && !fullName) {
           setFullName(userContact.fullName)
         }
         if (userContact.email && !email) {
           setEmail(userContact.email)
+        }
+        if (userContact.phone && !phoneNumber) {
+          setPhoneNumber(userContact.phone)
         }
       }
 
@@ -1394,6 +1411,12 @@ export default function SolarEnergyPlanner() {
         }
       }
 
+      let selectedLocation = null;
+      const storedSelectedLocation = localStorage.getItem("selectedLocation")
+      if (storedSelectedLocation) {
+        selectedLocation = JSON.parse(storedSelectedLocation)
+      }
+
     } catch (error) {
       // If there's an error, we'll fall back to defaults
       setBusinessProposal(null)
@@ -1402,6 +1425,62 @@ export default function SolarEnergyPlanner() {
       setIsLoading(false)
     }
   }, [])
+
+  // send the lead to CRM 
+  // const toInt = (value: unknown): number | null => {
+  //   if (typeof value === 'number') return value
+  //   if (typeof value === 'string') {
+  //     const digitsOnly = value.replace(/\D+/g, '')
+  //     return digitsOnly ? parseInt(digitsOnly, 10) : null
+  //   }
+  //   return null
+  // }
+
+  // useEffect(() => {
+
+  //   const lead_added_to_crm = localStorage.getItem("lead_added_to_crm") || "false"
+  //   const lead_crm_lock_key = "lead_added_to_crm_lock"
+  //   const lead_crm_locked = localStorage.getItem(lead_crm_lock_key) === "true"
+  //   console.log("Lead Added to CRM: ", personaliseData, solarPlanData, lead_added_to_crm, !lead_crm_locked)
+  //   // Guard against React StrictMode double-invocation by using a synchronous localStorage lock
+  //   if (personaliseData !== null && solarPlanData !== null) {
+  //     if (lead_added_to_crm === "false" && !lead_crm_locked) {
+  //       // Acquire lock synchronously so a second invocation in StrictMode will no-op
+  //       localStorage.setItem(lead_crm_lock_key, "true")
+
+  //       let selectedLocation = null;
+  //       const storedSelectedLocation = localStorage.getItem("selectedLocation")
+  //       if (storedSelectedLocation) {
+  //         selectedLocation = JSON.parse(storedSelectedLocation)
+  //       }
+
+  //       const payload = {
+  //         home_type: personaliseData["homeType"],
+  //         bedroom_count: toInt(personaliseData["bedrooms"]),
+  //         house_build_year: toInt(personaliseData["house-built-date"]),
+  //         name: fullName,
+  //         email: email,
+  //         phone: phoneNumber,
+  //         address: selectedLocation?.address || "",
+  //         solar_plan_data: solarPlanData,
+  //         personalise_answers: personaliseData,
+  //         selected_location: selectedLocation,
+  //         company_id: companyData?.id || 6,
+  //       }
+
+  //       companyService
+  //         .addLeadInCRM(payload)
+  //         .then((res) => {
+  //           localStorage.setItem("lead_added_to_crm", true.toString())
+  //           localStorage.removeItem(lead_crm_lock_key)
+  //         })
+  //         .catch((error) => {
+  //           localStorage.setItem("lead_added_to_crm", false.toString())
+  //           localStorage.removeItem(lead_crm_lock_key)
+  //         })
+  //     }
+  //   }
+  // }, [solarPlanData, personaliseData])
 
   // Calculate perPanelGeneration once when business proposal data is loaded
   useEffect(() => {
@@ -2988,7 +3067,7 @@ export default function SolarEnergyPlanner() {
                           </span>
                         </Button>
 
-                        
+
                         {/* Secondary CTA - Download Plan */}
                         <Button
                           variant="outline"
