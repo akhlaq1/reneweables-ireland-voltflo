@@ -636,7 +636,7 @@ const brands: Record<string, Branding> = {
         { panelCount: 18, price: 8850 },
       ],
       seaiGrant: 1800, // Default fallback value
-      panelWattage: 440, // Wattage per panel for SEAI grant calculation
+      panelWattage: 450, // Wattage per panel for SEAI grant calculation
       useDynamicSEAIGrant: true, // Enable dynamic SEAI grant calculation based on system size
       defaultEVGrant: 300
     },
