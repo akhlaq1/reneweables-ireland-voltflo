@@ -38,7 +38,7 @@ export const AddressTemplate0 = ({
         <div className="text-center mb-6">
           <Image
             src={branding?.logo}
-            alt={branding?.name}
+            alt={branding?.name || "logo_image"}
             width={80}
             height={40}
             className="h-16 sm:h-20 mx-auto mb-4 object-contain"
@@ -136,7 +136,7 @@ export const AddressTemplate0 = ({
               <div className="flex-1 flex items-center space-x-2 p-3 bg-gray-50 rounded-lg border border-gray-100">
                 <Image
                   src={branding?.logo}
-                  alt={branding?.name}
+                  alt={branding?.name || "reviews_image"}
                   width={24}
                   height={24}
                   className="h-6 w-auto flex-shrink-0 object-contain"
@@ -303,7 +303,7 @@ export const AddressTemplate1 = ({
             <div className="mt-8 pt-6 border-t border-gray-200">
               <div className="flex items-center justify-between text-sm">
                 <div className="flex items-center space-x-2">
-                  <Image src={branding?.logo} alt={branding?.name} width={20} height={20} className="h-5 w-auto object-contain" />
+                  <Image src={branding?.logo} alt={branding?.name || "reviews_image"} width={20} height={20} className="h-5 w-auto object-contain" />
                   <span className="font-semibold">{branding?.reviews?.rating || "5.0"} ⭐⭐⭐⭐⭐</span>
                   <span className="text-gray-500">({branding?.reviews?.count || "86"} reviews)</span>
                 </div>
@@ -350,7 +350,7 @@ export const AddressTemplate2 = ({
         <div className="text-center mb-6">
           <Image
             src={branding?.logo}
-            alt={`${branding.name} Logo`}
+            alt={`${branding?.name} Logo`}
             width={80}
             height={40}
             className="h-16 sm:h-20 mx-auto mb-4 object-contain"
@@ -447,7 +447,7 @@ export const AddressTemplate2 = ({
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
                 <div className="flex items-center space-x-2 mb-2">
-                  <Image src={branding?.logo} alt={branding?.name} width={24} height={24} className="h-6 w-auto object-contain" />
+                  <Image src={branding?.logo} alt={branding?.name || "reviews_image"} width={24} height={24} className="h-6 w-auto object-contain" />
                   <span className="font-bold text-gray-900">{branding?.reviews?.rating || "5.0"}</span>
                 </div>
                 <div className="flex text-yellow-400 mb-1">
@@ -596,7 +596,7 @@ export const AddressTemplate3 = ({
         <div className="grid grid-cols-2 gap-4">
           <div className="bg-white rounded-xl shadow-md border border-purple-100 p-4">
             <div className="flex items-center space-x-2 mb-2">
-              <Image src={branding?.logo} alt={branding?.name} width={20} height={20} className="h-5 w-auto object-contain" />
+              <Image src={branding?.logo} alt={branding?.name || "reviews_image"}  width={20} height={20} className="h-5 w-auto object-contain" />
               <span className="font-bold text-gray-900 text-sm">{branding?.reviews?.rating || "5.0"}</span>
             </div>
             <div className="flex text-yellow-400 mb-1">
@@ -653,7 +653,7 @@ export const AddressTemplate4 = ({
         <div className="text-center mb-8">
           <Image
             src={branding?.logo}
-            alt={branding?.name}
+            alt={branding?.name || "logo_image"}
             width={100}
             height={50}
             className="h-12 mx-auto mb-6 object-contain"
@@ -732,7 +732,7 @@ export const AddressTemplate4 = ({
 
             <div className="flex items-center justify-center space-x-6 text-sm">
               <div className="flex items-center space-x-1">
-                <Image src={branding?.logo} alt={branding?.name} width={16} height={16} className="h-4 w-auto object-contain" />
+                <Image src={branding?.logo} alt={branding?.name || "reviews_image"} width={16} height={16} className="h-4 w-auto object-contain" />
                 <span className="font-semibold">{branding?.reviews?.rating || "5.0"} ⭐</span>
                 <span className="text-gray-500">({branding?.reviews?.count || "86"})</span>
               </div>
@@ -780,7 +780,7 @@ export const AddressTemplate5 = ({
             <div className="flex items-center justify-center gap-3 mb-4">
               <Image
                 src={branding?.logo}
-                alt={branding?.name}
+                alt={branding?.name || "logo_image"}
                 width={50}
                 height={50}
                 className="h-12 object-contain bg-white rounded-lg p-2"
@@ -1014,7 +1014,7 @@ export const AddressTemplate6 = ({
                   >
                     <Image
                       src={branding?.logo}
-                      alt={branding?.name}
+                      alt={branding?.name || "reviews_image"}
                       width={60}
                       height={30}
                       className="h-8 object-contain"
