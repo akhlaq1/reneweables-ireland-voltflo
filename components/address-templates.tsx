@@ -68,8 +68,8 @@ export const AddressTemplate0 = ({
               <div className="relative z-10 flex items-center gap-2">
                 <span className="text-2xl animate-bounce">🎁</span>
                 <div>
-                  <div className="text-white font-bold text-sm sm:text-base">LIMITED TIME OFFER</div>
-                  <div className="text-white/90 text-xs sm:text-sm">Buy 3 Panels, Get 1 FREE!</div>
+                  <div className="text-white font-bold text-sm sm:text-base">Christmas Special Offer 10% OFF</div>
+                  <div className="text-white/90 text-xs sm:text-sm">Offer ends 31st December 2025</div>
                 </div>
               </div>
             </div>
@@ -237,8 +237,8 @@ export const AddressTemplate1 = ({
               <div className="relative z-10 flex items-center gap-2">
                 <span className="text-2xl animate-bounce">🎁</span>
                 <div>
-                  <div className="text-white font-bold text-sm sm:text-base">LIMITED TIME OFFER</div>
-                  <div className="text-white/90 text-xs sm:text-sm">Buy 3 Panels, Get 1 FREE!</div>
+                  <div className="text-white font-bold text-sm sm:text-base">Christmas Special Offer 10% OFF</div>
+                  <div className="text-white/90 text-xs sm:text-sm">Offer ends 31st December 2025</div>
                 </div>
               </div>
             </div>
@@ -383,8 +383,8 @@ export const AddressTemplate2 = ({
               <div className="relative z-10 flex items-center gap-2">
                 <span className="text-2xl animate-bounce">🎁</span>
                 <div>
-                  <div className="text-white font-bold text-sm sm:text-base">LIMITED TIME OFFER</div>
-                  <div className="text-white/90 text-xs sm:text-sm">Buy 3 Panels, Get 1 FREE!</div>
+                  <div className="text-white font-bold text-sm sm:text-base">Christmas Special Offer 10% OFF</div>
+                  <div className="text-white/90 text-xs sm:text-sm">Offer ends 31st December 2025</div>
                 </div>
               </div>
             </div>
@@ -528,8 +528,8 @@ export const AddressTemplate3 = ({
           <div className="relative z-10 flex items-center gap-2">
             <span className="text-2xl animate-bounce">🎁</span>
             <div>
-              <div className="text-white font-bold text-sm sm:text-base">LIMITED TIME OFFER</div>
-              <div className="text-white/90 text-xs sm:text-sm">Buy 3 Panels, Get 1 FREE!</div>
+              <div className="text-white font-bold text-sm sm:text-base">Christmas Special Offer 10% OFF</div>
+              <div className="text-white/90 text-xs sm:text-sm">Offer ends 31st December 2025</div>
             </div>
           </div>
         </div>
@@ -674,8 +674,8 @@ export const AddressTemplate4 = ({
           <div className="relative z-10 flex items-center gap-2">
             <span className="text-2xl animate-bounce">🎁</span>
             <div>
-              <div className="text-white font-bold text-sm sm:text-base">LIMITED TIME OFFER</div>
-              <div className="text-white/90 text-xs sm:text-sm">Buy 3 Panels, Get 1 FREE!</div>
+              <div className="text-white font-bold text-sm sm:text-base">Christmas Special Offer 10% OFF</div>
+              <div className="text-white/90 text-xs sm:text-sm">Offer ends 31st December 2025</div>
             </div>
           </div>
         </div>
@@ -809,8 +809,8 @@ export const AddressTemplate5 = ({
               <div className="relative z-10 flex items-center gap-2">
                 <span className="text-2xl animate-bounce">🎁</span>
                 <div>
-                  <div className="text-white font-bold text-sm sm:text-base">LIMITED TIME OFFER</div>
-                  <div className="text-white/90 text-xs sm:text-sm">Buy 3 Panels, Get 1 FREE!</div>
+                  <div className="text-white font-bold text-sm sm:text-base">Christmas Special Offer 10% OFF</div>
+                  <div className="text-white/90 text-xs sm:text-sm">Offer ends 31st December 2025</div>
                 </div>
               </div>
             </div>
@@ -925,8 +925,8 @@ export const AddressTemplate6 = ({
                 <div className="relative z-10 flex items-center gap-2">
                   <span className="text-2xl animate-bounce">🎁</span>
                   <div>
-                    <div className="text-white font-bold text-sm sm:text-base">LIMITED TIME OFFER</div>
-                    <div className="text-white/90 text-xs sm:text-sm">Buy 3 Panels, Get 1 FREE!</div>
+                    <div className="text-white font-bold text-sm sm:text-base">Christmas Special Offer 10% OFF</div>
+                    <div className="text-white/90 text-xs sm:text-sm">Offer ends 31st December 2025</div>
                   </div>
                 </div>
               </div>
