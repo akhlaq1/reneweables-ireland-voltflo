@@ -343,7 +343,22 @@ export default function CallPage() {
     return slots
   }
 
+  // Check if date is in vacation period (Dec 23, 2025 - Jan 5, 2026)
+  const isVacationPeriod = (date: Date) => {
+    const vacationStart = new Date(2025, 11, 23) // Dec 23, 2025
+    const vacationEnd = new Date(2026, 0, 5, 23, 59, 59) // Jan 5, 2026 end of day
+    vacationStart.setHours(0, 0, 0, 0)
+    const checkDate = new Date(date)
+    checkDate.setHours(0, 0, 0, 0)
+    return checkDate >= vacationStart && checkDate <= vacationEnd
+  }
+
   const dayHasAvailableSlots = (year: number, month: number, day: number) => {
+    const checkDate = new Date(year, month, day)
+    // No slots available during vacation period
+    if (isVacationPeriod(checkDate)) {
+      return false
+    }
     return generateTimeSlotsForDate(year, month, day).some(slot => {
       const ts = slot.date.getTime()
       const isFutureEnough = ts >= minBookingTime.getTime()
@@ -676,7 +691,8 @@ export default function CallPage() {
                             const dayBefore = new Date()
                             dayBefore.setDate(dayBefore.getDate() - 1)
                             const isSunday = date.getDay() === 0
-                            return date < dayBefore || isSunday || !dayHasAvailableSlots(date.getFullYear(), date.getMonth(), date.getDate())
+                            const isVacation = isVacationPeriod(date)
+                            return date < dayBefore || isSunday || isVacation || !dayHasAvailableSlots(date.getFullYear(), date.getMonth(), date.getDate())
                           }}
                           className="w-full"
                           classNames={{
@@ -738,7 +754,24 @@ export default function CallPage() {
                   </div>
                 </div>
 
-                <div className="relative">
+                {isVacationPeriod(selectedDate) ? (
+                  <div className="p-6 bg-amber-50 border-2 border-amber-200 rounded-lg">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <Info className="w-5 h-5 text-amber-600" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-amber-900 mb-2">
+                          Closed for Christmas and New Year Vacations
+                        </h4>
+                        <p className="text-sm text-amber-800 leading-relaxed">
+                          We're taking a break from December 23, 2025 to January 5, 2026. Please select a date after January 5th to schedule your call.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="relative">
                   <div className="grid grid-cols-1 gap-3 lg:space-y-3 max-h-96 overflow-y-auto pr-2">
                     {timeSlots
                       .filter((slot) => {
@@ -776,7 +809,8 @@ export default function CallPage() {
                               <Clock className="w-3 h-3 lg:w-4 lg:h-4 mr-1 lg:mr-2" />
                               {slot.label}
                             </Button>
-                          )}
+                  </div>
+                )}    )}
                         </div>
                       ))}
                   </div>
