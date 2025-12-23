@@ -806,8 +806,7 @@ export default function CallPage() {
                               <Clock className="w-3 h-3 lg:w-4 lg:h-4 mr-1 lg:mr-2" />
                               {slot.label}
                             </Button>
-                  </div>
-                )}    )}
+                          )}
                         </div>
                       ))}
                   </div>
@@ -824,7 +823,8 @@ export default function CallPage() {
                         </div>
                       </div>
                     )}
-                </div>
+                  </div>
+                )}
               </div>
             )}
 
