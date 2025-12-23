@@ -504,10 +504,7 @@ export default function CallPage() {
         localStorage.setItem("user_contact_info", JSON.stringify(contactInfoToSave))
         // Show the booking success terminal UI
         setStep("booking-success")
-
       })
-
-
 
     } catch (error: any) {
       setSubmitError(
